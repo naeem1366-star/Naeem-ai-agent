@@ -39,6 +39,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CompletableDeferred
 import java.io.File
 
+private fun isImageGenerationRequest(text: String): Boolean {
+    val normalized = text.lowercase().replace('ي', 'ی').replace('ك', 'ک')
+    val imageWords = "(?:تصویر|عکس|عکسی|image|picture|photo)"
+    val generationVerbs = "(?:بساز|بسازید|تولید\\s*کن|ایجاد\\s*کن|خلق\\s*کن|generate|create|make)"
+    return Regex("$imageWords.{0,45}$generationVerbs|$generationVerbs.{0,35}$imageWords")
+        .containsMatchIn(normalized)
+}
+
 data class ChatMessage(val text: String, val fromUser: Boolean, val image: androidx.compose.ui.graphics.ImageBitmap? = null)
 
 class MainActivity : ComponentActivity() {
