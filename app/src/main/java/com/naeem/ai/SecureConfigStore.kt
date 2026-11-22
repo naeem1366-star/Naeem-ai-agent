@@ -41,6 +41,12 @@ class SecureConfigStore(context: Context) {
             ?: ProviderConfig.DEFAULT_MODEL
 
     fun apiKey(): String = prefs.getString("api_key", "") ?: ""
+
+    fun imageModel(): String = prefs.getString("image_model", "gpt-image-2") ?: "gpt-image-2"
+
+    fun saveImageModel(model: String) {
+        prefs.edit().putString("image_model", model.trim()).apply()
+    }
 }
 
 private fun String.removeBearerPrefix(): String =
