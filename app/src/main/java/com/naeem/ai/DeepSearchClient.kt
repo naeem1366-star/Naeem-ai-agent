@@ -40,7 +40,7 @@ class DeepSearchClient {
                 if (title.isBlank() || href.isBlank()) null else WebFinding(title, href, snippet)
             }.distinctBy { it.url }.take(limit)
             if (results.isEmpty()) throw IllegalStateException("نتیجه‌ای از موتور جست‌وجو دریافت نشد؛ ممکن است دسترسی وب یا صفحه جست‌وجو محدود شده باشد.")
-            coroutineScope {
+            return@use coroutineScope {
                 results.take(6).map { finding ->
                     async(Dispatchers.IO) {
                         val pageText = runCatching { fetchPage(finding.url) }.getOrNull()
