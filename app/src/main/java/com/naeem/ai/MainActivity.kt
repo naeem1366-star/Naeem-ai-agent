@@ -3,6 +3,9 @@ package com.naeem.ai
 import android.content.Intent
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -65,15 +68,9 @@ fun NaeemApp(store: SecureConfigStore) {
     val client = remember { ChatClient() }
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     var ttsReady by remember { mutableStateOf(false) }
-
-    DisposableEffect(context) {
-        val engine = TextToSpeech(context) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) tts?.language = Locale("fa", "IR")
-        }
-        tts = engine
-        onDispose { engine.stop(); engine.shutdown(); tts = null }
-    }
+    var conversationMode by remember { mutableStateOf(false) }
+    val currentConversationMode by rememberUpdatedState(conversationMode)
+    var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val speechLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -93,11 +90,54 @@ fun NaeemApp(store: SecureConfigStore) {
                     val answer = client.send(baseUrl, model, apiKey, question)
                     messages.add(ChatMessage(answer, false))
                     if (ttsReady) tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "naeem-answer")
+                    else error = "پاسخ دریافت شد، اما صدای فارسی گوشی آماده نیست. از تنظیمات گوشی، موتور گفتار و صدای فارسی را فعال کن."
                 } catch (e: Exception) {
                     error = e.message ?: "خطای نامشخص"
                 } finally { busy = false }
             }
         }
+    }
+
+    val beginListening = remember(speechLauncher) {
+        {
+            listening = true
+            val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
+                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "صحبت کن…")
+            }
+            try { speechLauncher.launch(intent) }
+            catch (_: Exception) { listening = false; error = "سرویس تشخیص گفتار روی گوشی در دسترس نیست." }
+        }
+    }
+    SideEffect { startVoiceCapture = beginListening }
+
+    DisposableEffect(context) {
+        lateinit var engine: TextToSpeech
+        engine = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val languageResult = engine.setLanguage(Locale("fa", "IR"))
+                ttsReady = languageResult != TextToSpeech.LANG_MISSING_DATA &&
+                    languageResult != TextToSpeech.LANG_NOT_SUPPORTED
+                if (!ttsReady) error = "صدای فارسی روی موتور گفتار گوشی نصب یا پشتیبانی نمی‌شود. از تنظیمات گوشی، صدای فارسی را نصب کن."
+            } else {
+                ttsReady = false
+                error = "موتور تبدیل متن به گفتار گوشی راه‌اندازی نشد."
+            }
+        }
+        tts = engine
+        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) = Unit
+            override fun onError(utteranceId: String?) {
+                Handler(Looper.getMainLooper()).post { error = "پخش صدای پاسخ ناموفق بود. صدای فارسی گوشی را بررسی کن." }
+            }
+            override fun onDone(utteranceId: String?) {
+                Handler(Looper.getMainLooper()).post {
+                    if (currentConversationMode && !busy) startVoiceCapture?.invoke()
+                }
+            }
+        })
+        onDispose { engine.stop(); engine.shutdown(); tts = null }
     }
 
     fun sendMessage(speakAnswer: Boolean = false) {
@@ -157,23 +197,24 @@ fun NaeemApp(store: SecureConfigStore) {
                     ) {
                         IconButton(
                             onClick = {
-                                val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "صحبت کن…")
+                                if (conversationMode) {
+                                    conversationMode = false
+                                    listening = false
+                                    tts?.stop()
+                                } else {
+                                    conversationMode = true
+                                    startVoiceCapture?.invoke()
                                 }
-                                listening = true
-                                try { speechLauncher.launch(intent) } catch (_: Exception) { listening = false; error = "سرویس تشخیص گفتار روی گوشی در دسترس نیست." }
                             },
-                            enabled = !busy,
-                            modifier = Modifier.size(48.dp).background(if (listening) Gold else Panel, CircleShape)
+                            enabled = !busy || conversationMode,
+                            modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape)
                         ) {
-                            Icon(Icons.Default.Mic, contentDescription = "گفت‌وگوی صوتی", tint = if (listening) Ink else Gold)
+                            Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
                         }
                         OutlinedTextField(
                             value = prompt, onValueChange = { prompt = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("پیامت رو بنویس…", color = Muted) },
+                            placeholder = { Text(if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", color = Muted) },
                             maxLines = 4, shape = RoundedCornerShape(22.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
@@ -196,7 +237,7 @@ fun NaeemApp(store: SecureConfigStore) {
                     Spacer(Modifier.height(34.dp))
                     Text("سلام نعیم 👋", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Gold)
                     Spacer(Modifier.height(8.dp))
-                    Text("من آماده‌ام. بنویس یا دکمه میکروفون رو بزن و صحبت کن.", color = Muted, style = MaterialTheme.typography.bodyLarge)
+                    Text("من آماده‌ام. بنویس یا برای مکالمه صوتی، میکروفون رو بزن و صحبت کن. بعد از هر پاسخ دوباره گوش می‌دم.", color = Muted, style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(22.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SuggestionChip(onClick = { prompt = "امروز چه کاری انجام بدم؟" }, label = { Text("برنامه‌ریزی روز") })
