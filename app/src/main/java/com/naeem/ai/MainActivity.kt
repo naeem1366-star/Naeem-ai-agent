@@ -106,17 +106,18 @@ fun NaeemApp(store: SecureConfigStore) {
             var audioFile: File? = null
             try {
                 val audioBytes = audioClient.synthesize(baseUrl, apiKey, text)
-                audioFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
-                audioFile.writeBytes(audioBytes)
+                val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
+                audioFile = generatedFile
+                generatedFile.writeBytes(audioBytes)
                 mediaPlayer?.runCatching { stop() }
                 mediaPlayer?.release()
                 val player = MediaPlayer()
                 mediaPlayer = player
-                player.setDataSource(audioFile.absolutePath)
+                player.setDataSource(generatedFile.absolutePath)
                 player.setOnCompletionListener { completed ->
                     completed.release()
                     if (mediaPlayer === completed) mediaPlayer = null
-                    audioFile?.delete()
+                    generatedFile.delete()
                     if (continueListening && currentConversationMode && !busy) {
                         startVoiceCapture?.invoke()
                     }
@@ -128,8 +129,8 @@ fun NaeemApp(store: SecureConfigStore) {
                     error = "پخش صدای فارسی ناموفق بود."
                     true
                 }
-                player.prepare()
-                player.start()
+                player.setOnPreparedListener { it.start() }
+                player.prepareAsync()
             } catch (e: Exception) {
                 audioFile?.delete()
                 error = e.message ?: "ساخت صدای فارسی ناموفق بود."
