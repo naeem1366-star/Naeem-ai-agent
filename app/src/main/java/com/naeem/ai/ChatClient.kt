@@ -34,7 +34,8 @@ class ChatClient {
                 val text = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
                     val message = runCatching { JSONObject(text).optJSONObject("error")?.optString("message") }.getOrNull()
-                    throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "خطای سرور: HTTP ${response.code}")
+                    val detail = message?.takeIf { it.isNotBlank() } ?: text.take(500).ifBlank { response.message }
+                    throw IllegalStateException("خطای سرور HTTP ${response.code}: $detail")
                 }
                 val json = JSONObject(text)
                 json.getJSONArray("choices").getJSONObject(0)
