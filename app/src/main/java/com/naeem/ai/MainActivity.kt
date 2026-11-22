@@ -1,6 +1,10 @@
 package com.naeem.ai
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -10,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +32,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -34,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-data class ChatMessage(val text: String, val fromUser: Boolean)
+data class ChatMessage(val text: String, val fromUser: Boolean, val image: androidx.compose.ui.graphics.ImageBitmap? = null)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +65,10 @@ fun NaeemApp(store: SecureConfigStore) {
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
     var apiKey by remember { mutableStateOf(store.apiKey()) }
+    var imageModel by remember { mutableStateOf(store.imageModel()) }
+    var selectedImageBase64 by remember { mutableStateOf<String?>(null) }
+    var selectedImage by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var imageMode by remember { mutableStateOf(false) }
     var prompt by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
@@ -66,6 +77,27 @@ fun NaeemApp(store: SecureConfigStore) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
+    val imageClient = remember { ImageGenerationClient() }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            try {
+                val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                    ?: throw IllegalStateException("خواندن تصویر انتخاب‌شده ممکن نشد.")
+                val scale = minOf(1f, 1280f / maxOf(source.width, source.height).toFloat())
+                val resized = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true) else source
+                val output = ByteArrayOutputStream()
+                resized.compress(Bitmap.CompressFormat.JPEG, 82, output)
+                selectedImageBase64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+                selectedImage = resized.asImageBitmap()
+                imageMode = false
+                error = ""
+            } catch (e: Exception) {
+                selectedImageBase64 = null
+                selectedImage = null
+                error = e.message ?: "خطا در آماده‌سازی تصویر"
+            }
+        }
+    }
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     var ttsReady by remember { mutableStateOf(false) }
     var conversationMode by remember { mutableStateOf(false) }
@@ -142,16 +174,26 @@ fun NaeemApp(store: SecureConfigStore) {
 
     fun sendMessage(speakAnswer: Boolean = false) {
         val question = prompt.trim()
-        if (question.isBlank() || busy) return
+        val imageToSend = selectedImageBase64
+        val imagePreview = selectedImage
+        if ((question.isBlank() && imageToSend.isNullOrBlank()) || busy) return
+        val finalQuestion = question.ifBlank { "این تصویر را با جزئیات بررسی و تحلیل کن." }
         prompt = ""
-        messages.add(ChatMessage(question, true))
+        selectedImageBase64 = null
+        selectedImage = null
+        messages.add(ChatMessage(if (imageMode) "ساخت تصویر: $finalQuestion" else finalQuestion, true, imagePreview))
         busy = true
         error = ""
         scope.launch {
             try {
-                val answer = client.send(baseUrl, model, apiKey, question)
-                messages.add(ChatMessage(answer, false))
-                if (speakAnswer && ttsReady) tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "naeem-answer")
+                if (imageMode) {
+                    val bitmap = imageClient.generate(baseUrl, apiKey, imageModel, finalQuestion)
+                    messages.add(ChatMessage("تصویر ساخته شد.", false, bitmap.asImageBitmap()))
+                } else {
+                    val answer = client.send(baseUrl, model, apiKey, finalQuestion, imageToSend)
+                    messages.add(ChatMessage(answer, false))
+                    if (speakAnswer && ttsReady) tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "naeem-answer")
+                }
             } catch (e: Exception) {
                 error = e.message ?: "خطای نامشخص"
             } finally { busy = false }
@@ -189,44 +231,61 @@ fun NaeemApp(store: SecureConfigStore) {
             },
             bottomBar = {
                 Surface(color = Ink, tonalElevation = 8.dp) {
-                    Row(
+                    Column(
                         Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        IconButton(
-                            onClick = {
-                                if (conversationMode) {
-                                    conversationMode = false
-                                    listening = false
-                                    tts?.stop()
-                                } else {
-                                    conversationMode = true
-                                    startVoiceCapture?.invoke()
-                                }
-                            },
-                            enabled = !busy || conversationMode,
-                            modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
+                        if (selectedImage != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Image(bitmap = selectedImage!!, contentDescription = "تصویر انتخاب‌شده", modifier = Modifier.size(64.dp), contentScale = ContentScale.Crop)
+                                Text("تصویر آماده ارسال است", color = Muted, style = MaterialTheme.typography.labelMedium)
+                                TextButton(onClick = { selectedImage = null; selectedImageBase64 = null }) { Text("حذف", color = Gold) }
+                            }
                         }
-                        OutlinedTextField(
-                            value = prompt, onValueChange = { prompt = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text(if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", color = Muted) },
-                            maxLines = 4, shape = RoundedCornerShape(22.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
-                                focusedContainerColor = Panel, unfocusedContainerColor = Panel
-                            )
-                        )
-                        IconButton(
-                            onClick = { sendMessage(false) },
-                            enabled = !busy && prompt.isNotBlank(),
-                            modifier = Modifier.size(48.dp).background(if (!busy && prompt.isNotBlank()) Gold else Panel, CircleShape)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { imagePicker.launch("image/*") }, enabled = !busy) { Text("＋ عکس", color = Gold) }
+                            TextButton(onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }, enabled = !busy) {
+                                Text(if (imageMode) "✦ حالت ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFFFD58A) else Gold)
+                            }
+                        }
+                        Row(
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "ارسال", tint = if (!busy && prompt.isNotBlank()) Ink else Muted)
+                            IconButton(
+                                onClick = {
+                                    if (conversationMode) {
+                                        conversationMode = false
+                                        listening = false
+                                        tts?.stop()
+                                    } else {
+                                        conversationMode = true
+                                        startVoiceCapture?.invoke()
+                                    }
+                                },
+                                enabled = !busy || conversationMode,
+                                modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
+                            }
+                            OutlinedTextField(
+                                value = prompt, onValueChange = { prompt = it },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text(if (imageMode) "توضیح تصویری که می‌خواهی بسازم…" else if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", color = Muted) },
+                                maxLines = 4, shape = RoundedCornerShape(22.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
+                                    focusedContainerColor = Panel, unfocusedContainerColor = Panel
+                                )
+                            )
+                            IconButton(
+                                onClick = { sendMessage(false) },
+                                enabled = !busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank()),
+                                modifier = Modifier.size(48.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Gold else Panel, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = if (imageMode) "ساخت تصویر" else "ارسال", tint = if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Ink else Muted)
+                            }
                         }
                     }
                 }
@@ -268,7 +327,11 @@ fun NaeemApp(store: SecureConfigStore) {
                                     Text(if (msg.fromUser) "شما" else "Naeem AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(5.dp))
                                     Text(msg.text, color = Color(0xFFF2F0EA), style = MaterialTheme.typography.bodyLarge)
-                                    if (!msg.fromUser) {
+                                    msg.image?.let { image ->
+                                        Spacer(Modifier.height(8.dp))
+                                        Image(bitmap = image, contentDescription = "تصویر گفتگو", modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp), contentScale = ContentScale.Fit)
+                                    }
+                                    if (!msg.fromUser && msg.image == null) {
                                         TextButton(onClick = { if (ttsReady) tts?.speak(msg.text, TextToSpeech.QUEUE_FLUSH, null, "naeem-replay") }) {
                                             Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Gold)
                                             Spacer(Modifier.width(5.dp))
@@ -292,8 +355,10 @@ fun NaeemApp(store: SecureConfigStore) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("نشانی سرویس (Base URL)")
                         OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
-                        Text("نام مدل")
+                        Text("نام مدل گفتگو")
                         OutlinedTextField(model, { model = it }, singleLine = true)
+                        Text("مدل ساخت تصویر در GapGPT")
+                        OutlinedTextField(imageModel, { imageModel = it }, singleLine = true)
                         Text("کلید API")
                         OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
                         Text("کلید به‌صورت رمزگذاری‌شده روی همین گوشی ذخیره می‌شود.", style = MaterialTheme.typography.bodySmall, color = Muted)
@@ -302,6 +367,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 confirmButton = {
                     TextButton(onClick = {
                         store.save(baseUrl.trim(), model.trim(), apiKey.trim())
+                        store.saveImageModel(imageModel)
                         showSettings = false
                     }) { Text("ذخیره", color = Gold) }
                 },
