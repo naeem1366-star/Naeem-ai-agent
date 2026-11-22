@@ -12,6 +12,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.animation.core.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +30,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
@@ -36,6 +51,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CompletableDeferred
 import java.io.File
 
@@ -80,6 +100,16 @@ fun NaeemApp(store: SecureConfigStore) {
     var listening by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     val messages = remember { mutableStateListOf<ChatMessage>() }
+    val dataStore = remember { AssistantDataStore(context) }
+    val deepSearchClient = remember { DeepSearchClient() }
+    var memories by remember { mutableStateOf(dataStore.memories()) }
+    var albumImages by remember { mutableStateOf(dataStore.images()) }
+    var showMemory by remember { mutableStateOf(false) }
+    var showAlbum by remember { mutableStateOf(false) }
+    var memoryDraft by remember { mutableStateOf("") }
+    var searchMode by remember { mutableStateOf(false) }
+    var speechPaused by remember { mutableStateOf(false) }
+    var speechJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
@@ -111,50 +141,74 @@ fun NaeemApp(store: SecureConfigStore) {
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    fun stopSpeech() {
+        speechJob?.cancel()
+        speechJob = null
+        mediaPlayer?.runCatching { stop() }
+        mediaPlayer?.runCatching { release() }
+        mediaPlayer = null
+        speechPlaying = false
+        speechPaused = false
+    }
+
     fun playAnswer(text: String, continueListening: Boolean = false) {
-        scope.launch {
+        stopSpeech()
+        speechJob = scope.launch {
             speechPlaying = true
+            speechPaused = false
             try {
                 val audioChunks = audioClient.synthesizeChunks(baseUrl, apiKey, text)
                 for (audioBytes in audioChunks) {
+                    if (!isActive) break
                     val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
                     generatedFile.writeBytes(audioBytes)
-                    mediaPlayer?.runCatching { if (isPlaying) stop() }
-                    mediaPlayer?.release()
-
                     val player = MediaPlayer()
                     mediaPlayer = player
-                    val playbackDone = CompletableDeferred<Unit>()
-                    player.setDataSource(generatedFile.absolutePath)
-                    player.setOnCompletionListener { completed ->
-                        completed.release()
-                        if (mediaPlayer === completed) mediaPlayer = null
-                        generatedFile.delete()
-                        playbackDone.complete(Unit)
+                    suspendCancellableCoroutine<Unit> { continuation ->
+                        player.setDataSource(generatedFile.absolutePath)
+                        player.setOnCompletionListener { completed ->
+                            if (mediaPlayer === completed) mediaPlayer = null
+                            completed.release()
+                            generatedFile.delete()
+                            if (continuation.isActive) continuation.resume(Unit)
+                        }
+                        player.setOnErrorListener { failed, _, _ ->
+                            if (mediaPlayer === failed) mediaPlayer = null
+                            failed.release()
+                            generatedFile.delete()
+                            if (continuation.isActive) continuation.resumeWithException(IllegalStateException("پخش یکی از بخش‌های صدای فارسی ناموفق بود."))
+                            true
+                        }
+                        player.setOnPreparedListener { prepared -> if (continuation.isActive) prepared.start() }
+                        continuation.invokeOnCancellation {
+                            runCatching { player.release() }
+                            generatedFile.delete()
+                            if (mediaPlayer === player) mediaPlayer = null
+                        }
+                        player.prepareAsync()
                     }
-                    player.setOnErrorListener { failed, _, _ ->
-                        failed.release()
-                        if (mediaPlayer === failed) mediaPlayer = null
-                        generatedFile.delete()
-                        playbackDone.completeExceptionally(IllegalStateException("پخش یکی از بخش‌های صدای فارسی ناموفق بود."))
-                        true
-                    }
-                    player.setOnPreparedListener { it.start() }
-                    player.prepareAsync()
-                    playbackDone.await()
                 }
-                if (continueListening && currentConversationMode && !busy) {
-                    startVoiceCapture?.invoke()
-                }
+                if (continueListening && currentConversationMode && !busy) startVoiceCapture?.invoke()
             } catch (e: Exception) {
+                if (isActive) error = e.message ?: "ساخت یا پخش صدای فارسی ناموفق بود."
+            } finally {
                 mediaPlayer?.runCatching { release() }
                 mediaPlayer = null
-                error = e.message ?: "ساخت یا پخش صدای فارسی ناموفق بود."
-            } finally {
                 speechPlaying = false
+                speechPaused = false
+                speechJob = null
             }
         }
     }
+
+    fun pauseOrResumeSpeech() {
+        val player = mediaPlayer ?: return
+        runCatching {
+            if (speechPaused) { player.start(); speechPaused = false }
+            else if (player.isPlaying) { player.pause(); speechPaused = true }
+        }
+    }
+
 
     val speechLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -213,9 +267,24 @@ fun NaeemApp(store: SecureConfigStore) {
             try {
                 if (shouldGenerateImage) {
                     val bitmap = imageClient.generate(baseUrl, apiKey, imageModel, finalQuestion)
-                    messages.add(ChatMessage("تصویر ساخته شد.", false, bitmap.asImageBitmap()))
+                    dataStore.saveImage(bitmap, finalQuestion)
+                    albumImages = dataStore.images()
+                    messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))
                 } else {
-                    val answer = client.send(baseUrl, model, apiKey, finalQuestion, imageToSend)
+                    val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\\n") { "- $it" }?.let { "\\n\\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\\n$it" }.orEmpty()
+                    val answer = if (searchMode) {
+                        val findings = deepSearchClient.search(finalQuestion, 8)
+                        val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\\n${item.snippet}\\nURL: ${item.url}" }.joinToString("\\n\\n")
+                        val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\\n\\nپرسش: $finalQuestion\\n\\nمنابع وب:\\n$sourceText$memoryContext"
+                        client.send(baseUrl, model, apiKey, researchPrompt)
+                    } else {
+                        val memoryAwarePrompt = finalQuestion + memoryContext
+                        if (finalQuestion.contains("به خاطر بسپار") || finalQuestion.contains("یادت باشه")) {
+                            val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
+                            if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
+                        }
+                        client.send(baseUrl, model, apiKey, memoryAwarePrompt, imageToSend)
+                    }
                     messages.add(ChatMessage(answer, false))
                     if (speakAnswer) playAnswer(answer)
                 }
