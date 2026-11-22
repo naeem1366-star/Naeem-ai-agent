@@ -6,10 +6,7 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
-import android.os.Handler
-import android.os.Looper
+import android.media.MediaPlayer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import java.util.Locale
+import java.io.File
 
 data class ChatMessage(val text: String, val fromUser: Boolean, val image: androidx.compose.ui.graphics.ImageBitmap? = null)
 
@@ -98,11 +95,47 @@ fun NaeemApp(store: SecureConfigStore) {
             }
         }
     }
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    var ttsReady by remember { mutableStateOf(false) }
+    val audioClient = remember { AudioSpeechClient() }
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var conversationMode by remember { mutableStateOf(false) }
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    fun playAnswer(text: String, continueListening: Boolean = false) {
+        scope.launch {
+            var audioFile: File? = null
+            try {
+                val audioBytes = audioClient.synthesize(baseUrl, apiKey, text)
+                audioFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
+                audioFile.writeBytes(audioBytes)
+                mediaPlayer?.runCatching { stop() }
+                mediaPlayer?.release()
+                val player = MediaPlayer()
+                mediaPlayer = player
+                player.setDataSource(audioFile.absolutePath)
+                player.setOnCompletionListener { completed ->
+                    completed.release()
+                    if (mediaPlayer === completed) mediaPlayer = null
+                    audioFile?.delete()
+                    if (continueListening && currentConversationMode && !busy) {
+                        startVoiceCapture?.invoke()
+                    }
+                }
+                player.setOnErrorListener { failed, _, _ ->
+                    failed.release()
+                    if (mediaPlayer === failed) mediaPlayer = null
+                    audioFile?.delete()
+                    error = "پخش صدای فارسی ناموفق بود."
+                    true
+                }
+                player.prepare()
+                player.start()
+            } catch (e: Exception) {
+                audioFile?.delete()
+                error = e.message ?: "ساخت صدای فارسی ناموفق بود."
+            }
+        }
+    }
 
     val speechLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -121,8 +154,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 try {
                     val answer = client.send(baseUrl, model, apiKey, question)
                     messages.add(ChatMessage(answer, false))
-                    if (ttsReady) tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "naeem-answer")
-                    else error = "پاسخ دریافت شد، اما صدای فارسی گوشی آماده نیست. از تنظیمات گوشی، موتور گفتار و صدای فارسی را فعال کن."
+                    playAnswer(answer, continueListening = true)
                 } catch (e: Exception) {
                     error = e.message ?: "خطای نامشخص"
                 } finally { busy = false }
@@ -144,33 +176,6 @@ fun NaeemApp(store: SecureConfigStore) {
     }
     SideEffect { startVoiceCapture = beginListening }
 
-    DisposableEffect(context) {
-        lateinit var engine: TextToSpeech
-        engine = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val languageResult = engine.setLanguage(Locale("fa", "IR"))
-                ttsReady = languageResult != TextToSpeech.LANG_MISSING_DATA &&
-                    languageResult != TextToSpeech.LANG_NOT_SUPPORTED
-                if (!ttsReady) error = "صدای فارسی روی موتور گفتار گوشی نصب یا پشتیبانی نمی‌شود. از تنظیمات گوشی، صدای فارسی را نصب کن."
-            } else {
-                ttsReady = false
-                error = "موتور تبدیل متن به گفتار گوشی راه‌اندازی نشد."
-            }
-        }
-        tts = engine
-        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) = Unit
-            override fun onError(utteranceId: String?) {
-                Handler(Looper.getMainLooper()).post { error = "پخش صدای پاسخ ناموفق بود. صدای فارسی گوشی را بررسی کن." }
-            }
-            override fun onDone(utteranceId: String?) {
-                Handler(Looper.getMainLooper()).post {
-                    if (currentConversationMode && !busy) startVoiceCapture?.invoke()
-                }
-            }
-        })
-        onDispose { engine.stop(); engine.shutdown(); tts = null }
-    }
 
     fun sendMessage(speakAnswer: Boolean = false) {
         val question = prompt.trim()
@@ -192,7 +197,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 } else {
                     val answer = client.send(baseUrl, model, apiKey, finalQuestion, imageToSend)
                     messages.add(ChatMessage(answer, false))
-                    if (speakAnswer && ttsReady) tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "naeem-answer")
+                    if (speakAnswer) playAnswer(answer)
                 }
             } catch (e: Exception) {
                 error = e.message ?: "خطای نامشخص"
@@ -258,7 +263,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                     if (conversationMode) {
                                         conversationMode = false
                                         listening = false
-                                        tts?.stop()
+                                        mediaPlayer?.runCatching { stop() }; mediaPlayer?.release(); mediaPlayer = null
                                     } else {
                                         conversationMode = true
                                         startVoiceCapture?.invoke()
@@ -332,7 +337,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                         Image(bitmap = image, contentDescription = "تصویر گفتگو", modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp), contentScale = ContentScale.Fit)
                                     }
                                     if (!msg.fromUser && msg.image == null) {
-                                        TextButton(onClick = { if (ttsReady) tts?.speak(msg.text, TextToSpeech.QUEUE_FLUSH, null, "naeem-replay") }) {
+                                        TextButton(onClick = { playAnswer(msg.text) }) {
                                             Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Gold)
                                             Spacer(Modifier.width(5.dp))
                                             Text("پخش پاسخ", color = Gold)
