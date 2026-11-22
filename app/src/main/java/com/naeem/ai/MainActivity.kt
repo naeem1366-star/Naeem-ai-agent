@@ -272,11 +272,11 @@ fun NaeemApp(store: SecureConfigStore) {
                     albumImages = dataStore.images()
                     messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))
                 } else {
-                    val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\\n") { "- $it" }?.let { "\\n\\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\\n$it" }.orEmpty()
+                    val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
                     val answer = if (searchMode) {
                         val findings = deepSearchClient.search(finalQuestion, 8)
-                        val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\\n${item.snippet}\\nURL: ${item.url}" }.joinToString("\\n\\n")
-                        val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\\n\\nپرسش: $finalQuestion\\n\\nمنابع وب:\\n$sourceText$memoryContext"
+                        val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
+                        val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$memoryContext"
                         client.send(baseUrl, model, apiKey, researchPrompt)
                     } else {
                         val memoryAwarePrompt = finalQuestion + memoryContext
