@@ -18,11 +18,33 @@ class SecureConfigStore(context: Context) {
     )
 
     fun save(baseUrl: String, model: String, apiKey: String) {
-        prefs.edit().putString("base_url", baseUrl)
-            .putString("model", model).putString("api_key", apiKey).apply()
+        prefs.edit()
+            .putString("base_url", baseUrl.trim().trimEnd('/'))
+            .putString("model", model.trim())
+            .putString("api_key", apiKey.trim().removeBearerPrefix())
+            .apply()
     }
 
-    fun baseUrl() = prefs.getString("base_url", ProviderConfig.presets[0].baseUrl) ?: ProviderConfig.presets[0].baseUrl
-    fun model() = prefs.getString("model", ProviderConfig.presets[0].model) ?: ProviderConfig.presets[0].model
-    fun apiKey() = prefs.getString("api_key", "") ?: ""
+    fun baseUrl(): String {
+        val saved = prefs.getString("base_url", null)?.trim()?.trimEnd('/')
+        // Migrate existing installs that still have the old OpenAI default.
+        if (saved.isNullOrBlank() || saved == "https://api.openai.com/v1") {
+            prefs.edit().putString("base_url", ProviderConfig.DEFAULT_BASE_URL).apply()
+            return ProviderConfig.DEFAULT_BASE_URL
+        }
+        return saved
+    }
+
+    fun model(): String =
+        prefs.getString("model", ProviderConfig.DEFAULT_MODEL)
+            ?.takeIf { it.isNotBlank() }
+            ?: ProviderConfig.DEFAULT_MODEL
+
+    fun apiKey(): String = prefs.getString("api_key", "") ?: ""
 }
+
+private fun String.removeBearerPrefix(): String =
+    trim().let { value ->
+        if (value.startsWith("Bearer ", ignoreCase = true)) value.substringAfter(' ').trim()
+        else value
+    }
