@@ -84,6 +84,7 @@ class AudioSpeechClient {
                 .put("model", "gpt-4o-mini-tts")
                 .put("voice", "nova")
                 .put("input", text.take(4096))
+                .put("instructions", "Speak Persian (Farsi) in a warm, natural, conversational voice. Use clear pronunciation, gentle sentence-level pauses, varied intonation, and a comfortable moderate pace. Do not sound robotic or rush through the text.")
                 .put("response_format", "mp3")
 
             val request = Request.Builder()
