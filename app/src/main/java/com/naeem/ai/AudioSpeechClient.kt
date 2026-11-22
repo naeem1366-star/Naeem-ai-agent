@@ -20,6 +20,46 @@ class AudioSpeechClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    /** Split long Persian answers into natural speech-sized parts. */
+    suspend fun synthesizeChunks(baseUrl: String, apiKey: String, text: String): List<ByteArray> {
+        val chunks = splitForSpeech(text)
+        return chunks.map { part -> synthesize(baseUrl, apiKey, part) }
+    }
+
+    private fun splitForSpeech(text: String, maxChars: Int = 900): List<String> {
+        val sentences = text.replace("\r\n", "\n")
+            .split(Regex("(?<=[.!?؟؛])\\s+|\\n+"))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        val result = mutableListOf<String>()
+        val current = StringBuilder()
+
+        fun flush() {
+            if (current.isNotEmpty()) {
+                result.add(current.toString().trim())
+                current.setLength(0)
+            }
+        }
+
+        for (sentence in sentences) {
+            if (sentence.length <= maxChars) {
+                if (current.isNotEmpty() && current.length + sentence.length + 1 > maxChars) flush()
+                if (current.isNotEmpty()) current.append(' ')
+                current.append(sentence)
+            } else {
+                flush()
+                for (word in sentence.split(Regex("\\s+"))) {
+                    if (current.isNotEmpty() && current.length + word.length + 1 > maxChars) flush()
+                    if (current.isNotEmpty()) current.append(' ')
+                    current.append(word)
+                }
+                flush()
+            }
+        }
+        flush()
+        return result.ifEmpty { listOf(text.take(maxChars)) }
+    }
+
     suspend fun synthesize(baseUrl: String, apiKey: String, text: String): ByteArray =
         withContext(Dispatchers.IO) {
             val cleanKey = apiKey.trim().let { value ->
