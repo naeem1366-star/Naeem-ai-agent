@@ -157,9 +157,10 @@ fun NaeemApp(store: SecureConfigStore) {
             speechPlaying = true
             speechPaused = false
             try {
-                val audioChunks = audioClient.synthesizeChunks(baseUrl, apiKey, text)
-                for (audioBytes in audioChunks) {
+                val textChunks = audioClient.splitText(text)
+                for (textChunk in textChunks) {
                     if (!isActive) break
+                    val audioBytes = audioClient.synthesize(baseUrl, apiKey, textChunk)
                     val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
                     generatedFile.writeBytes(audioBytes)
                     val player = MediaPlayer()
