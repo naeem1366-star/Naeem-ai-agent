@@ -27,6 +27,9 @@ class AudioSpeechClient {
                 else value
             }
             require(cleanKey.isNotBlank()) { "کلید API در تنظیمات وارد نشده است." }
+            require(cleanKey.all { it.code in 0x21..0x7E }) {
+                "مقدار فیلد کلید API معتبر نیست؛ فقط کلید اصلی انگلیسی را از پنل GapGPT کپی کن. متن فارسی، فاصله یا توضیحات را وارد نکن."
+            }
             require(text.isNotBlank()) { "متنی برای تبدیل به صدا وجود ندارد." }
 
             var root = baseUrl.trim().trimEnd('/')
