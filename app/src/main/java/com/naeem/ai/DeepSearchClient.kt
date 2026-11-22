@@ -2,6 +2,9 @@ package com.naeem.ai
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -37,7 +40,30 @@ class DeepSearchClient {
                 if (title.isBlank() || href.isBlank()) null else WebFinding(title, href, snippet)
             }.distinctBy { it.url }.take(limit)
             if (results.isEmpty()) throw IllegalStateException("نتیجه‌ای از موتور جست‌وجو دریافت نشد؛ ممکن است دسترسی وب یا صفحه جست‌وجو محدود شده باشد.")
-            results
+            coroutineScope {
+                results.take(6).map { finding ->
+                    async(Dispatchers.IO) {
+                        val pageText = runCatching { fetchPage(finding.url) }.getOrNull()
+                        if (pageText.isNullOrBlank()) finding else finding.copy(snippet = pageText)
+                    }
+                }.awaitAll()
+            }
+        }
+    }
+
+    private fun fetchPage(url: String): String {
+        if (!url.startsWith("https://") && !url.startsWith("http://")) return ""
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
+            .get().build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return ""
+            val html = response.body?.string().orEmpty()
+            val doc = Jsoup.parse(html)
+            doc.select("script,style,nav,footer,header,aside,form,noscript").remove()
+            val main = doc.selectFirst("article, main, [role=main]") ?: doc.body()
+            main?.text()?.replace(Regex("\\s+"), " ")?.take(2200).orEmpty()
         }
     }
 }
