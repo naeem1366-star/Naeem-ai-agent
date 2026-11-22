@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CompletableDeferred
 import java.io.File
 
 data class ChatMessage(val text: String, val fromUser: Boolean, val image: androidx.compose.ui.graphics.ImageBitmap? = null)
@@ -97,43 +98,52 @@ fun NaeemApp(store: SecureConfigStore) {
     }
     val audioClient = remember { AudioSpeechClient() }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var speechPlaying by remember { mutableStateOf(false) }
     var conversationMode by remember { mutableStateOf(false) }
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     fun playAnswer(text: String, continueListening: Boolean = false) {
         scope.launch {
-            var audioFile: File? = null
+            speechPlaying = true
             try {
-                val audioBytes = audioClient.synthesize(baseUrl, apiKey, text)
-                val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
-                audioFile = generatedFile
-                generatedFile.writeBytes(audioBytes)
-                mediaPlayer?.runCatching { stop() }
-                mediaPlayer?.release()
-                val player = MediaPlayer()
-                mediaPlayer = player
-                player.setDataSource(generatedFile.absolutePath)
-                player.setOnCompletionListener { completed ->
-                    completed.release()
-                    if (mediaPlayer === completed) mediaPlayer = null
-                    generatedFile.delete()
-                    if (continueListening && currentConversationMode && !busy) {
-                        startVoiceCapture?.invoke()
+                val audioChunks = audioClient.synthesizeChunks(baseUrl, apiKey, text)
+                for (audioBytes in audioChunks) {
+                    val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
+                    generatedFile.writeBytes(audioBytes)
+                    mediaPlayer?.runCatching { if (isPlaying) stop() }
+                    mediaPlayer?.release()
+
+                    val player = MediaPlayer()
+                    mediaPlayer = player
+                    val playbackDone = CompletableDeferred<Unit>()
+                    player.setDataSource(generatedFile.absolutePath)
+                    player.setOnCompletionListener { completed ->
+                        completed.release()
+                        if (mediaPlayer === completed) mediaPlayer = null
+                        generatedFile.delete()
+                        playbackDone.complete(Unit)
                     }
+                    player.setOnErrorListener { failed, _, _ ->
+                        failed.release()
+                        if (mediaPlayer === failed) mediaPlayer = null
+                        generatedFile.delete()
+                        playbackDone.completeExceptionally(IllegalStateException("پخش یکی از بخش‌های صدای فارسی ناموفق بود."))
+                        true
+                    }
+                    player.setOnPreparedListener { it.start() }
+                    player.prepareAsync()
+                    playbackDone.await()
                 }
-                player.setOnErrorListener { failed, _, _ ->
-                    failed.release()
-                    if (mediaPlayer === failed) mediaPlayer = null
-                    audioFile?.delete()
-                    error = "پخش صدای فارسی ناموفق بود."
-                    true
+                if (continueListening && currentConversationMode && !busy) {
+                    startVoiceCapture?.invoke()
                 }
-                player.setOnPreparedListener { it.start() }
-                player.prepareAsync()
             } catch (e: Exception) {
-                audioFile?.delete()
-                error = e.message ?: "ساخت صدای فارسی ناموفق بود."
+                mediaPlayer?.runCatching { release() }
+                mediaPlayer = null
+                error = e.message ?: "ساخت یا پخش صدای فارسی ناموفق بود."
+            } finally {
+                speechPlaying = false
             }
         }
     }
@@ -184,15 +194,16 @@ fun NaeemApp(store: SecureConfigStore) {
         val imagePreview = selectedImage
         if ((question.isBlank() && imageToSend.isNullOrBlank()) || busy) return
         val finalQuestion = question.ifBlank { "این تصویر را با جزئیات بررسی و تحلیل کن." }
+        val shouldGenerateImage = imageMode || isImageGenerationRequest(finalQuestion)
         prompt = ""
         selectedImageBase64 = null
         selectedImage = null
-        messages.add(ChatMessage(if (imageMode) "ساخت تصویر: $finalQuestion" else finalQuestion, true, imagePreview))
+        messages.add(ChatMessage(if (shouldGenerateImage) "ساخت تصویر: $finalQuestion" else finalQuestion, true, imagePreview))
         busy = true
         error = ""
         scope.launch {
             try {
-                if (imageMode) {
+                if (shouldGenerateImage) {
                     val bitmap = imageClient.generate(baseUrl, apiKey, imageModel, finalQuestion)
                     messages.add(ChatMessage("تصویر ساخته شد.", false, bitmap.asImageBitmap()))
                 } else {
