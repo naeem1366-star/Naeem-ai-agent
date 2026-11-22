@@ -316,6 +316,12 @@ fun NaeemApp(store: SecureConfigStore) {
                         }
                     },
                     actions = {
+                        IconButton(onClick = { showAlbum = true; albumImages = dataStore.images() }) {
+                            Icon(Icons.Default.Collections, contentDescription = "آلبوم تصاویر", tint = Gold)
+                        }
+                        IconButton(onClick = { showMemory = true; memories = dataStore.memories() }) {
+                            Icon(Icons.Default.Bookmark, contentDescription = "حافظه", tint = Gold)
+                        }
                         IconButton(onClick = { showSettings = true }) {
                             Icon(Icons.Default.Settings, contentDescription = "تنظیمات", tint = Gold)
                         }
@@ -340,7 +346,11 @@ fun NaeemApp(store: SecureConfigStore) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = { imagePicker.launch("image/*") }, enabled = !busy) { Text("＋ عکس", color = Gold) }
                             TextButton(onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }, enabled = !busy) {
-                                Text(if (imageMode) "✦ حالت ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFFFD58A) else Gold)
+                                Text(if (imageMode) "✦ ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFFFD58A) else Gold)
+                            }
+                            TextButton(onClick = { searchMode = !searchMode }, enabled = !busy) {
+                                Icon(Icons.Default.Search, contentDescription = null, tint = if (searchMode) Color(0xFFFFD58A) else Gold)
+                                Text(if (searchMode) "جست‌وجوی عمیق روشن" else "جست‌وجوی عمیق", color = if (searchMode) Color(0xFFFFD58A) else Gold)
                             }
                         }
                         Row(
@@ -403,7 +413,12 @@ fun NaeemApp(store: SecureConfigStore) {
                     }
                 }
                 if (busy) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = Panel)
+                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        ThinkingOrb()
+                        Spacer(Modifier.height(6.dp))
+                        Text(if (searchMode) "در حال جست‌وجو و بررسی منابع…" else if (imageMode) "در حال ساخت تصویر…" else "دارم فکر می‌کنم…", color = Gold, style = MaterialTheme.typography.labelMedium)
+                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp), color = Gold, trackColor = Panel)
+                    }
                 }
                 LazyColumn(
                     state = listState, modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -426,10 +441,20 @@ fun NaeemApp(store: SecureConfigStore) {
                                         Image(bitmap = image, contentDescription = "تصویر گفتگو", modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp), contentScale = ContentScale.Fit)
                                     }
                                     if (!msg.fromUser && msg.image == null) {
-                                        TextButton(onClick = { playAnswer(msg.text) }) {
-                                            Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Gold)
-                                            Spacer(Modifier.width(5.dp))
-                                            Text("پخش پاسخ", color = Gold)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            TextButton(onClick = { playAnswer(msg.text) }) {
+                                                Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Gold)
+                                                Spacer(Modifier.width(5.dp))
+                                                Text("پخش کامل", color = Gold)
+                                            }
+                                            if (speechPlaying) {
+                                                IconButton(onClick = { pauseOrResumeSpeech() }) {
+                                                    Icon(if (speechPaused) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = if (speechPaused) "ادامه صدا" else "مکث صدا", tint = Gold)
+                                                }
+                                                IconButton(onClick = { stopSpeech() }) {
+                                                    Icon(Icons.Default.Stop, contentDescription = "توقف صدا", tint = Color(0xFFFF8B80))
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -438,6 +463,59 @@ fun NaeemApp(store: SecureConfigStore) {
                     }
                 }
             }
+        }
+
+        if (showMemory) {
+            AlertDialog(
+                onDismissRequest = { showMemory = false },
+                containerColor = Panel,
+                title = { Text("حافظه Naeem AI", color = Gold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(value = memoryDraft, onValueChange = { memoryDraft = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند") })
+                        memories.forEach { item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(item, modifier = Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.bodySmall)
+                                TextButton(onClick = { dataStore.deleteMemory(item); memories = dataStore.memories() }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (memoryDraft.isNotBlank()) { dataStore.addMemory(memoryDraft); memories = dataStore.memories(); memoryDraft = "" }
+                    }) { Text("ذخیره نکته", color = Gold) }
+                },
+                dismissButton = { TextButton(onClick = { showMemory = false }) { Text("بستن", color = Muted) } }
+            )
+        }
+
+        if (showAlbum) {
+            AlertDialog(
+                onDismissRequest = { showAlbum = false },
+                containerColor = Panel,
+                title = { Text("آلبوم تصاویر ساخته‌شده", color = Gold) },
+                text = {
+                    if (albumImages.isEmpty()) {
+                        Text("هنوز تصویری نساخته‌ای. تصاویر بعدی به‌صورت خودکار اینجا ذخیره می‌شوند.", color = Muted)
+                    } else {
+                        LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            gridItems(albumImages) { item ->
+                                val bitmap = remember(item.file.absolutePath) { BitmapFactory.decodeFile(item.file.absolutePath)?.asImageBitmap() }
+                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF292C33))) {
+                                    Column {
+                                        bitmap?.let { Image(bitmap = it, contentDescription = item.prompt, modifier = Modifier.fillMaxWidth().height(120.dp), contentScale = ContentScale.Crop) }
+                                        Text(item.prompt, color = Color.White, maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
+                                        TextButton(onClick = { dataStore.deleteImage(item); albumImages = dataStore.images() }) { Text("حذف از آلبوم", color = Color(0xFFFF8B80)) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showAlbum = false }) { Text("بستن", color = Gold) } }
+            )
         }
 
         if (showSettings) {
@@ -468,5 +546,38 @@ fun NaeemApp(store: SecureConfigStore) {
                 dismissButton = { TextButton(onClick = { showSettings = false }) { Text("انصراف") } }
             )
         }
+    }
+}
+
+
+@Composable
+private fun ThinkingOrb() {
+    val transition = rememberInfiniteTransition()
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(animation = tween(2200, easing = LinearEasing), repeatMode = RepeatMode.Restart)
+    )
+    Canvas(Modifier.size(104.dp)) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val maxRadius = size.minDimension * 0.46f
+        for (ring in 0..2) {
+            val progress = (phase + ring / 3f) % 1f
+            drawCircle(
+                color = Color(0xFFD1B078).copy(alpha = (1f - progress) * 0.42f),
+                radius = maxRadius * (0.35f + progress * 0.65f),
+                center = center,
+                style = Stroke(width = 1.5.dp.toPx())
+            )
+        }
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFFFE3AE), Color(0xFFD1B078), Color(0xFF745A37), Color.Transparent),
+                center = center,
+                radius = maxRadius * 0.55f
+            ),
+            radius = maxRadius * 0.34f,
+            center = center
+        )
     }
 }
