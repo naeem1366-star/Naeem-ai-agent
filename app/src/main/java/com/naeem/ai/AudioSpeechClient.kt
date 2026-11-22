@@ -21,9 +21,10 @@ class AudioSpeechClient {
         .build()
 
     /** Split long Persian answers into natural speech-sized parts. */
+    fun splitText(text: String): List<String> = splitForSpeech(text)
+
     suspend fun synthesizeChunks(baseUrl: String, apiKey: String, text: String): List<ByteArray> {
-        val chunks = splitForSpeech(text)
-        return chunks.map { part -> synthesize(baseUrl, apiKey, part) }
+        return splitForSpeech(text).map { part -> synthesize(baseUrl, apiKey, part) }
     }
 
     private fun splitForSpeech(text: String, maxChars: Int = 900): List<String> {
