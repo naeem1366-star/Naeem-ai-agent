@@ -17,7 +17,7 @@ class ChatClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    suspend fun send(baseUrl: String, model: String, apiKey: String, prompt: String): String =
+    suspend fun send(baseUrl: String, model: String, apiKey: String, prompt: String, imageBase64: String? = null): String =
         withContext(Dispatchers.IO) {
             val cleanKey = apiKey.trim().let { value ->
                 if (value.startsWith("Bearer ", ignoreCase = true)) value.substringAfter(' ').trim()
@@ -35,10 +35,20 @@ class ChatClient {
                 root = root.removeSuffix("/chat/completions")
             }
             val endpoint = "$root/chat/completions"
+            val userContent: Any = if (imageBase64.isNullOrBlank()) {
+                prompt
+            } else {
+                JSONArray()
+                    .put(JSONObject().put("type", "text").put("text", prompt.ifBlank { "این تصویر را بررسی و تحلیل کن." }))
+                    .put(JSONObject().put("type", "image_url").put(
+                        "image_url",
+                        JSONObject().put("url", "data:image/jpeg;base64,$imageBase64").put("detail", "auto")
+                    ))
+            }
             val payload = JSONObject()
                 .put("model", model.trim())
                 .put("messages", JSONArray().put(
-                    JSONObject().put("role", "user").put("content", prompt)
+                    JSONObject().put("role", "user").put("content", userContent)
                 ))
             val body = payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
             val request = Request.Builder()
