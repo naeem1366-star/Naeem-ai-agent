@@ -73,19 +73,27 @@ class ImageGenerationClient {
                 throw IllegalStateException("خطای ساخت تصویر (HTTP ${response.code}): $detail$hint")
             }
 
-            val data = JSONObject(responseText).optJSONArray("data")
-                ?: throw IllegalStateException("پاسخ سرویس ساخت تصویر، بخش data ندارد.")
+            val responseJson = JSONObject(responseText)
+            val data = responseJson.optJSONArray("data") ?: responseJson.optJSONArray("images")
+                ?: throw IllegalStateException("پاسخ سرویس ساخت تصویر، آرایه data یا images ندارد: ${responseText.take(500)}")
             if (data.length() == 0) throw IllegalStateException("سرویس تصویری تولید نکرد.")
             val item = data.getJSONObject(0)
-            val bytes = item.optString("b64_json").takeIf { it.isNotBlank() }?.let {
-                Base64.decode(it, Base64.DEFAULT)
-            } ?: item.optString("url").takeIf { it.startsWith("https://") }?.let { imageUrl ->
-                val imageRequest = Request.Builder().url(imageUrl).get().build()
+            val encodedImage = item.optString("b64_json").ifBlank {
+                item.optString("image_base64")
+            }.takeIf { it.isNotBlank() }
+            val imageUrl = item.optString("url").ifBlank {
+                item.optString("image_url")
+            }.takeIf { it.startsWith("https://", ignoreCase = true) || it.startsWith("http://", ignoreCase = true) }
+            val bytes = encodedImage?.let { encoded ->
+                val cleanBase64 = encoded.substringAfter("base64,", encoded)
+                Base64.decode(cleanBase64, Base64.DEFAULT)
+            } ?: imageUrl?.let { url ->
+                val imageRequest = Request.Builder().url(url).get().build()
                 http.newCall(imageRequest).execute().use { imageResponse ->
-                    if (!imageResponse.isSuccessful) throw IllegalStateException("دریافت تصویر تولیدشده ناموفق بود.")
+                    if (!imageResponse.isSuccessful) throw IllegalStateException("دریافت تصویر تولیدشده ناموفق بود (HTTP ${imageResponse.code}).")
                     imageResponse.body?.bytes() ?: throw IllegalStateException("فایل تصویر خالی است.")
                 }
-            } ?: throw IllegalStateException("سرویس تصویر نه فایل Base64 و نه نشانی تصویر برگرداند.")
+            } ?: throw IllegalStateException("سرویس پاسخ داده، اما لینک یا داده تصویر در خروجی پیدا نشد: ${item.toString().take(500)}")
 
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 ?: throw IllegalStateException("فایل برگشتی تصویر قابل نمایش نیست.")
