@@ -39,7 +39,7 @@ fun SportsDashboard(onClose:()->Unit){
  var minutes by remember{mutableStateOf("45")};var sets by remember{mutableStateOf("3")};var reps by remember{mutableStateOf("10")}
  var weight by remember{mutableStateOf("0")};var distance by remember{mutableStateOf("0")};var notes by remember{mutableStateOf("")}
  var goal by remember{mutableStateOf("افزایش قدرت")};var selectedPlan by remember{mutableStateOf("قدرت پایه")}
- val bg=Color(0xFF10131C);val panel=Color(0xFF1B2230);val accent=Color(0xFFB9A4FF);val muted=Color(0xFFB5B9C8)
+ val bg=Color(0xFF0A0C10);val panel=Color(0xFF1B1F25);val accent=Color(0xFFD4D9E0);val muted=Color(0xFFB5B9C8)
  val today=java.util.Calendar.getInstance().apply{set(java.util.Calendar.HOUR_OF_DAY,0);set(java.util.Calendar.MINUTE,0);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0)}.timeInMillis
  val week=logs.filter{it.date>=today-6L*24*60*60*1000};val weekMinutes=week.sumOf{it.minutes}
  val volume=week.sumOf{it.sets.toLong()*it.reps.toLong()*(it.weight*100).toLong()/100L}
