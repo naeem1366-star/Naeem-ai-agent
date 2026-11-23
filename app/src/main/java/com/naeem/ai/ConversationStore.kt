@@ -153,7 +153,7 @@ class ConversationStore(context: Context) {
         }.getOrDefault(emptyList())
         val now = System.currentTimeMillis()
         val id = UUID.randomUUID().toString()
-        val title = oldMessages.firstOrNull { it.fromUser }?.text?.take(38)?.ifBlank { "گفت‌وگوی قبلی" } ?: "گفت‌وگوی قبلی"
+        val title = if (oldMessages.isEmpty()) "گفت‌وگوی تازه" else oldMessages.firstOrNull { it.fromUser }?.text?.take(38)?.ifBlank { "گفت‌وگوی قبلی" } ?: "گفت‌وگوی قبلی"
         persist(listOf(StoredConversation(id, title, now, now, null, oldMessages)))
         prefs.edit().putString("active_id", id).apply()
     }
