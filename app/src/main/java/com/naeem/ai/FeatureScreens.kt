@@ -200,10 +200,48 @@ private class HStore(c:Context){
     Button(onClick={if(team==1)score1++ else score2++;next()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8DE0C1),contentColor=Color(0xFF102019)),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CheckCircle,null);Text("حدس درست بود! +۱")}
    }}}
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF344A82) else Color(0xFF222E49)),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFF9EAEFF),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFF8DE0C1),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=Color(0xFFADB8D0),style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
-   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp)){Text("بازی‌های بیشتر",color=Color.White,fontWeight=FontWeight.Bold);Text("چالش محاسبه و حافظه رنگی در نسخه بعدی به‌صورت بازی‌های مستقل و مرحله‌ای اضافه می‌شوند.",color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)}}}
+   item { QuickMathGame() }
+   item { ColorMemoryGame() }
   }
  }
 }
+
+@Composable private fun QuickMathGame(){
+ var a by remember{mutableIntStateOf((3..12).random())}
+ var b by remember{mutableIntStateOf((3..12).random())}
+ var answer by remember{mutableStateOf("")}
+ var points by remember{mutableIntStateOf(0)}
+ var message by remember{mutableStateOf("جواب درست بده و رکوردت را بالا ببر!")}
+ Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){
+  Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+   Text("چالش محاسبه سریع",color=Color(0xFF9EAEFF),fontWeight=FontWeight.Bold)
+   Text(a.toString()+" × "+b.toString()+" = ؟",color=Color.White,style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Black)
+   Text("امتیاز: "+points,color=Color(0xFF8DE0C1),fontWeight=FontWeight.Bold)
+   OutlinedTextField(answer,{answer=it.filter(Char::isDigit)},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("پاسخ")})
+   Button(onClick={if(answer.toIntOrNull()==a*b){points++;message="درست بود! عالیه."}else message="جواب درست "+(a*b)+" بود.";a=(3..12).random();b=(3..12).random();answer=""},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7188FF))){Text("بررسی و سؤال بعدی")}
+   Text(message,color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)
+  }
+ }
+}
+@Composable private fun ColorMemoryGame(){
+ val colors=remember{listOf(Color(0xFFE66B62),Color(0xFF6C9FE6),Color(0xFF65B98A),Color(0xFFE3BD61))}
+ val names=remember{listOf("قرمز","آبی","سبز","زرد")}
+ var sequence by remember{mutableStateOf(listOf<Int>())}
+ var chosen by remember{mutableStateOf(listOf<Int>())}
+ var level by remember{mutableIntStateOf(1)}
+ var message by remember{mutableStateOf("الگو را ببین و همان ترتیب را تکرار کن.")}
+ Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){
+  Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+   Text("حافظه رنگ‌ها",color=Color(0xFF9EAEFF),fontWeight=FontWeight.Bold)
+   Text("مرحله "+level,color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+   Text(message,color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)
+   if(sequence.isNotEmpty()) Text("الگو: "+sequence.joinToString(" ← "){names[it]},color=Color.White,fontWeight=FontWeight.SemiBold)
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){colors.forEachIndexed{index,c->Box(Modifier.weight(1f).height(58.dp).background(c,RoundedCornerShape(14.dp)).clickable{if(sequence.isNotEmpty()){val next=chosen+index;chosen=next;if(next.size==sequence.size){if(next==sequence){level++;sequence=sequence+(0..3).random();message="درست بود! مرحله بعدی آماده است."}else{level=1;sequence=emptyList();message="ترتیب اشتباه بود؛ دوباره شروع کن."};chosen=emptyList()}}},contentAlignment=Alignment.Center){Text(names[index],color=Color.Black,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.labelSmall)}}}
+   Button(onClick={sequence=List((level+1).coerceAtMost(8)){(0..3).random()};chosen=emptyList();message="حالا رنگ‌ها را به همان ترتیب لمس کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7188FF))){Text("ساخت الگوی مرحله بعد")}
+  }
+ }
+}
+
 private data class Film(val title:String,val year:Int,val genre:String,val duration:Int,val summary:String,val reason:String)
 private val films=listOf(
  Film("Perfect Days",2023,"درام",124,"مردی در توکیو زیبایی‌های کوچک زندگی روزمره را کشف می‌کند.","مینیمال، آرام و انسانی."),
