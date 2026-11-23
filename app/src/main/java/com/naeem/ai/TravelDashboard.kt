@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONObject
 import java.net.URLEncoder
 import androidx.compose.ui.platform.LocalContext
 import org.json.JSONArray
@@ -197,7 +196,7 @@ fun TravelDashboard(onClose:()->Unit) {
                     Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF203B48)),shape=RoundedCornerShape(22.dp)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
                             Row(verticalAlignment=Alignment.CenterVertically) {
-                                Icon(Icons.Default.WbCloudy,null,tint=accent)
+                                Text("☁️", fontSize = 20.sp)
                                 Spacer(Modifier.width(8.dp))
                                 Text("آب‌وهوا و شرایط مسیر",color=Color.White,fontWeight=FontWeight.Bold)
                             }
@@ -210,7 +209,7 @@ fun TravelDashboard(onClose:()->Unit) {
                                     weatherLoading=false
                                 }
                             },enabled=!weatherLoading,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent,contentColor=bg)) {
-                                Icon(Icons.Default.CloudDownload,null);Spacer(Modifier.width(7.dp));Text(if(weatherLoading)"در حال دریافت..." else "دریافت وضعیت هوا و پیش‌بینی")
+                                Text("🌦️");Spacer(Modifier.width(7.dp));Text(if(weatherLoading)"در حال دریافت..." else "دریافت وضعیت هوا و پیش‌بینی")
                             }
                             if(weatherText.isNotBlank()) Text(weatherText,color=Color.White,style=MaterialTheme.typography.bodySmall)
                             if(weatherError.isNotBlank()) Text(weatherError,color=Color(0xFFFFB2A8),style=MaterialTheme.typography.bodySmall)
@@ -219,7 +218,7 @@ fun TravelDashboard(onClose:()->Unit) {
                                 val url="https://www.google.com/maps/dir/?api=1&destination="+destinationQuery+"&travelmode=driving&dir_action=navigate"
                                 runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(url)))}
                             },modifier=Modifier.fillMaxWidth()) {
-                                Icon(Icons.Default.Directions,null);Spacer(Modifier.width(7.dp));Text("مسیریابی رانندگی و بررسی ترافیک")
+                                Text("🧭");Spacer(Modifier.width(7.dp));Text("مسیریابی رانندگی و بررسی ترافیک")
                             }
                             Text("ترافیک زنده، محدودیت جاده و مسیرهای جایگزین به پوشش و داده‌های نقشه وابسته‌اند؛ برنامه وضعیت بسته‌بودن جاده را مستقلاً تأیید نمی‌کند.",color=muted,style=MaterialTheme.typography.labelSmall)
                         }
