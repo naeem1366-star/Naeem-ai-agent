@@ -217,6 +217,15 @@ fun NaeemApp(store: SecureConfigStore) {
     }
 
 
+    fun recordFinanceCommand(question: String): String? {
+        val transaction = LedgerStore.parseVoiceCommand(question) ?: return null
+        ledgerStore.add(transaction.amountToman, transaction.category, transaction.note, transaction.isIncome)
+        ledgerEntries = ledgerStore.entries()
+        val formatted = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(transaction.amountToman)
+        return if (transaction.isIncome) "درآمد $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
+        else "هزینهٔ $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
+    }
+
     val speechLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -261,15 +270,6 @@ fun NaeemApp(store: SecureConfigStore) {
         }
     }
     SideEffect { startVoiceCapture = beginListening }
-
-    fun recordFinanceCommand(question: String): String? {
-        val transaction = LedgerStore.parseVoiceCommand(question) ?: return null
-        ledgerStore.add(transaction.amountToman, transaction.category, transaction.note, transaction.isIncome)
-        ledgerEntries = ledgerStore.entries()
-        val formatted = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(transaction.amountToman)
-        return if (transaction.isIncome) "درآمد $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
-        else "هزینهٔ $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
-    }
 
     fun sendMessage(speakAnswer: Boolean = false) {
         val question = prompt.trim()
