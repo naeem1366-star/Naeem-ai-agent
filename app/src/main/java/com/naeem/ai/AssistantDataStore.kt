@@ -2,6 +2,8 @@ package com.naeem.ai
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import java.io.File
 
 data class SavedImage(val file: File, val prompt: String, val createdAt: Long)
@@ -22,6 +24,26 @@ class AssistantDataStore(context: Context) {
     fun deleteMemory(value: String) {
         val updated = memories().toMutableSet().apply { remove(value) }
         prefs.edit().putStringSet("memories", updated).apply()
+    }
+
+    fun replaceMemories(values: List<String>) {
+        prefs.edit().putStringSet("memories", values.map { it.trim() }.filter { it.isNotBlank() }.toSet()).apply()
+    }
+
+    fun clearImages() {
+        images().forEach { it.file.delete() }
+        prefs.edit().remove("album_items").apply()
+    }
+
+    fun restoreImage(bytes: ByteArray, prompt: String, createdAt: Long): SavedImage {
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: throw IllegalArgumentException("یکی از تصاویر پشتیبان قابل خواندن نیست.")
+        val file = File(albumDir, "naeem_$createdAt.jpg")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 94, it) }
+        val all = prefs.getStringSet("album_items", emptySet())?.toMutableSet() ?: mutableSetOf()
+        all.add("$createdAt|$prompt")
+        prefs.edit().putStringSet("album_items", all).apply()
+        return SavedImage(file, prompt, createdAt)
     }
 
     fun saveImage(bitmap: Bitmap, prompt: String): SavedImage {
