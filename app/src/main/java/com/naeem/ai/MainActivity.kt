@@ -519,8 +519,8 @@ fun NaeemApp(store: SecureConfigStore) {
 
         if (showHub) {
             Dialog(onDismissRequest = { showHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
-                Surface(modifier = Modifier.fillMaxHeight().width(340.dp), shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp), color = Ink) {
+                Box(Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     FeatureHub(
                         onClose = { showHub = false },
                         onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
