@@ -89,7 +89,9 @@ object PersianAssistantIntentResolver {
         }
 
         val income = listOf("درآمد", "واریز", "حقوق گرفتم", "دریافت کردم", "فروختم").any { text.contains(it) }
-        val expense = listOf("خرج کردم", "هزینه کردم", "پرداخت کردم", "خریدم", "پول دادم", "هزینه").any { text.contains(it) }
+        val foodPurchase = listOf("غذا", "رستوران", "ناهار", "شام", "کافه", "سوپر").any { text.contains(it) } &&
+            listOf("خوردم", "خوردیم", "گرفتم", "خریدم").any { text.contains(it) }
+        val expense = listOf("خرج کردم", "هزینه کردم", "پرداخت کردم", "خریدم", "پول دادم", "هزینه").any { text.contains(it) } || foodPurchase
         if (income || expense) {
             if (hasAmbiguousToman(text)) return AssistantIntentResolution.Clarify("منظورت مبلغ واقعی به تومان است یا هزار تومان؟ مثلاً «۲۰۰ تومان» یا «۲۰۰ هزار تومان»؟")
             val amount = parseAmount(text) ?: return AssistantIntentResolution.Clarify("مبلغ را همراه واحد مشخص کن؛ مثلاً «۲۰۰ هزار تومان خرج غذا کردم».")
