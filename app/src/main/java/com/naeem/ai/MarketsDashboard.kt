@@ -90,7 +90,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                     }
                 }
                 val parsed = parsePayload(result)
-                if (parsed.isEmpty()) error("ساختار داده دریافتی قابل‌خواندن نیست.")
+                if (parsed.isEmpty()) kotlin.error("ساختار داده دریافتی قابل‌خواندن نیست.")
                 quotes = parsed
                 updatedAt = JSONObject(result).optString("generated_utc")
                 prefs.edit().putString("payload", result).apply()
