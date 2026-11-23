@@ -136,6 +136,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showGames by remember { mutableStateOf(false) }
     var showDiscover by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
+    var showTravel by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
     var showAlbum by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
@@ -369,10 +370,10 @@ fun NaeemApp(store: SecureConfigStore) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_brain_mark),
                                 contentDescription = "نشان مغز هوشمند Naeem AI",
-                                modifier = Modifier.size(34.dp)
+                                modifier = Modifier.size(28.dp)
                             )
-                            Column {
-                                Text("Naeem AI", fontWeight = FontWeight.SemiBold)
+                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text("Naeem AI", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                                 Text("دستیار هوشمند شخصی", style = MaterialTheme.typography.labelSmall, color = Muted)
                             }
                         }
@@ -473,7 +474,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                     Column(Modifier.weight(1f)) {
                                         Text("YOUR PERSONAL AI STUDIO", color = Color(0xFF9BE5C4), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                         Spacer(Modifier.height(9.dp))
-                                        Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+                                        Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                                         Text("امروز چی توی ذهنته؟", color = Color(0xFFC4D1CD), style = MaterialTheme.typography.titleMedium)
                                     }
                                     Box(Modifier.size(94.dp).background(Brush.radialGradient(listOf(Color(0xFF7DE0B1), Color(0xFF285E50), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
@@ -489,26 +490,7 @@ fun NaeemApp(store: SecureConfigStore) {
                             }
                         }
                     }
-                    Spacer(Modifier.height(18.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("دسترسی سریع", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                        Text("YOUR APPS", color = Color(0xFF82918E), style = MaterialTheme.typography.labelSmall)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        HomeShortcut("سلامت", "تغذیه و تندرستی", Icons.Default.Favorite, Color(0xFF77D7A8), Modifier.weight(1f)) { showHealth = true }
-                        HomeShortcut("بازی‌ها", "چالش و سرگرمی", Icons.Default.SportsEsports, Color(0xFF9D9BFF), Modifier.weight(1f)) { showGames = true }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        HomeShortcut("سینما", "فیلم و پوستر", Icons.Default.Movie, Color(0xFFFFBD78), Modifier.weight(1f)) { showDiscover = true }
-                        HomeShortcut("موسیقی", "کشف و شنیدن", Icons.Default.MusicNote, Color(0xFF80C9F0), Modifier.weight(1f)) { showMusic = true }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SuggestionChip(onClick = { prompt = "امروز چه کاری انجام بدم؟" }, label = { Text("برنامه‌ریزی روز") })
-                        SuggestionChip(onClick = { prompt = "یک ایده خلاقانه بهم بده" }, label = { Text("ایده‌پردازی") })
-                    }
+
                 }
                 if (error.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF3A2425)), modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
@@ -591,9 +573,17 @@ fun NaeemApp(store: SecureConfigStore) {
                         onMusic = { showHub = false; showMusic = true },
                         onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
                         onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
-                        onSettings = { showHub = false; showSettings = true }
+                        onSettings = { showHub = false; showSettings = true },
+                        onTravel = { showHub = false; showTravel = true }
                     )
                 }
+                }
+            }
+        }
+        if (showTravel) {
+            Dialog(onDismissRequest = { showTravel = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    TravelDashboard(onClose = { showTravel = false })
                 }
             }
         }
