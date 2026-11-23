@@ -140,7 +140,7 @@ fun TravelDashboard(onClose:()->Unit) {
     val selected=trips.firstOrNull { it.id==selectedId }
     LaunchedEffect(selectedId) { expenseBeneficiaries = selected?.members?.toSet().orEmpty() }
     val number= remember { NumberFormat.getNumberInstance(Locale("fa","IR")) }
-    val bg=Color(0xFF0D1820); val panel=Color(0xFF172A36); val accent=Color(0xFF73D2D0); val muted=Color(0xFFA8BDC5)
+    val bg=Color(0xFF0A0C10); val panel=Color(0xFF1B1F25); val accent=Color(0xFFD4D9E0); val muted=Color(0xFF9AA3AE)
     fun persist(next:List<LocalTrip>) { trips=next; store.save(next) }
 
     Column(Modifier.fillMaxSize().background(bg).padding(horizontal=18.dp, vertical=14.dp)) {
@@ -211,7 +211,7 @@ fun TravelDashboard(onClose:()->Unit) {
                     }
                 }
                 item {
-                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF203B48)),shape=RoundedCornerShape(22.dp)) {
+                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF252B34)),shape=RoundedCornerShape(22.dp)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
                             Row(verticalAlignment=Alignment.CenterVertically) {
                                 Text("☁️", fontSize = 20.sp)
@@ -230,7 +230,7 @@ fun TravelDashboard(onClose:()->Unit) {
                                 Text("🌦️");Spacer(Modifier.width(7.dp));Text(if(weatherLoading)"در حال دریافت..." else "دریافت وضعیت هوا و پیش‌بینی")
                             }
                             if(weatherText.isNotBlank()) Text(weatherText,color=Color.White,style=MaterialTheme.typography.bodySmall)
-                            if(weatherError.isNotBlank()) Text(weatherError,color=Color(0xFFFFB2A8),style=MaterialTheme.typography.bodySmall)
+                            if(weatherError.isNotBlank()) Text(weatherError,color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)
                             OutlinedButton(onClick={
                                 val destinationQuery=URLEncoder.encode(selected.destination,"UTF-8")
                                 val url="https://www.google.com/maps/dir/?api=1&destination="+destinationQuery+"&travelmode=driving&dir_action=navigate"
@@ -310,7 +310,7 @@ fun TravelDashboard(onClose:()->Unit) {
                     }
                 }
                 item {
-                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF203B48)),shape=RoundedCornerShape(20.dp)) {
+                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF252B34)),shape=RoundedCornerShape(20.dp)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
                             Text("تسویهٔ هوشمند سهم‌ها",color=accent,fontWeight=FontWeight.Bold)
                             Text("سهم هر نفر بر اساس افراد انتخاب‌شده برای هر هزینه محاسبه می‌شود؛ نه تقسیم مساوی کل سفر.",color=muted,style=MaterialTheme.typography.labelSmall)
