@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,41 +46,56 @@ private val FM=Color(0xFFA8ADB8)
 @Composable
 fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,onSettings:()->Unit){
  var query by remember { mutableStateOf("") }
- Column(Modifier.fillMaxSize().background(FB).padding(horizontal=18.dp, vertical=14.dp)){
+ Column(Modifier.fillMaxSize().background(Color(0xFF101519)).padding(horizontal=17.dp, vertical=13.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
    Column(Modifier.weight(1f)){
-    Text("NAEEM AI",color=FG,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
-    Text("مرکز فرماندهی زندگی دیجیتال",color=FM,style=MaterialTheme.typography.bodySmall)
+    Text("NAEEM AI  /  APP SPACE",color=Color(0xFF8CE0B5),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+    Text("فضای برنامه‌ها",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
+    Text("هر بخش، تجربه‌ای مستقل در یک اپلیکیشن",color=Color(0xFFA9B8B2),style=MaterialTheme.typography.bodySmall)
    }
-   Surface(color=Color(0xFF29251E),shape=RoundedCornerShape(14.dp)){Text("v1.3",color=FG,modifier=Modifier.padding(horizontal=12.dp,vertical=7.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)}
-   IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}
+   IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color(0xFF8CE0B5))}
   }
-  Spacer(Modifier.height(14.dp))
-  Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF29251E)),shape=RoundedCornerShape(22.dp)){
-   Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically){
-    Surface(color=Color(0xFF403625),shape=CircleShape,modifier=Modifier.size(54.dp)){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.AutoAwesome,null,tint=FG,modifier=Modifier.size(30.dp))}}
-    Spacer(Modifier.width(13.dp))
-    Column(Modifier.weight(1f)){Text("همه‌چیز در یک جا",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Text("ابزارها، سلامت، امور مالی و سرگرمی",color=FM,style=MaterialTheme.typography.bodySmall)}
+  Spacer(Modifier.height(12.dp))
+  Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF1D302B)),shape=RoundedCornerShape(26.dp)){
+   Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF315B4A),Color(0xFF202F38),Color(0xFF28263C)))).padding(17.dp)){
+    Row(verticalAlignment=Alignment.CenterVertically){
+     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)){
+      Text("YOUR DIGITAL WORLD",color=Color(0xFFB5F0D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+      Text("همه ابزارها،\nبا هویت مخصوص خودشان",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
+      Text("برای ورود، یکی از فضاها را انتخاب کن.",color=Color(0xFFD0DED8),style=MaterialTheme.typography.bodySmall)
+     }
+     Box(Modifier.size(76.dp).background(Brush.radialGradient(listOf(Color(0xFF9CE8C0),Color(0xFF376C58),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
+      Icon(Icons.Default.Widgets,null,tint=Color(0xFFD5FFE5),modifier=Modifier.size(38.dp))
+     }
+    }
    }
   }
   Spacer(Modifier.height(12.dp))
-  OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در قابلیت‌ها…")},leadingIcon={Icon(Icons.Default.Search,null,tint=FG)},colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=FG,unfocusedBorderColor=Color(0xFF414550),focusedContainerColor=FC,unfocusedContainerColor=FC))
-  LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp),contentPadding=PaddingValues(top=13.dp,bottom=14.dp)){
-   if(query.isBlank()||"دفتر مالی هزینه درآمد گزارش ماهانه".contains(query,true)) item { HubItem("دفتر مالی","هزینه‌ها، درآمدها و تحلیل بیشترین مخارج",Icons.Default.AccountBalanceWallet,onFinance) }
-   if(query.isBlank()||"حافظه هوشمند یادداشت اطلاعات".contains(query,true)) item { HubItem("حافظهٔ هوشمند","یادداشت‌ها و اطلاعات ذخیره‌شده",Icons.Default.Bookmark,onMemory) }
-   if(query.isBlank()||"آلبوم تصاویر هوش مصنوعی".contains(query,true)) item { HubItem("آلبوم تصاویر","آرشیو خروجی‌های تصویری ساخته‌شده",Icons.Default.Collections,onAlbum) }
-   if(query.isBlank()||"سلامت تغذیه BMI کالری غذا وزن".contains(query,true)) item { HubItem("سلامت و تغذیه","BMI، کالری، مواد غذایی، آب و فعالیت",Icons.Default.Favorite,onHealth) }
-   if(query.isBlank()||"بازی پانتومیم حدس کلمه تیمی سرگرمی".contains(query,true)) item { HubItem("بازی‌ها و پانتومیم","بازی تیمی، کارت کلمه و امتیازدهی",Icons.Default.SportsEsports,onGames) }
-   if(query.isBlank()||"فیلم سینما پوستر بازیگر ژانر".contains(query,true)) item { HubItem("سینما","کاتالوگ فیلم‌ها، پوسترها و پیشنهاد تماشا",Icons.Default.Movie,onDiscover) }
-   if(query.isBlank()||"موسیقی آهنگ خواننده پلیر پخش".contains(query,true)) item { HubItem("موسیقی","جست‌وجوی آهنگ، پیش‌نمایش و کشف هنرمند",Icons.Default.MusicNote,onMusic) }
-   if(query.isBlank()||"تنظیمات اتصال مدل API".contains(query,true)) item { HubItem("تنظیمات و اتصال","مدیریت سرویس هوش مصنوعی و کلید API",Icons.Default.Settings,onSettings) }
+  OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(17.dp),placeholder={Text("جست‌وجو در برنامه‌ها…")},leadingIcon={Icon(Icons.Default.Search,null,tint=Color(0xFF8CE0B5))},colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Color(0xFF8CE0B5),unfocusedBorderColor=Color(0xFF394640),focusedContainerColor=Color(0xFF1B2424),unfocusedContainerColor=Color(0xFF1B2424)))
+  Spacer(Modifier.height(12.dp))
+  LazyVerticalGrid(columns=GridCells.Fixed(2),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(11.dp),verticalArrangement=Arrangement.spacedBy(11.dp),contentPadding=PaddingValues(bottom=14.dp)){
+   if(query.isBlank()||"دفتر مالی هزینه درآمد گزارش ماهانه".contains(query,true)) item { HubItem("دفتر مالی","مدیریت پول و گزارش",Icons.Default.AccountBalanceWallet,Color(0xFFFFC477),onFinance) }
+   if(query.isBlank()||"حافظه هوشمند یادداشت اطلاعات".contains(query,true)) item { HubItem("حافظه هوشمند","یادداشت و اطلاعات",Icons.Default.Bookmark,Color(0xFFB9A4FF),onMemory) }
+   if(query.isBlank()||"آلبوم تصاویر هوش مصنوعی".contains(query,true)) item { HubItem("آلبوم تصاویر","آرشیو آثار تصویری",Icons.Default.Collections,Color(0xFF8CCCF1),onAlbum) }
+   if(query.isBlank()||"سلامت تغذیه BMI کالری غذا وزن".contains(query,true)) item { HubItem("سلامت و تغذیه","بدن، غذا و فعالیت",Icons.Default.Favorite,Color(0xFF8CE0B5),onHealth) }
+   if(query.isBlank()||"بازی پانتومیم حدس کلمه تیمی سرگرمی".contains(query,true)) item { HubItem("بازی‌ها","چالش و سرگرمی",Icons.Default.SportsEsports,Color(0xFFB5A2FF),onGames) }
+   if(query.isBlank()||"فیلم سینما پوستر بازیگر ژانر".contains(query,true)) item { HubItem("سینما","فیلم و پوستر",Icons.Default.Movie,Color(0xFFFFB987),onDiscover) }
+   if(query.isBlank()||"موسیقی آهنگ خواننده پلیر پخش".contains(query,true)) item { HubItem("موسیقی","آهنگ و هنرمند",Icons.Default.MusicNote,Color(0xFF83CFF0),onMusic) }
+   if(query.isBlank()||"تنظیمات اتصال مدل API".contains(query,true)) item { HubItem("تنظیمات","اتصال و حریم خصوصی",Icons.Default.Settings,Color(0xFFD1D5DD),onSettings) }
    if(query.isNotBlank() && listOf("دفتر مالی هزینه درآمد گزارش ماهانه","حافظه هوشمند یادداشت اطلاعات","آلبوم تصاویر هوش مصنوعی","سلامت تغذیه BMI کالری غذا وزن","بازی پانتومیم حدس کلمه تیمی سرگرمی","فیلم سینما پوستر بازیگر ژانر","موسیقی آهنگ خواننده پلیر پخش","تنظیمات اتصال مدل API").none{it.contains(query,true)}) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
   }
  }
 }
-@Composable private fun HubItem(title:String,sub:String,icon:androidx.compose.ui.graphics.vector.ImageVector,click:()->Unit){
- Card(Modifier.fillMaxWidth().padding(top=7.dp).clickable{click()},colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(16.dp)){
-  Row(Modifier.padding(13.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,tint=FG,modifier=Modifier.size(28.dp));Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(title,color=Color.White,fontWeight=FontWeight.SemiBold);Text(sub,color=FM,style=MaterialTheme.typography.bodySmall)};Icon(Icons.Default.ChevronLeft,null,tint=FG)}
+@Composable private fun HubItem(title:String,sub:String,icon:androidx.compose.ui.graphics.vector.ImageVector,accent:Color,click:()->Unit){
+ Card(Modifier.fillMaxWidth().height(139.dp).clickable{click()},colors=CardDefaults.cardColors(containerColor=Color(0xFF20282A)),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
+  Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha=.19f),Color(0xFF20282A)))).padding(13.dp)){
+   Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+    Box(Modifier.size(42.dp).background(accent.copy(alpha=.18f),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Icon(icon,null,tint=accent,modifier=Modifier.size(25.dp))}
+    Text(title,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall)
+    Text(sub,color=Color(0xFFB0BCB8),style=MaterialTheme.typography.labelSmall)
+   }
+   Icon(Icons.Default.ArrowOutward,null,tint=accent,modifier=Modifier.align(Alignment.BottomEnd).size(17.dp))
+  }
  }
 }
 @Composable private fun FCard(content:@Composable ColumnScope.()->Unit){Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp),content=content)}}
