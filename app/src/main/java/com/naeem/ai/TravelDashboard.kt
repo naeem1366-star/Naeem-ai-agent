@@ -250,7 +250,10 @@ fun TravelDashboard(onClose:()->Unit) {
                             OutlinedTextField(memberName,{memberName=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("نام هم‌سفر جدید")})
                             Button(onClick={
                                 val n=memberName.trim()
-                                if(n.isNotBlank() && !selected.members.any{it.equals(n,true)}) persist(trips.map{if(it.id==selected.id)it.copy(members=it.members+n)else it})
+                                if(n.isNotBlank() && !selected.members.any{it.equals(n,true)}) {
+                                    persist(trips.map{if(it.id==selected.id)it.copy(members=it.members+n)else it})
+                                    expenseBeneficiaries = expenseBeneficiaries + n
+                                }
                                 memberName=""
                             },enabled=memberName.isNotBlank(),modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent,contentColor=bg)) { Text("افزودن هم‌سفر") }
                         }
@@ -372,7 +375,7 @@ private fun calculateTripSettlements(trip: LocalTrip): List<String> {
         val debtor = debtors[debtorIndex]
         val creditor = creditors[creditorIndex]
         val amount = minOf(debtor.amount, creditor.amount)
-        if (amount > 0L) result.add(debtor.person + " ← " + creditor.person + " : " + number.format(amount) + " تومان")
+        if (amount > 0L) result.add(debtor.person + " → " + creditor.person + " : " + number.format(amount) + " تومان")
         debtor.amount -= amount
         creditor.amount -= amount
         if (debtor.amount == 0L) debtorIndex++
