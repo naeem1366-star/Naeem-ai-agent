@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -516,8 +517,9 @@ fun NaeemApp(store: SecureConfigStore) {
         }
 
         if (showHub) {
-            Dialog(onDismissRequest = { showHub = false }) {
-                Surface(modifier = Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.94f), shape = RoundedCornerShape(24.dp), color = Ink) {
+            Dialog(onDismissRequest = { showHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+                Surface(modifier = Modifier.fillMaxHeight().width(340.dp), shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp), color = Ink) {
                     FeatureHub(
                         onClose = { showHub = false },
                         onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
@@ -528,6 +530,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
                         onSettings = { showHub = false; showSettings = true }
                     )
+                }
                 }
             }
         }
