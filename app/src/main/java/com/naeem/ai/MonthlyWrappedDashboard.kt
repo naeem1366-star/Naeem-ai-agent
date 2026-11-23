@@ -63,9 +63,9 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
         }
     }
 
-    val bg = Color(0xFF10141B)
-    val panel = Color(0xFF202731)
-    val accent = Color(0xFF9BE5C4)
+    val bg = Color(0xFF0A0C10)
+    val panel = Color(0xFF1B1F25)
+    val accent = Color(0xFFD4D9E0)
     Surface(Modifier.fillMaxSize(), color = bg) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
@@ -76,14 +76,14 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text("NAEEM AI / WRAPPED", color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     Text("روایت ماه تو", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text(monthName, color = Color(0xFFAEB9C2), style = MaterialTheme.typography.bodySmall)
+                    Text(monthName, color = Color(0xFF9AA3AE), style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1D3932)), shape = RoundedCornerShape(24.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF252B34)), shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("یک ماه، چند قدم جلوتر", color = accent, fontWeight = FontWeight.Bold)
                     Text("این گزارش از اطلاعاتی ساخته شده که خودت در Naeem AI ثبت کرده‌ای؛ پیش‌بینی یا قضاوت نیست.", color = Color.White, style = MaterialTheme.typography.bodyMedium)
-                    Text("ماندهٔ مالی ماه", color = Color(0xFFB8C9C2), style = MaterialTheme.typography.labelMedium)
+                    Text("ماندهٔ مالی ماه", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.labelMedium)
                     Text(number.format(income - expenses) + " تومان", color = if (income - expenses >= 0) accent else Color(0xFFFFA49B), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
                 }
             }
@@ -92,19 +92,19 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
                 WrappedMetric("هزینه", number.format(expenses), "تومان", Modifier.weight(1f), Color(0xFFFFA49B), panel)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                WrappedMetric("جلسه تمرین", monthWorkouts.size.toString(), "این ماه", Modifier.weight(1f), Color(0xFFC7B8FF), panel)
-                WrappedMetric("زمان تمرین", monthWorkouts.sumOf { it.minutes }.toString(), "دقیقه", Modifier.weight(1f), Color(0xFF8CCCF1), panel)
+                WrappedMetric("جلسه تمرین", monthWorkouts.size.toString(), "این ماه", Modifier.weight(1f), Color(0xFFBFC6D0), panel)
+                WrappedMetric("زمان تمرین", monthWorkouts.sumOf { it.minutes }.toString(), "دقیقه", Modifier.weight(1f), Color(0xFFBFC6D0), panel)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                WrappedMetric("مسافت", number.format(monthWorkouts.sumOf { it.distance }), "کیلومتر", Modifier.weight(1f), Color(0xFF8CCCF1), panel)
-                WrappedMetric("روز فعال", activeDays.toString(), "ورزشی", Modifier.weight(1f), Color(0xFFC7B8FF), panel)
+                WrappedMetric("مسافت", number.format(monthWorkouts.sumOf { it.distance }), "کیلومتر", Modifier.weight(1f), Color(0xFFBFC6D0), panel)
+                WrappedMetric("روز فعال", activeDays.toString(), "ورزشی", Modifier.weight(1f), Color(0xFFBFC6D0), panel)
             }
             Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("ردپای سفر و حافظه", color = accent, fontWeight = FontWeight.Bold)
                     Text(trips.size.toString() + " سفر ثبت‌شده • " + number.format(travelExpenses) + " تومان هزینه سفر", color = Color.White)
                     Text(memories.size.toString() + " یادداشت در حافظه شخصی", color = Color(0xFFB8C2CC))
-                    Text("بیشترین دسته هزینه: " + (topCategory?.key ?: "هنوز مشخص نیست"), color = Color(0xFFFFD08A))
+                    Text("بیشترین دسته هزینه: " + (topCategory?.key ?: "هنوز مشخص نیست"), color = Color(0xFFBFC6D0))
                 }
             }
             Button(
@@ -131,7 +131,7 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
 private fun WrappedMetric(title: String, value: String, unit: String, modifier: Modifier, tint: Color, panel: Color) {
     Card(modifier, colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(17.dp)) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, color = Color(0xFFAEB9C2), style = MaterialTheme.typography.labelSmall)
+            Text(title, color = Color(0xFF9AA3AE), style = MaterialTheme.typography.labelSmall)
             Text(value, color = tint, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(unit, color = Color(0xFF8995A1), style = MaterialTheme.typography.labelSmall)
         }
