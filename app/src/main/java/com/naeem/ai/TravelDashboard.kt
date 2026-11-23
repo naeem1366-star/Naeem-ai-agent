@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -122,6 +123,7 @@ fun TravelDashboard(onClose:()->Unit) {
     var expenseTitle by remember { mutableStateOf("") }
     var expenseAmount by remember { mutableStateOf("") }
     var payer by remember { mutableStateOf("") }
+    var deleteTarget by remember { mutableStateOf<LocalTrip?>(null) }
     var weatherText by remember { mutableStateOf("") }
     var weatherError by remember { mutableStateOf("") }
     var weatherLoading by remember { mutableStateOf(false) }
@@ -176,7 +178,12 @@ fun TravelDashboard(onClose:()->Unit) {
                                     Text(trip.destination+"  •  "+trip.dates,color=muted,style=MaterialTheme.typography.bodySmall)
                                     Text(trip.members.size.toString()+" نفر  •  "+trip.expenses.size.toString()+" هزینه",color=accent,style=MaterialTheme.typography.labelSmall)
                                 }
-                                Text(number.format(trip.expenses.sumOf{it.amount})+" تومان",color=Color.White,fontWeight=FontWeight.SemiBold)
+                                Column(horizontalAlignment=Alignment.End, verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                    Text(number.format(trip.expenses.sumOf{it.amount})+" تومان",color=Color.White,fontWeight=FontWeight.SemiBold)
+                                    IconButton(onClick={ deleteTarget=trip }, modifier=Modifier.size(38.dp)) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription="حذف سفر", tint=Color(0xFFFF8D86))
+                                    }
+                                }
                             }
                         }
                     }
@@ -279,5 +286,26 @@ fun TravelDashboard(onClose:()->Unit) {
                 }
             }
         }
+    }
+
+    deleteTarget?.let { trip ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("حذف سفر") },
+            text = { Text("سفر «${trip.title}» و تمام هم‌سفرها و هزینه‌های ثبت‌شده آن حذف شود؟ این کار قابل بازگشت نیست.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    persist(trips.filterNot { it.id == trip.id })
+                    if (selectedId == trip.id) selectedId = null
+                    deleteTarget = null
+                }) { Text("حذف", color = Color(0xFFFF8D86)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text("انصراف") }
+            },
+            containerColor = panel,
+            titleContentColor = Color.White,
+            textContentColor = muted
+        )
     }
 }
