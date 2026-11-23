@@ -64,6 +64,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CompletableDeferred
+import com.naeem.ai.core.assistant.*
 import java.io.File
 
 private fun isImageGenerationRequest(text: String): Boolean {
@@ -130,6 +131,19 @@ fun NaeemApp(store: SecureConfigStore) {
     var albumImages by remember { mutableStateOf(dataStore.images()) }
     val ledgerStore = remember { LedgerStore(context) }
     var ledgerEntries by remember { mutableStateOf(ledgerStore.entries()) }
+    val assistantRouter = remember {
+        AssistantActionRouter(
+            ToolRegistry(
+                listOf(
+                    FinanceAssistantTool(ledgerStore),
+                    SportsAssistantTool(context.applicationContext),
+                    TravelAssistantTool(context.applicationContext),
+                    MemoryAssistantTool(dataStore)
+                )
+            )
+        )
+    }
+    var pendingAssistantAction by remember { mutableStateOf<AssistantAction?>(null) }
     var showFinance by remember { mutableStateOf(false) }
     var showHub by remember { mutableStateOf(false) }
     var showHealth by remember { mutableStateOf(false) }
@@ -246,13 +260,43 @@ fun NaeemApp(store: SecureConfigStore) {
     }
 
 
-    fun recordFinanceCommand(question: String): String? {
-        val transaction = LedgerStore.parseVoiceCommand(question) ?: return null
-        ledgerStore.add(transaction.amountToman, transaction.category, transaction.note, transaction.isIncome)
-        ledgerEntries = ledgerStore.entries()
-        val formatted = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(transaction.amountToman)
-        return if (transaction.isIncome) "درآمد $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
-        else "هزینهٔ $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
+    suspend fun routeAssistantIntent(question: String): String? {
+        return when (val resolution = PersianAssistantIntentResolver.resolve(question, TravelStore(context).load())) {
+            AssistantIntentResolution.NoMatch -> null
+            is AssistantIntentResolution.Clarify -> resolution.question
+            is AssistantIntentResolution.Ready -> when (val routed = assistantRouter.route(resolution.action)) {
+                is ActionRouteResult.Completed -> {
+                    ledgerEntries = ledgerStore.entries()
+                    memories = dataStore.memories()
+                    routed.result.message
+                }
+                is ActionRouteResult.ConfirmationRequired -> {
+                    pendingAssistantAction = routed.action
+                    assistantActionPreview(routed.action)
+                }
+                is ActionRouteResult.ClarificationRequired -> routed.question
+                is ActionRouteResult.Rejected -> routed.reason
+                is ActionRouteResult.Failed -> routed.reason
+            }
+        }
+    }
+
+    fun confirmPendingAssistantAction() {
+        val action = pendingAssistantAction ?: return
+        scope.launch {
+            when (val result = assistantRouter.confirm(action.id)) {
+                is ActionRouteResult.Completed -> {
+                    ledgerEntries = ledgerStore.entries()
+                    memories = dataStore.memories()
+                    messages.add(ChatMessage(result.result.message, false))
+                }
+                is ActionRouteResult.ClarificationRequired -> messages.add(ChatMessage(result.question, false))
+                is ActionRouteResult.Rejected -> messages.add(ChatMessage(result.reason, false))
+                is ActionRouteResult.Failed -> messages.add(ChatMessage(result.reason, false))
+                is ActionRouteResult.ConfirmationRequired -> Unit
+            }
+            pendingAssistantAction = null
+        }
     }
 
     val speechLauncher = rememberLauncherForActivityResult(
@@ -270,10 +314,10 @@ fun NaeemApp(store: SecureConfigStore) {
             error = ""
             scope.launch {
                 try {
-                    val financeReply = recordFinanceCommand(question)
-                    if (financeReply != null) {
-                        messages.add(ChatMessage(financeReply, false))
-                        playAnswer(financeReply, continueListening = true)
+                    val actionReply = routeAssistantIntent(question)
+                    if (actionReply != null) {
+                        messages.add(ChatMessage(actionReply, false))
+                        playAnswer(actionReply, continueListening = true)
                         return@launch
                     }
                     val answer = client.send(baseUrl, model, apiKey, question)
@@ -321,10 +365,10 @@ fun NaeemApp(store: SecureConfigStore) {
                     albumImages = dataStore.images()
                     messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))
                 } else {
-                    val financeReply = recordFinanceCommand(finalQuestion)
-                    if (financeReply != null) {
-                        messages.add(ChatMessage(financeReply, false))
-                        if (speakAnswer) playAnswer(financeReply)
+                    val actionReply = routeAssistantIntent(finalQuestion)
+                    if (actionReply != null) {
+                        messages.add(ChatMessage(actionReply, false))
+                        if (speakAnswer) playAnswer(actionReply)
                         return@launch
                     }
                     val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
@@ -519,6 +563,34 @@ fun NaeemApp(store: SecureConfigStore) {
                         Spacer(Modifier.height(6.dp))
                         Text(if (searchMode) "در حال جست‌وجو و بررسی منابع…" else if (imageMode) "در حال ساخت تصویر…" else "دارم فکر می‌کنم…", color = Gold, style = MaterialTheme.typography.labelMedium)
                         LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp), color = Gold, trackColor = Panel)
+                    }
+                }
+                pendingAssistantAction?.let { action ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF343126)),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("تأیید قبل از ثبت", color = Gold, fontWeight = FontWeight.Bold)
+                            Text(assistantActionPreview(action), color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            Text("هیچ تغییری تا زمان تأیید تو در اطلاعات برنامه انجام نمی‌شود.", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                                Button(
+                                    onClick = { confirmPendingAssistantAction() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink),
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("تأیید و ثبت") }
+                                OutlinedButton(
+                                    onClick = {
+                                        assistantRouter.cancel(action.id)
+                                        pendingAssistantAction = null
+                                        messages.add(ChatMessage("عملیات لغو شد و چیزی ثبت نشد.", false))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("لغو", color = Color.White) }
+                            }
+                        }
                     }
                 }
                 LazyColumn(
@@ -764,5 +836,17 @@ private fun ThinkingOrb() {
             center.y + (radius * 0.42f * kotlin.math.sin(orbitAngle)).toFloat()
         ))
         drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.16f), radius * 1.48f, center, style = Stroke(width = 1.dp.toPx()))
+    }
+}
+
+
+private fun assistantActionPreview(action: AssistantAction): String {
+    val p = action.parameters
+    val amount = p["amount"]?.toLongOrNull()?.let { java.text.NumberFormat.getNumberInstance(java.util.Locale("fa", "IR")).format(it) + " تومان" }
+    return when (action.module) {
+        AssistantModule.FINANCE -> (if (action.operation == "add_income") "ثبت درآمد" else "ثبت هزینه") + ": " + (amount ?: "مبلغ نامشخص") + "، دسته: " + p["category"].orEmpty() + "، شرح: " + p["note"].orEmpty()
+        AssistantModule.SPORTS -> "ثبت تمرین «" + p["title"].orEmpty() + "»؛ " + p["minutes"].orEmpty() + " دقیقه، " + p["distance"].orEmpty() + " کیلومتر"
+        AssistantModule.TRAVEL -> "ثبت هزینهٔ سفر: " + (amount ?: "مبلغ نامشخص") + "، عنوان: " + p["title"].orEmpty() + "، پرداخت‌کننده: " + p["payer"].orEmpty()
+        AssistantModule.MEMORY -> "ذخیره در حافظه: «" + p["note"].orEmpty() + "»"
     }
 }
