@@ -84,6 +84,7 @@ data class ChatMessage(val text: String, val fromUser: Boolean, val image: andro
 
 class MainActivity : FragmentActivity() {
     private val unlocked = mutableStateOf(false)
+    private val introCompleted = mutableStateOf(false)
     private var promptShowing = false
     private var requireAuthentication = true
     private lateinit var biometricPrompt: BiometricPrompt
@@ -112,8 +113,15 @@ class MainActivity : FragmentActivity() {
             .setAllowedAuthenticators(authenticators)
             .build()
         val store = SecureConfigStore(this)
+        introCompleted.value = getSharedPreferences("naeem_app_intro", MODE_PRIVATE).getBoolean("completed", false)
         setContent {
-            if (unlocked.value) NaeemApp(store)
+            if (unlocked.value) {
+                if (introCompleted.value) NaeemApp(store)
+                else AppIntegrationIntro(onEnter = {
+                    getSharedPreferences("naeem_app_intro", MODE_PRIVATE).edit().putBoolean("completed", true).apply()
+                    introCompleted.value = true
+                })
+            }
             else AppLockScreen(
                 onUnlock = { authenticate() },
                 message = if (BiometricManager.from(this).canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS)
@@ -170,6 +178,54 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
                     Text("باز کردن برنامه", color = silver)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AppIntegrationIntro(onEnter: () -> Unit) {
+    val silver = Color(0xFFD7DDE5)
+    val muted = Color(0xFF9AA4B0)
+    Surface(Modifier.fillMaxSize(), color = Color(0xFF080A0D)) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(17.dp)
+        ) {
+            Spacer(Modifier.height(8.dp))
+            ThinkingOrb(diameter = 142.dp, active = true)
+            Text("همه‌چیز به هم متصل است", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Naeem AI فقط یک صفحه چت نیست؛ دستیار مرکزی بخش‌های مختلف برنامه است.", color = muted, style = MaterialTheme.typography.bodyMedium)
+            IntroFeatureRow("گفتگو و حافظه", "متن گفتگوها در تاریخچه چت می‌ماند. نکته‌هایی که برای یادآوری انتخاب می‌کنی، در بخش حافظه ذخیره می‌شوند.")
+            IntroFeatureRow("مالی", "وقتی از خرید، درآمد یا هزینه‌ای حرف بزنی، دستیار می‌تواند اطلاعاتش را تشخیص دهد و برای ثبت در دفتر مالی آماده کند.")
+            IntroFeatureRow("ورزش", "تمرین، مدت، مسافت و جزئیات ورزشیِ گفته‌شده در چت می‌توانند به ثبت تمرین در بخش ورزش تبدیل شوند.")
+            IntroFeatureRow("سفر", "هزینه‌ها و اطلاعات سفر را می‌توان از گفتگو به بخش سفر منتقل کرد تا کنار بقیه مخارج و جزئیات سفر باشند.")
+            IntroFeatureRow("بخش‌های دیگر", "هر قابلیت داده‌های مربوط به خودش را در همان بخش نگه می‌دارد؛ قرار نیست همه حرف‌ها بی‌ربط وارد همه قسمت‌ها شوند.")
+            Surface(color = Color(0xFF171C22), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("حریم خصوصی و کنترل ثبت اطلاعات", color = silver, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "دستیار پیام متنی یا متنِ تبدیل‌شده از صدایت را در گفتگو پردازش می‌کند. اما ثبت اطلاعات در بخش‌های مالی، ورزش، سفر یا حافظه خودکار و بی‌اجازه نیست: قبل از هر تغییر، جزئیات ثبت را می‌بینی و باید تأیید کنی. اگر منظورت مبهم باشد، اول از تو سؤال می‌شود. فایل صوتی خام به‌عنوان یادداشت در این بخش‌ها ذخیره نمی‌شود.",
+                        color = muted, style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            Button(onClick = onEnter, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)), shape = RoundedCornerShape(16.dp)) {
+                Text("متوجه شدم؛ ورود به برنامه", fontWeight = FontWeight.Bold)
+            }
+            Text("این معرفی فقط بار اول نمایش داده می‌شود.", color = Color(0xFF727C88), style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(10.dp))
+        }
+    }
+}
+
+@Composable
+private fun IntroFeatureRow(title: String, description: String) {
+    Row(Modifier.fillMaxWidth().background(Color(0xFF14181E), RoundedCornerShape(16.dp)).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+        Box(Modifier.size(7.dp).background(Color(0xFFD7DDE5), CircleShape))
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, color = Color(0xFFE0E5EB), fontWeight = FontWeight.SemiBold)
+            Text(description, color = Color(0xFF9AA4B0), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
