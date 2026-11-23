@@ -52,13 +52,14 @@ private val FM=Color(0xFFA8ADB8)
 fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
-    onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit
+    onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onTrail:()->Unit
 ){
     var query by remember { mutableStateOf("") }
     val carouselState = rememberLazyListState()
     data class Entry(val title:String,val subtitle:String,val detail:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val action:()->Unit,val keywords:String)
     val entries=listOf(
         Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","سفرها، همراهان و مخارج",Icons.Default.Luggage,onTravel,"سفر مسافرت مقصد همسفر هزینه"),
+        Entry("Naeem Trail","ناوبری طبیعت‌گردی","GPS، ثبت مسیر و نقشه آفلاین ایران",Icons.Default.Terrain,onTrail,"طبیعت گردی کوه پیمایی مسیر جی پی اس نقشه آفلاین پیمایش"),
         Entry("باشگاه ورزش","تمرین و آمادگی","تمرین، برنامه و رکوردها",Icons.Default.FitnessCenter,onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
         Entry("نبض بازار","قیمت دارایی‌ها","طلا، ارز و بازارهای جهانی",Icons.Default.TrendingUp,onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
         Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
