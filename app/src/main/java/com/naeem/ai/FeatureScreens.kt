@@ -51,7 +51,7 @@ private val FM=Color(0xFFA8ADB8)
 fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
-    onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit
+    onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit
 ){
     var query by remember { mutableStateOf("") }
     val listState= rememberLazyListState()
@@ -59,6 +59,7 @@ fun FeatureHub(
     val entries=listOf(
         Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","ساخت سفر، افزودن همراهان و ثبت مخارج",Icons.Default.Luggage,Color(0xFF73D2D0),onTravel,"سفر مسافرت مقصد همسفر هزینه"),
         Entry("باشگاه ورزش","تمرین و آمادگی جسمانی","قدرت، عضله‌سازی، هوازی، برنامه و رکوردهای شخصی",Icons.Default.FitnessCenter,Color(0xFFB9A4FF),onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
+        Entry("نبض بازار","قیمت دارایی‌ها","طلا، نقره، ارز، بیت‌کوین و بازارهای جهانی",Icons.Default.TrendingUp,Color(0xFF76D6C5),onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
         Entry("دفتر مالی","مدیریت پول","ثبت درآمد و هزینه و گزارش مالی",Icons.Default.AccountBalanceWallet,Color(0xFFFFC477),onFinance,"مالی پول هزینه درآمد"),
         Entry("سلامت و تغذیه","بدن و انرژی","تغذیه، کالری و فعالیت روزانه",Icons.Default.Favorite,Color(0xFF8CE0B5),onHealth,"سلامت تغذیه کالری غذا"),
         Entry("حافظه هوشمند","یادداشت‌های من","نگهداری نکته‌ها و اطلاعات مهم",Icons.Default.Bookmark,Color(0xFFB9A4FF),onMemory,"حافظه یادداشت"),
