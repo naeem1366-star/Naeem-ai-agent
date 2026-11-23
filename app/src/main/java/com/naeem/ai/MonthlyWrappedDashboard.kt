@@ -68,7 +68,7 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
     val accent = Color(0xFFD4D9E0)
     Surface(Modifier.fillMaxSize(), color = bg) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+            Modifier.fillMaxSize().mountainBackdrop(Color(0xFFB9C5D8)).verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
