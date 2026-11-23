@@ -42,7 +42,7 @@ private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
 
 @Composable
-fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,onDiscover:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,onSettings:()->Unit){
+fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,onSettings:()->Unit){
  var query by remember { mutableStateOf("") }
  Column(Modifier.fillMaxSize().background(FB).padding(horizontal=18.dp, vertical=14.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
@@ -69,9 +69,10 @@ fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()-
    if(query.isBlank()||"آلبوم تصاویر هوش مصنوعی".contains(query,true)) item { HubItem("آلبوم تصاویر","آرشیو خروجی‌های تصویری ساخته‌شده",Icons.Default.Collections,onAlbum) }
    if(query.isBlank()||"سلامت تغذیه BMI کالری غذا وزن".contains(query,true)) item { HubItem("سلامت و تغذیه","BMI، کالری، مواد غذایی، آب و فعالیت",Icons.Default.Favorite,onHealth) }
    if(query.isBlank()||"بازی پانتومیم حدس کلمه تیمی سرگرمی".contains(query,true)) item { HubItem("بازی‌ها و پانتومیم","بازی تیمی، کارت کلمه و امتیازدهی",Icons.Default.SportsEsports,onGames) }
-   if(query.isBlank()||"فیلم سینما موسیقی آهنگ پلیر".contains(query,true)) item { HubItem("سینما و موسیقی","پیشنهاد فیلم، جست‌وجوی آهنگ و پخش",Icons.Default.Movie,onDiscover) }
+   if(query.isBlank()||"فیلم سینما پوستر بازیگر ژانر".contains(query,true)) item { HubItem("سینما","کاتالوگ فیلم‌ها، پوسترها و پیشنهاد تماشا",Icons.Default.Movie,onDiscover) }
+   if(query.isBlank()||"موسیقی آهنگ خواننده پلیر پخش".contains(query,true)) item { HubItem("موسیقی","جست‌وجوی آهنگ، پیش‌نمایش و کشف هنرمند",Icons.Default.MusicNote,onMusic) }
    if(query.isBlank()||"تنظیمات اتصال مدل API".contains(query,true)) item { HubItem("تنظیمات و اتصال","مدیریت سرویس هوش مصنوعی و کلید API",Icons.Default.Settings,onSettings) }
-   if(query.isNotBlank() && listOf("دفتر مالی هزینه درآمد گزارش ماهانه","حافظه هوشمند یادداشت اطلاعات","آلبوم تصاویر هوش مصنوعی","سلامت تغذیه BMI کالری غذا وزن","بازی پانتومیم حدس کلمه تیمی سرگرمی","فیلم سینما موسیقی آهنگ پلیر","تنظیمات اتصال مدل API").none{it.contains(query,true)}) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
+   if(query.isNotBlank() && listOf("دفتر مالی هزینه درآمد گزارش ماهانه","حافظه هوشمند یادداشت اطلاعات","آلبوم تصاویر هوش مصنوعی","سلامت تغذیه BMI کالری غذا وزن","بازی پانتومیم حدس کلمه تیمی سرگرمی","فیلم سینما پوستر بازیگر ژانر","موسیقی آهنگ خواننده پلیر پخش","تنظیمات اتصال مدل API").none{it.contains(query,true)}) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
   }
  }
 }
@@ -232,13 +233,13 @@ private class TrackSearch{
  }catch(_:Exception){}}
  Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF30364A),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){if(bitmap!=null)Image(bitmap!!,contentDescription=title,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Movie,null,tint=Color(0xFFD7B77D),modifier=Modifier.size(32.dp));Text("POSTER",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}}
 }
-@Composable fun DiscoverDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
- val ctx=LocalContext.current;var tab by remember{mutableStateOf("فیلم امروز")};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
+@Composable fun DiscoverDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="فیلم امروز",standalone:Boolean=false){
+ val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
  DisposableEffect(Unit){onDispose{player?.runCatching{stop()};player?.runCatching{release()}}}
  Column(Modifier.fillMaxSize().background(FB).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("اتاق کشف",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("فیلم و موسیقی متناسب با حال‌وهوایت",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
-  Row{listOf("فیلم امروز","جست‌وجوی فیلم","موسیقی").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}}
+  if(!standalone) Row{listOf("فیلم امروز","جست‌وجوی فیلم").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}}
   if(tab=="فیلم امروز"){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=24.dp)){
     item{FCard{Text("انتخاب امروز",color=FG,fontWeight=FontWeight.Bold);Text(today.title,color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text(today.year.toString()+" • "+today.genre+" • "+today.duration+" دقیقه",color=FG);Text(today.summary,color=Color.White);Text("چرا پیشنهادش می‌کنم؟",color=FG,fontWeight=FontWeight.SemiBold);Text(today.reason,color=FM);Button(onClick={onAskAi("درباره فیلم "+today.title+" معرفی کامل بدون اسپویل و تحلیل سبک کارگردانی بنویس.")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("تحلیل بیشتر با Naeem AI")}}}
@@ -263,3 +264,5 @@ private class TrackSearch{
   }
  }
 }
+
+@Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ DiscoverDashboard(onClose,onAskAi,"موسیقی",true) }
