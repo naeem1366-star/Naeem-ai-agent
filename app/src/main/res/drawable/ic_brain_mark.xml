@@ -1,76 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Soft silver aura around the single liquid-metal object. -->
+    <!-- Soft silver halo -->
     <path
-        android:pathData="M54,9 C72,9 91,25 94,44 C98,64 84,88 63,96 C42,104 18,87 13,66 C8,46 22,19 42,11 C46,9 50,9 54,9 Z"
-        android:strokeLineJoin="round"
-        android:strokeWidth="5"
-        android:fillColor="#00000000">
-        <aapt:attr name="android:strokeColor">
-            <gradient
-                android:type="radial"
-                android:centerX="54"
-                android:centerY="53"
-                android:gradientRadius="51">
-                <item android:color="#99DCE7F2" android:offset="0.0"/>
-                <item android:color="#559AAABD" android:offset="0.62"/>
-                <item android:color="#009AAABD" android:offset="1.0"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <path
-        android:pathData="M54,14 C72,12 87,28 89,46 C92,64 79,83 62,91 C44,99 24,84 19,66 C14,49 26,27 42,18 C46,16 50,14 54,14 Z"
-        android:strokeLineJoin="round"
-        android:strokeWidth="2.2"
-        android:fillColor="#00000000"
-        android:strokeColor="#A9C0D5"/>
-
-    <!-- One sculptural, asymmetrical mercury drop; no lettering or extra symbol. -->
-    <path
-        android:pathData="M54,17 C66,16 81,28 83,43 C86,57 77,74 65,84 C55,92 39,88 29,76 C19,64 20,48 29,34 C35,25 44,19 54,17 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="linear"
-                android:startX="27"
-                android:startY="25"
-                android:endX="83"
-                android:endY="87">
-                <item android:color="#F8FBFF" android:offset="0.0"/>
-                <item android:color="#B8C4D0" android:offset="0.22"/>
-                <item android:color="#56616D" android:offset="0.48"/>
-                <item android:color="#E8EDF3" android:offset="0.68"/>
-                <item android:color="#65717F" android:offset="0.84"/>
-                <item android:color="#202832" android:offset="1.0"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Deep flowing reflection gives the surface a liquid, folded appearance. -->
-    <path
-        android:pathData="M55,23 C44,28 39,39 42,49 C45,60 57,63 57,73 C57,79 52,84 47,85 C57,88 67,78 68,67 C69,55 57,51 57,42 C57,34 63,29 70,28 C65,23 60,22 55,23 Z"
-        android:fillColor="#26313D"
-        android:fillAlpha="0.88"/>
-
-    <path
-        android:pathData="M49,25 C39,30 32,41 32,51"
+        android:pathData="M52,18 C41,13 29,20 29,32 C18,35 16,47 22,54 C15,64 21,76 30,78 C33,89 44,92 53,85 M52,37 H68 V27 H79 M52,52 H86 M52,67 H68 V80 H79"
+        android:strokeColor="#559AAABD"
+        android:strokeWidth="11"
         android:strokeLineCap="round"
-        android:strokeWidth="3"
-        android:fillColor="#00000000"
-        android:strokeColor="#F8FBFF"
-        android:strokeAlpha="0.92"/>
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"/>
 
+    <!-- Brain outline and connected circuit branches -->
     <path
-        android:pathData="M70,31 C78,39 80,49 76,58"
+        android:pathData="M52,18 C41,13 29,20 29,32 C18,35 16,47 22,54 C15,64 21,76 30,78 C33,89 44,92 53,85 M52,37 H68 V27 H79 M52,52 H86 M52,67 H68 V80 H79"
+        android:strokeColor="#D7DDE5"
+        android:strokeWidth="4.2"
         android:strokeLineCap="round"
-        android:strokeWidth="2"
-        android:fillColor="#00000000"
-        android:strokeColor="#EAF2FA"
-        android:strokeAlpha="0.75"/>
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"/>
+
+    <!-- Silver circuit terminals -->
+    <path android:pathData="M79,23 A4,4 0,1 0,79.1 23 M86,48 A4,4 0,1 0,86.1 48 M79,80 A4,4 0,1 0,79.1 80"
+        android:fillColor="#E7ECF2"/>
 </vector>
