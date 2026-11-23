@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.Dialog
@@ -364,9 +365,16 @@ fun NaeemApp(store: SecureConfigStore) {
             topBar = {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text("Naeem AI", fontWeight = FontWeight.SemiBold)
-                            Text("دستیار هوشمند شخصی", style = MaterialTheme.typography.labelSmall, color = Muted)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_brain_mark),
+                                contentDescription = "نشان مغز هوشمند Naeem AI",
+                                modifier = Modifier.size(34.dp)
+                            )
+                            Column {
+                                Text("Naeem AI", fontWeight = FontWeight.SemiBold)
+                                Text("دستیار هوشمند شخصی", style = MaterialTheme.typography.labelSmall, color = Muted)
+                            }
                         }
                     },
                     navigationIcon = {
