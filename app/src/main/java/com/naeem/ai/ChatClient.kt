@@ -62,11 +62,7 @@ class ChatClient {
                 .post(body)
                 .build()
 
-            val endpoints = if (root.equals("https://api.gapgpt.app/v1", ignoreCase = true)) {
-                listOf(endpoint, "https://api.gapapi.com/v1/chat/completions")
-            } else listOf(endpoint)
-
-            var lastDnsError: UnknownHostException? = null
+            val endpoints = listOf(endpoint)
             for ((index, target) in endpoints.withIndex()) {
                 try {
                     return@withContext http.newCall(request.newBuilder().url(target).build()).execute().use { response ->
@@ -110,15 +106,14 @@ class ChatClient {
                         }
                     }
                 } catch (e: UnknownHostException) {
-                    lastDnsError = e
                     if (index == endpoints.lastIndex) {
                         throw IllegalStateException(
-                            "نام سرورهای GapGPT از DNS گوشی پیدا نشد. اینترنت و DNS یا فیلترشکن را بررسی کن؛ آدرس جایگزین هم پاسخ نداد.",
+                            "نام سرور GapGPT از DNS گوشی پیدا نشد. اینترنت، DNS یا فیلترشکن را بررسی کن. آدرس تأییدشده سرویس: $root",
                             e
                         )
                     }
                 }
             }
-            throw lastDnsError ?: IllegalStateException("اتصال به سرویس هوش مصنوعی برقرار نشد.")
+            throw IllegalStateException("اتصال به سرویس هوش مصنوعی برقرار نشد.")
         }
 }
