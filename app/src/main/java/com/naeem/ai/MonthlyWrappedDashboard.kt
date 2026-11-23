@@ -66,9 +66,9 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
     val bg = Color(0xFF0A0C10)
     val panel = Color(0xFF1B1F25)
     val accent = Color(0xFFD4D9E0)
-    Surface(Modifier.fillMaxSize(), color = bg) {
+    Surface(Modifier.fillMaxSize(), color = bg.copy(alpha = 0.84f)) {
         Column(
-            Modifier.fillMaxSize().mountainBackdrop(Color(0xFFB9C5D8)).verticalScroll(rememberScrollState()).padding(18.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
