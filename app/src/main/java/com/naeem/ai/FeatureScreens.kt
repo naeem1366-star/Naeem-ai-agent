@@ -213,7 +213,8 @@ fun FeatureHub(
                                 }
                             }
                         }
-                        Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)\n                        IconButton(onClick = { selectedEntry = entry }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "توضیحات " + entry.title, tint = Color(0xFF9BA7B5), modifier = Modifier.size(16.dp)) }
+                        Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)
+                        IconButton(onClick = { selectedEntry = entry }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "توضیحات " + entry.title, tint = Color(0xFF9BA7B5), modifier = Modifier.size(16.dp)) }
                     }
                 }
             }
