@@ -141,6 +141,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showArchivedConversations by remember { mutableStateOf(false) }
     var conversationRefresh by remember { mutableStateOf(0) }
     var renameConversationId by remember { mutableStateOf<String?>(null) }
+    var deleteConversationTarget by remember { mutableStateOf<StoredConversation?>(null) }
     var renameConversationDraft by remember { mutableStateOf("") }
     val dataStore = remember { AssistantDataStore(context) }
     val deepSearchClient = remember { DeepSearchClient() }
@@ -897,7 +898,6 @@ fun NaeemApp(store: SecureConfigStore) {
                                                         pendingAssistantAction = null
                                                     }) { Text("بازکردن", color = Gold) }
                                                     TextButton(onClick = {
-                                                        conversationStore.rename(thread.id, thread.title)
                                                         renameConversationId = thread.id
                                                         renameConversationDraft = thread.title
                                                     }) { Text("تغییر نام", color = Color.White) }
@@ -912,11 +912,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                                         conversationRefresh++
                                                     }) { Text("بازگردانی", color = Gold) }
                                                 }
-                                                TextButton(onClick = {
-                                                    conversationStore.delete(thread.id)
-                                                    if (thread.id == activeConversationId) activeConversationId = conversationStore.activeId()
-                                                    conversationRefresh++
-                                                }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                                                TextButton(onClick = { deleteConversationTarget = thread }) { Text("حذف", color = Color(0xFFFF8B80)) }
                                             }
                                         }
                                     }
@@ -926,6 +922,24 @@ fun NaeemApp(store: SecureConfigStore) {
                     }
                 },
                 confirmButton = { TextButton(onClick = { showConversationManager = false }) { Text("بستن", color = Gold) } }
+            )
+        }
+
+        deleteConversationTarget?.let { target ->
+            AlertDialog(
+                onDismissRequest = { deleteConversationTarget = null },
+                containerColor = Panel,
+                title = { Text("حذف گفت‌وگو", color = Gold) },
+                text = { Text("گفت‌وگوی «" + target.title + "» و تاریخچهٔ آن برای همیشه حذف شود؟", color = Color.White) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        conversationStore.delete(target.id)
+                        if (target.id == activeConversationId) activeConversationId = conversationStore.activeId()
+                        conversationRefresh++
+                        deleteConversationTarget = null
+                    }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                },
+                dismissButton = { TextButton(onClick = { deleteConversationTarget = null }) { Text("انصراف", color = Muted) } }
             )
         }
 
