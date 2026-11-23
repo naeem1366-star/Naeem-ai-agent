@@ -58,6 +58,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -125,7 +127,8 @@ fun NaeemApp(store: SecureConfigStore) {
     var error by remember { mutableStateOf("") }
     val conversationStore = remember { ConversationStore(context) }
     var activeConversationId by remember { mutableStateOf(conversationStore.activeId()) }
-    val messages = remember(activeConversationId) {
+    var conversationReload by remember { mutableStateOf(0) }
+    val messages = remember(activeConversationId, conversationReload) {
         mutableStateListOf<ChatMessage>().apply {
             addAll(conversationStore.load(activeConversationId).map { ChatMessage(it.text, it.fromUser) })
         }
@@ -171,6 +174,57 @@ fun NaeemApp(store: SecureConfigStore) {
     var speechPaused by remember { mutableStateOf(false) }
     var speechJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
+    val backupManager = remember {
+        NaeemBackupManager(ledgerStore, SportStore(context), TravelStore(context), dataStore, conversationStore)
+    }
+    var backupPassphrase by remember { mutableStateOf("") }
+    var backupStatus by remember { mutableStateOf("") }
+    val backupExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            val password = backupPassphrase
+            scope.launch {
+                try {
+                    val json = withContext(Dispatchers.IO) { backupManager.exportEncrypted(password) }
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                            ?: throw IllegalStateException("ساخت فایل پشتیبان ممکن نشد.")
+                    }
+                    backupStatus = "پشتیبان رمزگذاری‌شده با موفقیت ذخیره شد."
+                } catch (e: Exception) {
+                    backupStatus = e.message ?: "ساخت پشتیبان ناموفق بود."
+                }
+            }
+        }
+    }
+    val backupImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val password = backupPassphrase
+            scope.launch {
+                try {
+                    val json = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                            ?: throw IllegalStateException("خواندن فایل پشتیبان ممکن نشد.")
+                    }
+                    val summary = withContext(Dispatchers.IO) { backupManager.restoreEncrypted(json, password) }
+                    ledgerEntries = ledgerStore.entries()
+                    memories = dataStore.memories()
+                    albumImages = dataStore.images()
+                    activeConversationId = conversationStore.activeId()
+                    conversationReload++
+                    pendingAssistantAction = null
+                    backupStatus = "بازیابی انجام شد: " + summary.financeEntries + " تراکنش، " +
+                        summary.workouts + " تمرین، " + summary.trips + " سفر، " + summary.memories +
+                        " یادداشت، " + summary.conversations + " گفتگو و " + summary.images + " تصویر."
+                } catch (e: Exception) {
+                    backupStatus = e.message ?: "بازیابی پشتیبان ناموفق بود."
+                }
+            }
+        }
+    }
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
     val imageClient = remember { ImageGenerationClient() }
@@ -912,6 +966,30 @@ fun NaeemApp(store: SecureConfigStore) {
                         Text("کلید API")
                         OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
                         Text("کلید به‌صورت رمزگذاری‌شده روی همین گوشی ذخیره می‌شود.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                        Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
+                        Text("پشتیبان‌گیری و بازیابی", color = Gold, fontWeight = FontWeight.SemiBold)
+                        Text("از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = backupPassphrase,
+                            onValueChange = { backupPassphrase = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("رمز پشتیبان (حداقل ۸ نویسه)") },
+                            visualTransformation = PasswordVisualTransformation()
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { backupExportLauncher.launch("NaeemAI-Backup.json") },
+                                enabled = backupPassphrase.length >= 8,
+                                modifier = Modifier.weight(1f)
+                            ) { Text("خروجی گرفتن", color = Gold) }
+                            OutlinedButton(
+                                onClick = { backupImportLauncher.launch(arrayOf("application/json", "text/json")) },
+                                enabled = backupPassphrase.length >= 8,
+                                modifier = Modifier.weight(1f)
+                            ) { Text("بازیابی", color = Gold) }
+                        }
+                        if (backupStatus.isNotBlank()) Text(backupStatus, color = if (backupStatus.contains("موفق")) Color(0xFF9BD6B0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 confirmButton = {
