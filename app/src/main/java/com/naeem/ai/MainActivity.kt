@@ -138,6 +138,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showMusic by remember { mutableStateOf(false) }
     var showTravel by remember { mutableStateOf(false) }
     var showSports by remember { mutableStateOf(false) }
+    var showMarkets by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
     var showAlbum by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
@@ -576,7 +577,8 @@ fun NaeemApp(store: SecureConfigStore) {
                         onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
                         onSettings = { showHub = false; showSettings = true },
                         onTravel = { showHub = false; showTravel = true },
-                        onSport = { showHub = false; showSports = true }
+                        onSport = { showHub = false; showSports = true },
+                        onMarkets = { showHub = false; showMarkets = true }
                     )
                 }
                 }
@@ -586,6 +588,13 @@ fun NaeemApp(store: SecureConfigStore) {
             Dialog(onDismissRequest = { showTravel = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     TravelDashboard(onClose = { showTravel = false })
+                }
+            }
+        }
+        if (showMarkets) {
+            Dialog(onDismissRequest = { showMarkets = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    MarketsDashboard(onClose = { showMarkets = false })
                 }
             }
         }
