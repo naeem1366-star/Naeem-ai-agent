@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -86,6 +87,22 @@ private val Ink = Color(0xFF101114)
 private val Panel = Color(0xFF1B1D22)
 private val Gold = Color(0xFFD1B078)
 private val Muted = Color(0xFF9A9DA6)
+
+
+@Composable
+private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(modifier = modifier.height(112.dp), onClick = onClick, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF202329)), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.19f), Color(0xFF202329)))).padding(13.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Box(Modifier.size(36.dp).background(accent.copy(alpha = 0.18f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
+                }
+                Text(title, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(subtitle, color = Color(0xFFADB3BA), style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -439,11 +456,46 @@ fun NaeemApp(store: SecureConfigStore) {
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
                 if (messages.isEmpty()) {
-                    Spacer(Modifier.height(34.dp))
-                    Text("سلام نعیم 👋", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Gold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("من آماده‌ام. بنویس یا برای مکالمه صوتی، میکروفون رو بزن و صحبت کن. بعد از هر پاسخ دوباره گوش می‌دم.", color = Muted, style = MaterialTheme.typography.bodyLarge)
-                    Spacer(Modifier.height(22.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2428)), elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)) {
+                        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF263F3C), Color(0xFF202B37), Color(0xFF252331)))).padding(20.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("YOUR PERSONAL AI STUDIO", color = Color(0xFF9BE5C4), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(9.dp))
+                                        Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+                                        Text("امروز چی توی ذهنته؟", color = Color(0xFFC4D1CD), style = MaterialTheme.typography.titleMedium)
+                                    }
+                                    Box(Modifier.size(94.dp).background(Brush.radialGradient(listOf(Color(0xFF7DE0B1), Color(0xFF285E50), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.size(66.dp).background(Color(0xFF24483F), CircleShape), contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFB5F4D5), modifier = Modifier.size(34.dp))
+                                        }
+                                    }
+                                }
+                                Text("دستیار هوشمند و فضای شخصی تو؛ برای فکر کردن، ساختن و مدیریت روزمره.", color = Color(0xFFD5DFDC), style = MaterialTheme.typography.bodyMedium)
+                                Button(onClick = { showHub = true }, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9BE5C4), contentColor = Color(0xFF10251D)), shape = RoundedCornerShape(18.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)) {
+                                    Icon(Icons.Default.GridView, null); Spacer(Modifier.width(9.dp)); Text("ورود به فضای برنامه‌ها", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Icon(Icons.Default.ArrowForward, null)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("دسترسی سریع", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                        Text("YOUR APPS", color = Color(0xFF82918E), style = MaterialTheme.typography.labelSmall)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HomeShortcut("سلامت", "تغذیه و تندرستی", Icons.Default.Favorite, Color(0xFF77D7A8), Modifier.weight(1f)) { showHealth = true }
+                        HomeShortcut("بازی‌ها", "چالش و سرگرمی", Icons.Default.SportsEsports, Color(0xFF9D9BFF), Modifier.weight(1f)) { showGames = true }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HomeShortcut("سینما", "فیلم و پوستر", Icons.Default.Movie, Color(0xFFFFBD78), Modifier.weight(1f)) { showDiscover = true }
+                        HomeShortcut("موسیقی", "کشف و شنیدن", Icons.Default.MusicNote, Color(0xFF80C9F0), Modifier.weight(1f)) { showMusic = true }
+                    }
+                    Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SuggestionChip(onClick = { prompt = "امروز چه کاری انجام بدم؟" }, label = { Text("برنامه‌ریزی روز") })
                         SuggestionChip(onClick = { prompt = "یک ایده خلاقانه بهم بده" }, label = { Text("ایده‌پردازی") })
