@@ -87,6 +87,7 @@ private class HStore(c:Context){
  var water by remember{mutableIntStateOf(store.get("water","0").toIntOrNull()?:0)}
  var name by remember{mutableStateOf("")};var kcal by remember{mutableStateOf("")};var logs by remember{mutableStateOf(store.logs())}
  var foodSearch by remember{mutableStateOf("")};var grams by remember{mutableStateOf("100")};var selectedFood by remember{mutableStateOf<FoodInfo?>(null)};var meal by remember{mutableStateOf("ناهار")}
+ var walkKm by remember{mutableStateOf("2")};var walkMinutes by remember{mutableStateOf("30")}
  val h=height.toDoubleOrNull()?.div(100.0);val w=weight.toDoubleOrNull();val years=age.toIntOrNull()
  val bmi=if(h!=null&&h>0&&w!=null&&w>0)w/(h*h)else null
  val bmr=if(h!=null&&h>0&&w!=null&&w>0&&years!=null&&years>0)10*w+6.25*(h*100)-5*years+(if(sex=="مرد")5 else -161) else null
@@ -131,8 +132,16 @@ private class HStore(c:Context){
    item{FCard{Text("ثبت خوراکی و کالری",color=FG,fontWeight=FontWeight.Bold);FInput("نام غذا یا وعده",name,{name=it},Modifier.fillMaxWidth());FInput("کالری kcal",kcal,{kcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth());Button(onClick={val c=kcal.toIntOrNull()?:0;if(name.isNotBlank()&&c>0){store.add(HLog(name,c,"غذا",System.currentTimeMillis()));logs=store.logs();name="";kcal=""}},enabled=name.isNotBlank()&&kcal.toIntOrNull()!=null,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت وعده")};Text("برای خوراکی‌هایی که در بانک نیستند، کالری را می‌توانی دستی ثبت کنی.",color=FM,style=MaterialTheme.typography.labelSmall)}}
    item{FCard{Text("آب روزانه",color=FG,fontWeight=FontWeight.Bold);Text(water.toString()+" از ۸ لیوان",color=Color.White,style=MaterialTheme.typography.titleLarge);LinearProgressIndicator(progress={(water/8f).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth(),color=FG,trackColor=FB);Row{OutlinedButton(onClick={water=(water-1).coerceAtLeast(0);store.put("water",water.toString())}){Text("−۱")};Button(onClick={water++;store.put("water",water.toString())},colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("+ یک لیوان")}}}}
    item{FCard{
-    var actName by remember{mutableStateOf("پیاده‌روی")};var actKcal by remember{mutableStateOf("")}
-    Text("فعالیت و پیاده‌روی",color=FG,fontWeight=FontWeight.Bold);FInput("نوع فعالیت",actName,{actName=it},Modifier.fillMaxWidth());FInput("کالری سوزانده‌شده",actKcal,{actKcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth())
+    var actName by remember{mutableStateOf("تمرین ورزشی")};var actKcal by remember{mutableStateOf("")}
+    val walkEstimate=((walkKm.toDoubleOrNull()?:0.0)*(w?:0.0)*0.75).toInt()
+    Text("فعالیت و پیاده‌روی",color=FG,fontWeight=FontWeight.Bold)
+    Text("برآورد پیاده‌روی بر اساس مسافت و وزن ثبت‌شده",color=FM,style=MaterialTheme.typography.bodySmall)
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FInput("مسافت km",walkKm,{walkKm=it.filter{c->c.isDigit()||c=='.'}},Modifier.weight(1f));FInput("مدت دقیقه",walkMinutes,{walkMinutes=it.filter(Char::isDigit)},Modifier.weight(1f))}
+    Text("کالری تخمینی پیاده‌روی: "+walkEstimate+" kcal",color=FG,fontWeight=FontWeight.Bold)
+    Button(onClick={if(walkEstimate>0){store.add(HLog("پیاده‌روی "+walkKm+" کیلومتر • "+walkMinutes+" دقیقه",walkEstimate,"فعالیت",System.currentTimeMillis()));logs=store.logs()}},enabled=walkEstimate>0,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت پیاده‌روی")}
+    Divider(color=FB)
+    Text("فعالیت دیگر",color=FG,fontWeight=FontWeight.SemiBold)
+    FInput("نوع فعالیت",actName,{actName=it},Modifier.fillMaxWidth());FInput("کالری سوزانده‌شده",actKcal,{actKcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth())
     Button(onClick={val c=actKcal.toIntOrNull()?:0;if(c>0){store.add(HLog(actName,c,"فعالیت",System.currentTimeMillis()));logs=store.logs();actKcal=""}},enabled=actKcal.toIntOrNull()!=null,colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت فعالیت")}
    }}
    item{FCard{Text("پیشنهاد تغذیه‌ای",color=FG,fontWeight=FontWeight.Bold);val tips=when(goal){"کاهش وزن"->listOf("در هر وعده پروتئین و سبزیجات داشته باش.","نوشیدنی شیرین را با آب جایگزین کن.","کاهش کالری را تدریجی نگه دار.");"افزایش وزن"->listOf("از میان‌وعده‌های مغذی استفاده کن.","پروتئین را در وعده‌ها پخش کن.","افزایش انرژی را تدریجی انجام بده.");else->listOf("وعده‌ها را متعادل و متنوع نگه دار.","در طول روز آب کافی بنوش.","پروتئین، سبزیجات و غلات کامل را ترکیب کن.")};tips.forEach{Text("• "+it,color=Color.White,style=MaterialTheme.typography.bodySmall)}}}
