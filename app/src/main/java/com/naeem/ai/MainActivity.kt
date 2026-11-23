@@ -8,6 +8,9 @@ import java.io.ByteArrayOutputStream
 import android.os.Bundle
 import android.media.MediaPlayer
 import androidx.activity.ComponentActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -80,11 +83,94 @@ private fun isImageGenerationRequest(text: String): Boolean {
 data class ChatMessage(val text: String, val fromUser: Boolean, val image: androidx.compose.ui.graphics.ImageBitmap? = null)
 
 class MainActivity : ComponentActivity() {
+    private val unlocked = mutableStateOf(false)
+    private var promptShowing = false
+    private var requireAuthentication = true
+    private lateinit var biometricPrompt: BiometricPrompt
+    private lateinit var promptInfo: BiometricPrompt.PromptInfo
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        biometricPrompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                promptShowing = false
+                requireAuthentication = false
+                unlocked.value = true
+            }
+            override fun onAuthenticationFailed() { }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                promptShowing = false
+                unlocked.value = false
+                requireAuthentication = true
+            }
+        })
+        promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("قفل Naeem AI")
+            .setSubtitle("برای ورود اثر انگشت یا قفل صفحه گوشی را تأیید کن")
+            .setAllowedAuthenticators(authenticators)
+            .build()
         val store = SecureConfigStore(this)
-        setContent { NaeemApp(store) }
+        setContent {
+            if (unlocked.value) NaeemApp(store)
+            else AppLockScreen(
+                onUnlock = { authenticate() },
+                message = if (BiometricManager.from(this).canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS)
+                    "برای ورود، هویتت را تأیید کن"
+                else "برای استفاده از قفل، ابتدا اثر انگشت یا قفل صفحه را در تنظیمات گوشی فعال کن."
+            )
+        }
+        window.decorView.post { authenticate() }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (unlocked.value) {
+            unlocked.value = false
+            requireAuthentication = true
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (::biometricPrompt.isInitialized && requireAuthentication && !promptShowing && !unlocked.value) {
+            window.decorView.post { authenticate() }
+        }
+    }
+
+    private fun authenticate() {
+        if (isFinishing || isDestroyed || promptShowing || unlocked.value) return
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        if (BiometricManager.from(this).canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            requireAuthentication = true
+            return
+        }
+        promptShowing = true
+        try { biometricPrompt.authenticate(promptInfo) }
+        catch (_: Exception) { promptShowing = false }
+    }
+}
+
+@Composable
+private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
+    val silver = Color(0xFFD5D9DE)
+    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF08090B)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Box(Modifier.size(112.dp).background(Color(0xFF202329), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Fingerprint, contentDescription = "اثر انگشت", tint = silver, modifier = Modifier.size(64.dp))
+                }
+                Text("Naeem AI", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text("فضای شخصی تو", color = Color(0xFF9299A3), style = MaterialTheme.typography.bodyMedium)
+                Text(message, color = Color(0xFF9299A3), style = MaterialTheme.typography.bodySmall)
+                Button(onClick = onUnlock, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF343A42))) {
+                    Icon(Icons.Default.Lock, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("باز کردن برنامه", color = silver)
+                }
+            }
+        }
     }
 }
 
