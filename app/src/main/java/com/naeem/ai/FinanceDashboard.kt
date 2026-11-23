@@ -1,6 +1,5 @@
 package com.naeem.ai
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,7 +40,7 @@ fun FinanceDashboard(entries: List<LedgerEntry>, onAdd: (Long, String, String, B
     val number = remember { NumberFormat.getNumberInstance(Locale.US) }
     val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale("fa", "IR")) }
 
-    Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10)).mountainBackdrop(Color(0xFFD8BD83)).padding(18.dp)) {
+    Column(Modifier.fillMaxSize().padding(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text("دفتر مالی نعیم", style = MaterialTheme.typography.headlineSmall, color = FinanceGold, fontWeight = FontWeight.Bold)
