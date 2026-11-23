@@ -151,7 +151,7 @@ fun TrailNavigationDashboard(onClose: () -> Unit) {
         meters / 1000f
     }
 
-    Column(Modifier.fillMaxSize().background(TrailBg).mountainBackdrop(Color(0xFFA8C99A)).padding(16.dp)) {
+    Column(Modifier.fillMaxSize().background(TrailBg.copy(alpha = 0.84f)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("NAEEM TRAIL", color = TrailMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
