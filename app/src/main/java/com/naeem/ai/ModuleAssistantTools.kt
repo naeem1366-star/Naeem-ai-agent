@@ -120,7 +120,7 @@ object PersianAssistantIntentResolver {
     }
 
     private fun hasAmbiguousToman(text: String): Boolean {
-        val match = Regex("""(\\d+)\\s*تومن""").find(text) ?: return false
+        val match = Regex("""(\d+)\s*تومن""").find(text) ?: return false
         return (match.groupValues[1].toLongOrNull() ?: 0L) in 1L..999L
     }
 
