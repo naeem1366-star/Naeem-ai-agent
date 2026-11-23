@@ -174,6 +174,21 @@ fun FeatureHub(
             ) {
                 items(filtered.size) { index ->
                     val entry = filtered[index]
+                    val accent = when (entry.title) {
+                        "سلامت و تغذیه" -> Color(0xFF9AD6B0)
+                        "باشگاه ورزش" -> Color(0xFF91BFE8)
+                        "دفتر مالی", "نبض بازار" -> Color(0xFFD8BD83)
+                        "سفر و هم‌سفرها", "Naeem Trail" -> Color(0xFFA8C99A)
+                        "موسیقی" -> Color(0xFFC2A8E8)
+                        "اخبار مهم" -> Color(0xFF8DBBD0)
+                        "سینما" -> Color(0xFFD9A6B8)
+                        "حافظه هوشمند" -> Color(0xFFB5B7D9)
+                        "آلبوم تصاویر" -> Color(0xFFD5B49A)
+                        "بازی‌ها" -> Color(0xFFE0A68E)
+                        "روایت ماه" -> Color(0xFFB9C5D8)
+                        "تحلیل اینستاگرام" -> Color(0xFFE0A0B8)
+                        else -> Color(0xFFB8C2CE)
+                    }
                     Column(
                         Modifier.fillMaxWidth().clickable(onClick = { selectedEntry = entry }),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -192,13 +207,13 @@ fun FeatureHub(
                                 modifier = Modifier.fillMaxSize().offset(y = (-1).dp),
                                 shape = RoundedCornerShape(22.dp),
                                 color = Color(0xFF171C23),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF596473)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.42f)),
                                 shadowElevation = 12.dp
                             ) {
                                 Box(
                                     Modifier.fillMaxSize().background(
                                         ComposeBrush.linearGradient(
-                                            listOf(Color(0xFF414B58), Color(0xFF202731), Color(0xFF0B0E13))
+                                            listOf(accent.copy(alpha = 0.24f), Color(0xFF202731), Color(0xFF0B0E13))
                                         )
                                     ),
                                     contentAlignment = Alignment.Center
@@ -206,12 +221,12 @@ fun FeatureHub(
                                     Box(
                                         Modifier.align(Alignment.TopCenter).padding(top = 1.dp)
                                             .width(42.dp).height(1.dp)
-                                            .background(Color(0xFFB9C3CF).copy(alpha = 0.55f), RoundedCornerShape(1.dp))
+                                            .background(accent.copy(alpha = 0.72f), RoundedCornerShape(1.dp))
                                     )
                                     Icon(
                                         entry.icon,
                                         null,
-                                        tint = Color(0xFFE0E6EE),
+                                        tint = accent,
                                         modifier = Modifier.size(39.dp)
                                     )
                                 }
@@ -253,8 +268,8 @@ private class HStore(c:Context){
 }
 
 private val HBg=Color(0xFF0A0C10)
-private val HPanel=Color(0xFF1B1F25)
-private val HMint=Color(0xFFD4D9E0)
+private val HPanel=Color(0xFF1B2421)
+private val HMint=Color(0xFF9AD6B0)
 private val HMuted=Color(0xFF9AA3AE)
 @Composable private fun HCard(content:@Composable ColumnScope.()->Unit){
  Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
@@ -293,21 +308,21 @@ private val HMuted=Color(0xFF9AA3AE)
  val nf=remember{NumberFormat.getNumberInstance(Locale.US)}
  Column(Modifier.fillMaxSize().background(HBg).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
-   Box(Modifier.size(48.dp).background(Color(0xFF242A32),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
+   Box(Modifier.size(48.dp).background(Color(0xFF24372F),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
    Spacer(Modifier.width(11.dp))
    Column(Modifier.weight(1f)){Text("سلامت و تغذیه",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("داشبورد بدن و انرژی",color=HMuted,style=MaterialTheme.typography.bodySmall)}
    IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=HMint)}
   }
   Card(colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()){
-   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF252B34),Color(0xFF1B2027),Color(0xFF20252D)))).padding(17.dp)){
+   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF293C34),Color(0xFF1B2823),Color(0xFF202B27)))).padding(17.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){
      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
-      Text("HEALTH SPACE",color=Color(0xFFC9D0D9),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+      Text("HEALTH SPACE",color=HMint,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
       Text("قدم‌به‌قدم، سالم‌تر",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
       Text("غذا، فعالیت، چرخه قاعدگی و داروها را در یک پرونده دنبال کن؛ برنامه هفتگی و بیدارباش هوشمند هم در مسیر توسعه است.",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)
      }
-     Box(Modifier.size(68.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFFD4D9E0),Color(0xFF59616C),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
-      Icon(Icons.Default.HealthAndSafety,null,tint=Color(0xFFE7ECF2),modifier=Modifier.size(37.dp))
+     Box(Modifier.size(68.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFF9AD6B0),Color(0xFF426B56),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
+      Icon(Icons.Default.HealthAndSafety,null,tint=Color(0xFFDDF5E5),modifier=Modifier.size(37.dp))
      }
     }
    }
