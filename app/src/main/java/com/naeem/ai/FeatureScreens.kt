@@ -43,7 +43,7 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val FG=Color(0xFFD7B77D)
+private val FG=Color(0xFFD4D9E0)
 private val FB=Color(0xFF111318)
 private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
@@ -73,15 +73,15 @@ fun FeatureHub(
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت",Icons.Default.Settings,onSettings,"تنظیمات اتصال")
     )
     val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
-    val gold=Color(0xFFD1B078)
-    val champagne=Color(0xFFE8D2A8)
-    val hubBg=Color(0xFF101114)
+    val gold=Color(0xFFD4D9E0)
+    val champagne=Color(0xFFE8ECF0)
+    val hubBg=Color(0xFF090B0E)
     Column(Modifier.fillMaxSize().background(hubBg).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("برای دیدن قابلیت‌ها، افقی ورق بزن.",color=Color(0xFFAAA6A0),style=MaterialTheme.typography.bodySmall)
+                Text("برای دیدن قابلیت‌ها، افقی ورق بزن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
         }
@@ -91,8 +91,8 @@ fun FeatureHub(
             shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},
             leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
             colors=OutlinedTextFieldDefaults.colors(
-                focusedBorderColor=gold,unfocusedBorderColor=Color(0xFF45413A),
-                focusedContainerColor=Color(0xFF191A1E),unfocusedContainerColor=Color(0xFF191A1E),
+                focusedBorderColor=gold,unfocusedBorderColor=Color(0xFF454D58),
+                focusedContainerColor=Color(0xFF191D22),unfocusedContainerColor=Color(0xFF191D22),
                 cursorColor=gold
             )
         )
@@ -100,11 +100,11 @@ fun FeatureHub(
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
             Text(if(query.isBlank()) "گالری قابلیت‌ها" else "نتایج جست‌وجو",color=champagne,fontWeight=FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
-            Text(if(query.isBlank()) "←  کشیدن برای مرور  →" else "${filtered.size} مورد",color=Color(0xFF8E8A83),style=MaterialTheme.typography.labelSmall)
+            Text(if(query.isBlank()) "←  کشیدن برای مرور  →" else "${filtered.size} مورد",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
         }
         Spacer(Modifier.height(10.dp))
         if(filtered.isEmpty()){
-            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAA6A0))}
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
         } else {
             LazyRow(
                 state=carouselState,
@@ -169,7 +169,7 @@ fun FeatureHub(
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
                 Icon(Icons.Default.Swipe,null,tint=gold.copy(alpha=.7f),modifier=Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("کارت‌ها را به چپ و راست بکش",color=Color(0xFF8E8A83),style=MaterialTheme.typography.labelSmall)
+                Text("کارت‌ها را به چپ و راست بکش",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -406,7 +406,7 @@ private class TrackSearch{
   val url=withContext(Dispatchers.IO){val q=URLEncoder.encode(title,"UTF-8");val req=Request.Builder().url("https://itunes.apple.com/search?term="+q+"&entity=movie&limit=1").build();OkHttpClient().newCall(req).execute().use{res->JSONObject(res.body?.string().orEmpty()).optJSONArray("results")?.optJSONObject(0)?.optString("artworkUrl100")?.replace("100x100","600x900").orEmpty()}}
   if(url.isNotBlank()){val bytes=withContext(Dispatchers.IO){OkHttpClient().newCall(Request.Builder().url(url).build()).execute().use{it.body?.bytes()}};if(bytes!=null)bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.size)?.asImageBitmap()}
  }catch(_:Exception){}}
- Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF30364A),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){if(bitmap!=null)Image(bitmap!!,contentDescription=title,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Movie,null,tint=Color(0xFFD7B77D),modifier=Modifier.size(32.dp));Text("POSTER",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}}
+ Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF30364A),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){if(bitmap!=null)Image(bitmap!!,contentDescription=title,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Movie,null,tint=Color(0xFFD4D9E0),modifier=Modifier.size(32.dp));Text("POSTER",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}}
 }
 @Composable fun DiscoverDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="فیلم امروز",standalone:Boolean=false){
  val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
