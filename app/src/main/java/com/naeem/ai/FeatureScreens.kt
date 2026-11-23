@@ -109,7 +109,9 @@ private class HStore(c:Context){
     FMetric("BMI",bmi?.let{String.format(Locale.US,"%.1f",it)}?:"—",bmi?.let{when{it<18.5->"کمبود وزن";it<25->"محدوده معمول";it<30->"اضافه‌وزن";else->"بالا"}}?:"قد و وزن را وارد کن",Modifier.weight(1f))
     FMetric("کالری پایه",bmr?.toInt()?.toString()?:"—","BMR روزانه",Modifier.weight(1f))
    };Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=7.dp)){FMetric("هدف کالری",target?.toString()?:"—","برآورد روزانه",Modifier.weight(1f));FMetric("مصرف امروز",eaten.toString(),"فعالیت: "+burned+" kcal",Modifier.weight(1f))}
-    if(bmi!=null)Text("BMI فقط شاخص غربالگری است، نه تشخیص پزشکی.",color=FM,style=MaterialTheme.typography.labelSmall)
+    val pToday=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.protein};val cToday=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.carbs};val fToday=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.fat}
+   Text("درشت‌مغذی‌های امروز  •  پروتئین "+String.format(Locale.US,"%.1f",pToday)+"g  •  کربوهیدرات "+String.format(Locale.US,"%.1f",cToday)+"g  •  چربی "+String.format(Locale.US,"%.1f",fToday)+"g",color=FG,style=MaterialTheme.typography.labelSmall)
+   if(bmi!=null)Text("BMI فقط شاخص غربالگری است، نه تشخیص پزشکی.",color=FM,style=MaterialTheme.typography.labelSmall)
    }
    item{FCard{
     Text("بانک غذایی؛ محاسبه بر اساس گرم",color=FG,fontWeight=FontWeight.Bold)
