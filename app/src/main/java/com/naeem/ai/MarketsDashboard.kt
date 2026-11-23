@@ -85,8 +85,8 @@ fun MarketsDashboard(onClose: () -> Unit) {
                         .header("Accept", "application/json")
                         .build()
                     OkHttpClient().newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) error("پاسخ سرور: ${response.code}")
-                        response.body?.string() ?: error("پاسخ خالی از سرور")
+                        if (!response.isSuccessful) kotlin.error("پاسخ سرور: ${response.code}")
+                        response.body?.string() ?: kotlin.error("پاسخ خالی از سرور")
                     }
                 }
                 val parsed = parsePayload(result)
