@@ -9,6 +9,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import java.net.UnknownHostException
 
 class ChatClient {
     private val http = OkHttpClient.Builder()
@@ -61,45 +62,63 @@ class ChatClient {
                 .post(body)
                 .build()
 
-            http.newCall(request).execute().use { response ->
-                val responseText = response.body?.string().orEmpty()
-                if (!response.isSuccessful) {
-                    val parsed = runCatching {
-                        val json = JSONObject(responseText)
-                        val error = json.opt("error")
-                        when (error) {
-                            is JSONObject -> error.optString("message").ifBlank { error.toString() }
-                            is String -> error
-                            else -> json.optString("message").ifBlank { json.toString() }
-                        }
-                    }.getOrNull()
-                    val detail = parsed?.takeIf { it.isNotBlank() }
-                        ?: responseText.take(700).ifBlank { response.message }
-                    val hint = when (response.code) {
-                        401 -> "\nراهنما: کلید باید از پنل GapGPT باشد؛ آن را بدون Bearer وارد کنید و اعتبار/وضعیت کلید را در پنل بررسی کنید."
-                        403 -> "\nراهنما: دسترسی کلید یا اعتبار حساب GapGPT را بررسی کنید."
-                        404 -> "\nراهنما: آدرس Base URL و شناسه مدل را بررسی کنید."
-                        429 -> "\nراهنما: محدودیت درخواست یا اعتبار API را بررسی کنید."
-                        else -> ""
-                    }
-                    throw IllegalStateException(
-                        "HTTP ${response.code} در آدرس:\n$endpoint\nجزئیات سرور: $detail$hint"
-                    )
-                }
+            val endpoints = if (root.equals("https://api.gapgpt.app/v1", ignoreCase = true)) {
+                listOf(endpoint, "https://api.gapapi.com/v1/chat/completions")
+            } else listOf(endpoint)
 
-                val json = JSONObject(responseText)
-                val content = json.getJSONArray("choices").getJSONObject(0)
-                    .getJSONObject("message").opt("content")
-                when (content) {
-                    is String -> content
-                    is JSONArray -> buildString {
-                        for (i in 0 until content.length()) {
-                            val part = content.optJSONObject(i)
-                            if (part != null) append(part.optString("text"))
+            var lastDnsError: UnknownHostException? = null
+            for ((index, target) in endpoints.withIndex()) {
+                try {
+                    return@withContext http.newCall(request.newBuilder().url(target).build()).execute().use { response ->
+                        val responseText = response.body?.string().orEmpty()
+                        if (!response.isSuccessful) {
+                            val parsed = runCatching {
+                                val json = JSONObject(responseText)
+                                val error = json.opt("error")
+                                when (error) {
+                                    is JSONObject -> error.optString("message").ifBlank { error.toString() }
+                                    is String -> error
+                                    else -> json.optString("message").ifBlank { json.toString() }
+                                }
+                            }.getOrNull()
+                            val detail = parsed?.takeIf { it.isNotBlank() }
+                                ?: responseText.take(700).ifBlank { response.message }
+                            val hint = when (response.code) {
+                                401 -> "\\nراهنما: کلید API یا اعتبار حساب GapGPT را بررسی کنید."
+                                403 -> "\\nراهنما: دسترسی کلید یا اعتبار حساب GapGPT را بررسی کنید."
+                                404 -> "\\nراهنما: آدرس سرویس و شناسه مدل را بررسی کنید."
+                                429 -> "\\nراهنما: محدودیت درخواست یا اعتبار API را بررسی کنید."
+                                else -> ""
+                            }
+                            throw IllegalStateException(
+                                "HTTP ${response.code} در آدرس:\\n$target\\nجزئیات سرور: $detail$hint"
+                            )
                         }
-                    }.ifBlank { "پاسخی دریافت نشد." }
-                    else -> "پاسخی دریافت نشد."
+
+                        val json = JSONObject(responseText)
+                        val content = json.getJSONArray("choices").getJSONObject(0)
+                            .getJSONObject("message").opt("content")
+                        when (content) {
+                            is String -> content
+                            is JSONArray -> buildString {
+                                for (i in 0 until content.length()) {
+                                    val part = content.optJSONObject(i)
+                                    if (part != null) append(part.optString("text"))
+                                }
+                            }.ifBlank { "پاسخی دریافت نشد." }
+                            else -> "پاسخی دریافت نشد."
+                        }
+                    }
+                } catch (e: UnknownHostException) {
+                    lastDnsError = e
+                    if (index == endpoints.lastIndex) {
+                        throw IllegalStateException(
+                            "نام سرورهای GapGPT از DNS گوشی پیدا نشد. اینترنت و DNS یا فیلترشکن را بررسی کن؛ آدرس جایگزین هم پاسخ نداد.",
+                            e
+                        )
+                    }
                 }
             }
+            throw lastDnsError ?: IllegalStateException("اتصال به سرویس هوش مصنوعی برقرار نشد.")
         }
 }
