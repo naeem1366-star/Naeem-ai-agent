@@ -16,7 +16,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val FinanceGold = Color(0xFFD9B77A)
+private val FinanceGold = Color(0xFFD4D9E0)
 private val FinancePanel = Color(0xFF20232A)
 
 @Composable
@@ -51,12 +51,12 @@ fun FinanceDashboard(entries: List<LedgerEntry>, onAdd: (Long, String, String, B
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             FinanceStat("هزینهٔ این ماه", expenses, Modifier.weight(1f), Color(0xFFFFA49B), number)
-            FinanceStat("درآمد این ماه", incomes, Modifier.weight(1f), Color(0xFF9BD6B0), number)
+            FinanceStat("درآمد این ماه", incomes, Modifier.weight(1f), Color(0xFFD4D9E0), number)
         }
         Card(Modifier.fillMaxWidth().padding(top = 8.dp), colors = CardDefaults.cardColors(containerColor = FinancePanel), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(14.dp)) {
                 Text("ماندهٔ خالص ماه", color = Color(0xFFB9BDC6), style = MaterialTheme.typography.labelMedium)
-                Text("${number.format(incomes - expenses)} تومان", color = if (incomes - expenses >= 0) Color(0xFF9BD6B0) else Color(0xFFFFA49B), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("${number.format(incomes - expenses)} تومان", color = if (incomes - expenses >= 0) Color(0xFFD4D9E0) else Color(0xFFFFA49B), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -85,7 +85,7 @@ fun FinanceDashboard(entries: List<LedgerEntry>, onAdd: (Long, String, String, B
         categories.take(5).forEach { (name, total) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(name, color = Color.White)
-                Text("${number.format(total)} تومان", color = Color(0xFFFFC98A), fontWeight = FontWeight.Medium)
+                Text("${number.format(total)} تومان", color = Color(0xFFBFC6D0), fontWeight = FontWeight.Medium)
             }
             LinearProgressIndicator(progress = { if (expenses > 0) total.toFloat() / expenses.toFloat() else 0f }, modifier = Modifier.fillMaxWidth(), color = FinanceGold, trackColor = FinancePanel)
         }
@@ -100,7 +100,7 @@ fun FinanceDashboard(entries: List<LedgerEntry>, onAdd: (Long, String, String, B
                             Text("${item.category} • ${dateFormat.format(Date(item.timestamp))}", color = Color(0xFFAAAEB8), style = MaterialTheme.typography.labelSmall)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("${if (item.isIncome) "+" else "−"}${number.format(item.amountToman)}", color = if (item.isIncome) Color(0xFF9BD6B0) else Color(0xFFFFA49B), fontWeight = FontWeight.Bold)
+                            Text("${if (item.isIncome) "+" else "−"}${number.format(item.amountToman)}", color = if (item.isIncome) Color(0xFFD4D9E0) else Color(0xFFFFA49B), fontWeight = FontWeight.Bold)
                             TextButton(onClick = { onDelete(item.id) }, contentPadding = PaddingValues(0.dp)) { Text("حذف", color = Color(0xFFFFA49B), style = MaterialTheme.typography.labelSmall) }
                         }
                     }
