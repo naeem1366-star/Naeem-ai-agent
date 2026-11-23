@@ -356,6 +356,10 @@ fun NaeemApp(store: SecureConfigStore) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
+    DisposableEffect(conversationStore, messages) {
+        onDispose { conversationStore.save(messages) }
+    }
+
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Gold, onPrimary = Ink, background = Ink, onBackground = Color(0xFFF2F0EA),
