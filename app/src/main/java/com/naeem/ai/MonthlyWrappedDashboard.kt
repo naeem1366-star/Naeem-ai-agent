@@ -118,7 +118,7 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = bg),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.IosShare, null)
+                Icon(Icons.Default.Share, null)
                 Spacer(Modifier.width(8.dp))
                 Text("اشتراک گزارش ماهانه", fontWeight = FontWeight.Bold)
             }
