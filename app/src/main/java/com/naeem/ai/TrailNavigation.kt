@@ -120,14 +120,16 @@ fun TrailNavigationDashboard(onClose: () -> Unit) {
         }
     }
 
+    val recordingNow by rememberUpdatedState(recording)
+    val pointsNow by rememberUpdatedState(points)
     DisposableEffect(hasPermission) {
         if (!hasPermission) return@DisposableEffect onDispose { }
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val listener = object : LocationListener {
             override fun onLocationChanged(fix: Location) {
                 location = fix
-                if (recording) {
-                    val next = points + TrailPoint(fix.latitude, fix.longitude, fix.altitude, fix.time)
+                if (recordingNow) {
+                    val next = pointsNow + TrailPoint(fix.latitude, fix.longitude, fix.altitude, fix.time)
                     points = next
                     store.savePoints(next)
                 }
