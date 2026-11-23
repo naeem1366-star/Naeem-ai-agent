@@ -108,7 +108,8 @@ class NaeemBackupManager(
             val members = JSONArray().also { a -> trip.members.forEach(a::put) }
             val expenses = JSONArray()
             trip.expenses.forEach { item ->
-                expenses.put(JSONObject().put("id", item.id).put("title", item.title).put("amount", item.amount).put("payer", item.payer))
+                val beneficiaries = JSONArray().also { a -> item.beneficiaries.forEach(a::put) }
+                expenses.put(JSONObject().put("id", item.id).put("title", item.title).put("amount", item.amount).put("payer", item.payer).put("beneficiaries", beneficiaries))
             }
             trips.put(JSONObject().put("id", trip.id).put("title", trip.title).put("destination", trip.destination)
                 .put("dates", trip.dates).put("members", members).put("expenses", expenses))
@@ -158,7 +159,9 @@ class NaeemBackupManager(
             val e = expensesArray.getJSONObject(j)
             val amount = e.getLong("amount")
             require(amount > 0L) { "مبلغ یکی از هزینه‌های سفر نامعتبر است." }
-            TripExpense(e.getString("id"), e.getString("title"), amount, e.getString("payer"))
+            val beneficiariesArray = e.optJSONArray("beneficiaries")
+            val beneficiaries = if (beneficiariesArray == null) members else (0 until beneficiariesArray.length()).map { beneficiariesArray.getString(it) }
+            TripExpense(e.getString("id"), e.getString("title"), amount, e.getString("payer"), beneficiaries)
         }
         val title = o.optString("title")
         val destination = o.optString("destination")
