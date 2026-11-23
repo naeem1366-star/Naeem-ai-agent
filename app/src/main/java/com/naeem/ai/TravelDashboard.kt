@@ -1,6 +1,8 @@
 package com.naeem.ai
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +23,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.net.URLEncoder
 import androidx.compose.ui.platform.LocalContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -61,6 +70,44 @@ private class TravelStore(context:Context) {
     }
 }
 
+private fun fetchTripWeather(place:String):String {
+    val client=OkHttpClient()
+    val q=URLEncoder.encode(place,"UTF-8")
+    val geoRequest=Request.Builder().url("https://geocoding-api.open-meteo.com/v1/search?name="+q+"&count=1&language=fa&format=json").build()
+    val geo=client.newCall(geoRequest).execute().use { response ->
+        if(!response.isSuccessful) throw IllegalStateException("سرویس مکان‌یابی پاسخ نداد.")
+        JSONObject(response.body?.string().orEmpty())
+    }
+    val result=geo.optJSONArray("results")?.optJSONObject(0) ?: throw IllegalArgumentException("مقصد پیدا نشد؛ نام شهر یا منطقه را دقیق‌تر وارد کن.")
+    val lat=result.optDouble("latitude");val lon=result.optDouble("longitude")
+    val placeName=result.optString("name",place);val country=result.optString("country","")
+    val url="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
+        "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,weather_code"+
+        "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=3"
+    val forecast=client.newCall(Request.Builder().url(url).build()).execute().use { response ->
+        if(!response.isSuccessful) throw IllegalStateException("دریافت پیش‌بینی هوا ناموفق بود.")
+        JSONObject(response.body?.string().orEmpty())
+    }
+    val current=forecast.getJSONObject("current")
+    val daily=forecast.getJSONObject("daily")
+    fun condition(code:Int)=when(code){
+        0->"آسمان صاف";1->"عمدتاً صاف";2->"نیمه‌ابری";3->"ابری"
+        45,48->"مه‌آلود";51,53,55->"نم‌نم باران";56,57->"باران یخ‌زده"
+        61,63,65->"بارانی";66,67->"باران یخ‌زده";71,73,75,77->"برف"
+        80,81,82->"رگبار";85,86->"رگبار برف";95,96,99->"رعدوبرق";else->"وضعیت متغیر"
+    }
+    val lines=StringBuilder()
+    lines.append("آب‌وهوای ").append(placeName).append(if(country.isNotBlank())"، "+country else "").append("\n")
+    lines.append("اکنون: ").append(current.optDouble("temperature_2m").toInt()).append("° • حس‌شده ").append(current.optDouble("apparent_temperature").toInt()).append("° • ").append(condition(current.optInt("weather_code"))).append("\n")
+    lines.append("رطوبت ").append(current.optInt("relative_humidity_2m")).append("% • باد ").append(current.optInt("wind_speed_10m")).append(" km/h • بارش ").append(current.optDouble("precipitation")).append(" mm\n")
+    val dates=daily.getJSONArray("time");val codes=daily.getJSONArray("weather_code");val highs=daily.getJSONArray("temperature_2m_max");val lows=daily.getJSONArray("temperature_2m_min");val rain=daily.getJSONArray("precipitation_probability_max")
+    for(i in 0 until minOf(3,dates.length())){
+        lines.append(dates.optString(i)).append(": ").append(condition(codes.optInt(i))).append("، ").append(lows.optDouble(i).toInt()).append(" تا ").append(highs.optDouble(i).toInt()).append("°، احتمال بارش ").append(rain.optInt(i)).append("%\n")
+    }
+    lines.append("منبع: Open-Meteo • پیش‌بینی مقصد است، نه کل مسیر.")
+    return lines.toString()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TravelDashboard(onClose:()->Unit) {
@@ -75,6 +122,10 @@ fun TravelDashboard(onClose:()->Unit) {
     var expenseTitle by remember { mutableStateOf("") }
     var expenseAmount by remember { mutableStateOf("") }
     var payer by remember { mutableStateOf("") }
+    var weatherText by remember { mutableStateOf("") }
+    var weatherError by remember { mutableStateOf("") }
+    var weatherLoading by remember { mutableStateOf(false) }
+    val scope= rememberCoroutineScope()
     val selected=trips.firstOrNull { it.id==selectedId }
     val number= remember { NumberFormat.getNumberInstance(Locale("fa","IR")) }
     val bg=Color(0xFF0D1820); val panel=Color(0xFF172A36); val accent=Color(0xFF73D2D0); val muted=Color(0xFFA8BDC5)
@@ -139,6 +190,38 @@ fun TravelDashboard(onClose:()->Unit) {
                             Text("خلاصه هزینه‌ها",color=accent,fontWeight=FontWeight.Bold)
                             Text(number.format(selected.expenses.sumOf{it.amount})+" تومان",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
                             Text(selected.expenses.size.toString()+" هزینه ثبت‌شده  •  "+selected.members.size.toString()+" هم‌سفر",color=muted,style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                item {
+                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF203B48)),shape=RoundedCornerShape(22.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+                            Row(verticalAlignment=Alignment.CenterVertically) {
+                                Icon(Icons.Default.WbCloudy,null,tint=accent)
+                                Spacer(Modifier.width(8.dp))
+                                Text("آب‌وهوا و شرایط مسیر",color=Color.White,fontWeight=FontWeight.Bold)
+                            }
+                            Text("پیش‌بینی مقصد برای ۳ روز آینده؛ برای اطلاعات جاده و ترافیک، مسیر را در نقشه باز کن.",color=muted,style=MaterialTheme.typography.bodySmall)
+                            Button(onClick={
+                                weatherLoading=true;weatherError=""
+                                scope.launch {
+                                    try { weatherText=withContext(Dispatchers.IO){fetchTripWeather(selected.destination)} }
+                                    catch(e:Exception){weatherError=e.message ?: "دریافت اطلاعات هوا ممکن نشد."}
+                                    weatherLoading=false
+                                }
+                            },enabled=!weatherLoading,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent,contentColor=bg)) {
+                                Icon(Icons.Default.CloudDownload,null);Spacer(Modifier.width(7.dp));Text(if(weatherLoading)"در حال دریافت..." else "دریافت وضعیت هوا و پیش‌بینی")
+                            }
+                            if(weatherText.isNotBlank()) Text(weatherText,color=Color.White,style=MaterialTheme.typography.bodySmall)
+                            if(weatherError.isNotBlank()) Text(weatherError,color=Color(0xFFFFB2A8),style=MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick={
+                                val destinationQuery=URLEncoder.encode(selected.destination,"UTF-8")
+                                val url="https://www.google.com/maps/dir/?api=1&destination="+destinationQuery+"&travelmode=driving&dir_action=navigate"
+                                runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(url)))}
+                            },modifier=Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Directions,null);Spacer(Modifier.width(7.dp));Text("مسیریابی رانندگی و بررسی ترافیک")
+                            }
+                            Text("ترافیک زنده، محدودیت جاده و مسیرهای جایگزین به پوشش و داده‌های نقشه وابسته‌اند؛ برنامه وضعیت بسته‌بودن جاده را مستقلاً تأیید نمی‌کند.",color=muted,style=MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
