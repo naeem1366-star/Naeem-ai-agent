@@ -23,10 +23,10 @@ class ConversationStore(context: Context) {
 
     fun save(messages: List<ChatMessage>) {
         val array = JSONArray()
-        messages.filter { it.image == null }.takeLast(300).forEach { message ->
+        messages.filter { it.image == null }.forEach { message ->
             array.put(JSONObject().put("text", message.text).put("fromUser", message.fromUser))
         }
-        prefs.edit().putString("history", array.toString()).apply()
+        prefs.edit().putString("history", array.toString()).commit()
     }
 
     fun clear() = prefs.edit().remove("history").apply()
