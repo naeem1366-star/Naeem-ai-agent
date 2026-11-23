@@ -116,7 +116,7 @@ fun FeatureHub(
             }
         )
     }
-    Column(Modifier.fillMaxSize().background(hubBg).padding(horizontal=18.dp, vertical=14.dp)){
+    Column(Modifier.fillMaxSize().background(hubBg.copy(alpha=0.84f)).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -378,7 +378,7 @@ private val HMuted=Color(0xFF9AA3AE)
  val decks=remember{mapOf("ترکیبی" to listOf("فضانورد","چتر نجات","آشپز","ترافیک","کارآگاه","کتابخانه","آتش‌نشان","ماهیگیری","ربات","سینما","دوچرخه","آبشار","جادوگر","بستنی","قطار","عکاس","دندان‌پزشک","کوه‌نوردی","بادبادک","خواب‌آلود"),"سینما" to listOf("کارگردان","فرش قرمز","اسکار","دوربین","فیلمنامه","اکران","جلوه‌های ویژه","بازیگر","سکانس"),"سخت" to listOf("پارادوکس","ناخودآگاه","جاذبه","معماری","دیپلماسی","فرسایش","کهکشان","نوستالژی","الگوریتم","توربین"))}
  LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
  fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
- Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10))){
+ Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10).copy(alpha = 0.84f))){
   Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("پانتومیم؛ فعلاً تنها بازی فعال این مجموعه",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
