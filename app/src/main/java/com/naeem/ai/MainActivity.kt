@@ -502,6 +502,21 @@ fun NaeemApp(store: SecureConfigStore) {
                         IconButton(onClick = { showHub = true }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
                     },
                     actions = {
+                        IconButton(onClick = {
+                            conversationStore.save(activeConversationId, messages)
+                            activeConversationId = conversationStore.create()
+                            conversationReload++
+                            pendingAssistantAction = null
+                            error = ""
+                            prompt = ""
+                            selectedImage = null
+                            selectedImageBase64 = null
+                            imageMode = false
+                            conversationMode = false
+                            stopSpeech()
+                        }) {
+                            Icon(Icons.Default.AddComment, contentDescription = "شروع گفت‌وگوی تازه", tint = Gold)
+                        }
                         IconButton(onClick = { showConversationManager = true; conversationRefresh++ }) {
                             Icon(Icons.Default.Forum, contentDescription = "گفت‌وگوها", tint = Gold)
                         }
@@ -590,25 +605,57 @@ fun NaeemApp(store: SecureConfigStore) {
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
                 if (messages.isEmpty()) {
                     Spacer(Modifier.height(12.dp))
-                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2428)), elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)) {
-                        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF263F3C), Color(0xFF202B37), Color(0xFF252331)))).padding(20.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("YOUR PERSONAL AI STUDIO", color = Color(0xFF9BE5C4), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                        Spacer(Modifier.height(9.dp))
-                                        Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                                        Text("امروز چی توی ذهنته؟", color = Color(0xFFC4D1CD), style = MaterialTheme.typography.titleMedium)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(30.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF191A1E)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    ) {
+                        Box(
+                            Modifier.fillMaxWidth()
+                                .background(Brush.verticalGradient(listOf(Color(0xFF30271D), Color(0xFF1D1E22), Color(0xFF151619))))
+                                .padding(horizontal = 20.dp, vertical = 22.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text("NAEEM AI  •  PERSONAL INTELLIGENCE", color = Gold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                ThinkingOrb(size = 174.dp, active = false)
+                                Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                                Text("امروز از کجا شروع کنیم؟", color = Color(0xFFD8C6A8), style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "اینجا فضای گفت‌وگوی توست؛ ایده‌ها، پرسش‌ها و کارهایت را با هم پیش می‌بریم.",
+                                    color = Muted, style = MaterialTheme.typography.bodyMedium
+                                )
+                                Row(
+                                    Modifier.fillMaxWidth().padding(top = 5.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showHub = true },
+                                        modifier = Modifier.weight(1f).height(52.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink),
+                                        shape = RoundedCornerShape(17.dp)
+                                    ) {
+                                        Icon(Icons.Default.GridView, null)
+                                        Spacer(Modifier.width(7.dp))
+                                        Text("فضای برنامه‌ها", fontWeight = FontWeight.Bold)
                                     }
-                                    Box(Modifier.size(94.dp).background(Brush.radialGradient(listOf(Color(0xFF7DE0B1), Color(0xFF285E50), Color.Transparent)), CircleShape), contentAlignment = Alignment.Center) {
-                                        Box(Modifier.size(66.dp).background(Color(0xFF24483F), CircleShape), contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFB5F4D5), modifier = Modifier.size(34.dp))
-                                        }
+                                    OutlinedButton(
+                                        onClick = {
+                                            showConversationManager = true
+                                            conversationRefresh++
+                                        },
+                                        modifier = Modifier.weight(1f).height(52.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.55f)),
+                                        shape = RoundedCornerShape(17.dp)
+                                    ) {
+                                        Icon(Icons.Default.Forum, null, tint = Gold)
+                                        Spacer(Modifier.width(7.dp))
+                                        Text("گفت‌وگوها", color = Gold)
                                     }
-                                }
-                                Text("دستیار هوشمند و فضای شخصی تو؛ برای فکر کردن، ساختن و مدیریت روزمره.", color = Color(0xFFD5DFDC), style = MaterialTheme.typography.bodyMedium)
-                                Button(onClick = { showHub = true }, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9BE5C4), contentColor = Color(0xFF10251D)), shape = RoundedCornerShape(18.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)) {
-                                    Icon(Icons.Default.GridView, null); Spacer(Modifier.width(9.dp)); Text("ورود به فضای برنامه‌ها", fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Icon(Icons.Default.ArrowForward, null)
                                 }
                             }
                         }
@@ -620,22 +667,39 @@ fun NaeemApp(store: SecureConfigStore) {
                         Text(error, color = Color(0xFFFFC4C4), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (conversationMode || listening || speechPlaying) {
-                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        ThinkingOrb()
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(if (speechPlaying) "در حال صحبت با تو" else if (listening) "در حال شنیدن صدای تو" else if (busy) "در حال فکر کردن" else "حالت مکالمه فعال است", color = Gold, fontWeight = FontWeight.SemiBold)
-                            Text("گوی زندهٔ Naeem AI", color = Muted, style = MaterialTheme.typography.labelSmall)
+                if (conversationMode || listening || speechPlaying || busy) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                        shape = RoundedCornerShape(26.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1A18))
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .background(Brush.verticalGradient(listOf(Color(0xFF30271D), Color(0xFF1A1A1C))))
+                                .padding(horizontal = 18.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            ThinkingOrb(size = 158.dp, active = true)
+                            Text(
+                                when {
+                                    speechPlaying -> "در حال صحبت با تو"
+                                    listening -> "در حال شنیدن صدای تو"
+                                    searchMode && busy -> "در حال جست‌وجو و بررسی منابع…"
+                                    imageMode && busy -> "در حال ساخت تصویر…"
+                                    busy -> "دارم فکر می‌کنم…"
+                                    else -> "حالت مکالمه فعال است"
+                                },
+                                color = Gold, fontWeight = FontWeight.SemiBold
+                            )
+                            Text("گوی هوشمند Naeem AI", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            if (busy) {
+                                LinearProgressIndicator(
+                                    Modifier.fillMaxWidth().padding(top = 5.dp),
+                                    color = Gold, trackColor = Panel
+                                )
+                            }
                         }
-                    }
-                }
-                if (busy) {
-                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        ThinkingOrb()
-                        Spacer(Modifier.height(6.dp))
-                        Text(if (searchMode) "در حال جست‌وجو و بررسی منابع…" else if (imageMode) "در حال ساخت تصویر…" else "دارم فکر می‌کنم…", color = Gold, style = MaterialTheme.typography.labelMedium)
-                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp), color = Gold, trackColor = Panel)
                     }
                 }
                 pendingAssistantAction?.let { action ->
@@ -1064,34 +1128,78 @@ fun NaeemApp(store: SecureConfigStore) {
 
 
 @Composable
-private fun ThinkingOrb() {
+private fun ThinkingOrb(
+    size: androidx.compose.ui.unit.Dp = 118.dp,
+    active: Boolean = true
+) {
     val transition = rememberInfiniteTransition(label = "naeem-orb")
-    val phase by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(6200, easing = LinearEasing)), label = "orb-rotation")
-    val pulse by transition.animateFloat(0.94f, 1.06f, infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "orb-pulse")
-    Canvas(Modifier.size(118.dp)) {
+    val phase by transition.animateFloat(
+        0f, 360f,
+        infiniteRepeatable(tween(if (active) 4300 else 7600, easing = LinearEasing)),
+        label = "orb-rotation"
+    )
+    val pulse by transition.animateFloat(
+        if (active) 0.94f else 0.985f,
+        if (active) 1.065f else 1.015f,
+        infiniteRepeatable(tween(if (active) 1150 else 2300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "orb-pulse"
+    )
+    Canvas(Modifier.size(size)) {
         val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = size.minDimension * 0.34f * pulse
-        drawCircle(Color(0xFF000000).copy(alpha = 0.38f), radius * 1.23f, Offset(center.x + radius * 0.12f, center.y + radius * 0.28f))
-        drawCircle(brush = Brush.radialGradient(
-            colors = listOf(Color(0xFFFFF4D9), Color(0xFFE7C58E), Color(0xFFB8864C), Color(0xFF5B422B), Color(0xFF17191F)),
-            center = Offset(center.x - radius * 0.34f, center.y - radius * 0.42f), radius = radius * 2.15f
-        ), radius = radius, center = center)
-        drawCircle(brush = Brush.radialGradient(
-            colors = listOf(Color.White.copy(alpha = 0.72f), Color(0xFFFFE8C1).copy(alpha = 0.16f), Color.Transparent),
-            center = Offset(center.x - radius * 0.38f, center.y - radius * 0.52f), radius = radius * 0.9f
-        ), radius = radius * 0.9f, center = center)
-        drawArc(Color(0xFFFFE5B4).copy(alpha = 0.82f), phase, 205f, false,
-            Offset(center.x - radius * 1.38f, center.y - radius * 0.43f),
-            androidx.compose.ui.geometry.Size(radius * 2.76f, radius * 0.86f), style = Stroke(width = 1.6.dp.toPx()))
-        drawArc(Color(0xFFB98A55).copy(alpha = 0.72f), phase + 180f, 205f, false,
-            Offset(center.x - radius * 1.42f, center.y - radius * 0.31f),
-            androidx.compose.ui.geometry.Size(radius * 2.84f, radius * 0.62f), style = Stroke(width = 1.dp.toPx()))
+        val radius = size.minDimension * 0.285f * pulse
+        val glowRadius = radius * if (active) 2.2f else 1.8f
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(Color(0x66E6B66D), Color(0x22B9874B), Color.Transparent),
+                center, glowRadius
+            ),
+            radius = glowRadius, center = center
+        )
+        drawCircle(
+            Color.Black.copy(alpha = 0.48f), radius * 1.12f,
+            Offset(center.x + radius * 0.10f, center.y + radius * 0.30f)
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFF8E8), Color(0xFFFFE2A9), Color(0xFFD8A65E),
+                    Color(0xFF9B6635), Color(0xFF493322), Color(0xFF17191F)
+                ),
+                center = Offset(center.x - radius * 0.38f, center.y - radius * 0.48f),
+                radius = radius * 2.05f
+            ),
+            radius = radius, center = center
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White.copy(alpha = 0.88f), Color(0xFFFFE8C1).copy(alpha = 0.22f), Color.Transparent),
+                center = Offset(center.x - radius * 0.42f, center.y - radius * 0.57f),
+                radius = radius * 0.92f
+            ),
+            radius = radius * 0.92f, center = center
+        )
+        drawArc(
+            Color(0xFFFFE7BE).copy(alpha = 0.9f), phase, 205f, false,
+            Offset(center.x - radius * 1.72f, center.y - radius * 0.48f),
+            androidx.compose.ui.geometry.Size(radius * 3.44f, radius * 0.96f),
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        drawArc(
+            Color(0xFFB98A55).copy(alpha = 0.78f), phase + 178f, 205f, false,
+            Offset(center.x - radius * 1.80f, center.y - radius * 0.34f),
+            androidx.compose.ui.geometry.Size(radius * 3.60f, radius * 0.68f),
+            style = Stroke(width = 1.2.dp.toPx())
+        )
         val orbitAngle = Math.toRadians(phase.toDouble())
-        drawCircle(Color(0xFFFFE8C1), 3.4.dp.toPx(), Offset(
-            center.x + (radius * 1.34f * kotlin.math.cos(orbitAngle)).toFloat(),
-            center.y + (radius * 0.42f * kotlin.math.sin(orbitAngle)).toFloat()
-        ))
-        drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.16f), radius * 1.48f, center, style = Stroke(width = 1.dp.toPx()))
+        drawCircle(
+            Color(0xFFFFF0D2), if (active) 4.dp.toPx() else 3.dp.toPx(),
+            Offset(
+                center.x + (radius * 1.68f * kotlin.math.cos(orbitAngle)).toFloat(),
+                center.y + (radius * 0.50f * kotlin.math.sin(orbitAngle)).toFloat()
+            )
+        )
+        drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.20f), radius * 1.88f, center, style = Stroke(width = 1.dp.toPx()))
+        drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.09f), radius * 2.12f, center, style = Stroke(width = 0.7.dp.toPx()))
     }
 }
 
