@@ -124,7 +124,18 @@ fun NaeemApp(store: SecureConfigStore) {
     var listening by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     val conversationStore = remember { ConversationStore(context) }
-    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(conversationStore.load().map { ChatMessage(it.text, it.fromUser) }) } }
+    var activeConversationId by remember { mutableStateOf(conversationStore.activeId()) }
+    val messages = remember(activeConversationId) {
+        mutableStateListOf<ChatMessage>().apply {
+            addAll(conversationStore.load(activeConversationId).map { ChatMessage(it.text, it.fromUser) })
+        }
+    }
+    var showConversationManager by remember { mutableStateOf(false) }
+    var conversationSearch by remember { mutableStateOf("") }
+    var showArchivedConversations by remember { mutableStateOf(false) }
+    var conversationRefresh by remember { mutableStateOf(0) }
+    var renameConversationId by remember { mutableStateOf<String?>(null) }
+    var renameConversationDraft by remember { mutableStateOf("") }
     val dataStore = remember { AssistantDataStore(context) }
     val deepSearchClient = remember { DeepSearchClient() }
     var memories by remember { mutableStateOf(dataStore.memories()) }
@@ -395,13 +406,13 @@ fun NaeemApp(store: SecureConfigStore) {
         }
     }
 
-    LaunchedEffect(messages.size) {
-        conversationStore.save(messages)
+    LaunchedEffect(activeConversationId, messages.size) {
+        conversationStore.save(activeConversationId, messages)
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
-    DisposableEffect(conversationStore, messages) {
-        onDispose { conversationStore.save(messages) }
+    DisposableEffect(conversationStore, messages, activeConversationId) {
+        onDispose { conversationStore.save(activeConversationId, messages) }
     }
 
     MaterialTheme(
@@ -432,6 +443,9 @@ fun NaeemApp(store: SecureConfigStore) {
                         IconButton(onClick = { showHub = true }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
                     },
                     actions = {
+                        IconButton(onClick = { showConversationManager = true; conversationRefresh++ }) {
+                            Icon(Icons.Default.Forum, contentDescription = "گفت‌وگوها", tint = Gold)
+                        }
                         IconButton(onClick = { showAlbum = true; albumImages = dataStore.images() }) {
                             Icon(Icons.Default.Collections, contentDescription = "آلبوم تصاویر", tint = Gold)
                         }
@@ -772,6 +786,113 @@ fun NaeemApp(store: SecureConfigStore) {
                     }
                 },
                 confirmButton = { TextButton(onClick = { showAlbum = false }) { Text("بستن", color = Gold) } }
+            )
+        }
+
+        if (showConversationManager) {
+            val visibleThreads = remember(conversationSearch, showArchivedConversations, conversationRefresh) {
+                conversationStore.search(conversationSearch, showArchivedConversations)
+            }
+            AlertDialog(
+                onDismissRequest = { showConversationManager = false },
+                containerColor = Panel,
+                title = { Text("گفت‌وگوهای من", color = Gold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        OutlinedTextField(
+                            value = conversationSearch,
+                            onValueChange = { conversationSearch = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("جست‌وجو در عنوان و متن گفتگوها") }
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Button(
+                                onClick = {
+                                    activeConversationId = conversationStore.create()
+                                    showConversationManager = false
+                                    pendingAssistantAction = null
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)
+                            ) { Text("＋ گفت‌وگوی تازه") }
+                            TextButton(onClick = { showArchivedConversations = !showArchivedConversations; conversationRefresh++ }) {
+                                Text(if (showArchivedConversations) "نمایش فعال‌ها" else "بایگانی‌شده‌ها", color = Gold)
+                            }
+                        }
+                        if (visibleThreads.isEmpty()) {
+                            Text("گفت‌وگویی پیدا نشد.", color = Muted)
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.heightIn(max = 340.dp),
+                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                            ) {
+                                items(visibleThreads, key = { it.id }) { thread ->
+                                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF292C33))) {
+                                        Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(thread.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                                            Text(thread.messages.size.toString() + " پیام" + if (thread.id == activeConversationId) " • گفت‌وگوی فعلی" else "", color = Muted, style = MaterialTheme.typography.labelSmall)
+                                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                if (thread.archivedAt == null) {
+                                                    TextButton(onClick = {
+                                                        conversationStore.switchTo(thread.id)
+                                                        activeConversationId = thread.id
+                                                        showConversationManager = false
+                                                        pendingAssistantAction = null
+                                                    }) { Text("بازکردن", color = Gold) }
+                                                    TextButton(onClick = {
+                                                        conversationStore.rename(thread.id, thread.title)
+                                                        renameConversationId = thread.id
+                                                        renameConversationDraft = thread.title
+                                                    }) { Text("تغییر نام", color = Color.White) }
+                                                    TextButton(onClick = {
+                                                        conversationStore.archive(thread.id, true)
+                                                        activeConversationId = conversationStore.activeId()
+                                                        conversationRefresh++
+                                                    }) { Text("بایگانی", color = Muted) }
+                                                } else {
+                                                    TextButton(onClick = {
+                                                        conversationStore.archive(thread.id, false)
+                                                        conversationRefresh++
+                                                    }) { Text("بازگردانی", color = Gold) }
+                                                }
+                                                TextButton(onClick = {
+                                                    conversationStore.delete(thread.id)
+                                                    if (thread.id == activeConversationId) activeConversationId = conversationStore.activeId()
+                                                    conversationRefresh++
+                                                }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showConversationManager = false }) { Text("بستن", color = Gold) } }
+            )
+        }
+
+        if (renameConversationId != null) {
+            AlertDialog(
+                onDismissRequest = { renameConversationId = null },
+                containerColor = Panel,
+                title = { Text("تغییر نام گفت‌وگو", color = Gold) },
+                text = {
+                    OutlinedTextField(
+                        value = renameConversationDraft,
+                        onValueChange = { renameConversationDraft = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        renameConversationId?.let { conversationStore.rename(it, renameConversationDraft) }
+                        renameConversationId = null
+                        conversationRefresh++
+                    }) { Text("ذخیره", color = Gold) }
+                },
+                dismissButton = { TextButton(onClick = { renameConversationId = null }) { Text("انصراف", color = Muted) } }
             )
         }
 
