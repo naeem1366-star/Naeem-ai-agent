@@ -128,12 +128,42 @@ fun FeatureHub(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
-                            Modifier.size(88.dp)
-                                .background(Color(0xFF030405), RoundedCornerShape(20.dp))
-                                .then(Modifier),
+                            Modifier.size(88.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(entry.icon, null, tint = Color(0xFFD4D9E0), modifier = Modifier.size(39.dp))
+                            // Offset graphite layers create a restrained 3D object, not a flat icon tile.
+                            Box(
+                                Modifier.fillMaxSize().offset(y = 5.dp)
+                                    .background(Color(0xFF020304), RoundedCornerShape(22.dp))
+                            )
+                            Surface(
+                                modifier = Modifier.fillMaxSize().offset(y = (-1).dp),
+                                shape = RoundedCornerShape(22.dp),
+                                color = Color(0xFF171C23),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF596473)),
+                                shadowElevation = 12.dp
+                            ) {
+                                Box(
+                                    Modifier.fillMaxSize().background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFF414B58), Color(0xFF202731), Color(0xFF0B0E13))
+                                        )
+                                    ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        Modifier.align(Alignment.TopCenter).padding(top = 1.dp)
+                                            .width(42.dp).height(1.dp)
+                                            .background(Color(0xFFB9C3CF).copy(alpha = 0.55f), RoundedCornerShape(1.dp))
+                                    )
+                                    Icon(
+                                        entry.icon,
+                                        null,
+                                        tint = Color(0xFFE0E6EE),
+                                        modifier = Modifier.size(39.dp)
+                                    )
+                                }
+                            }
                         }
                         Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)
                     }
@@ -415,7 +445,7 @@ private class TrackSearch{
 
 @Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ DiscoverDashboard(onClose,onAskAi,"موسیقی",true) }
 
-// Horizontal gold carousel layout for the Naeem AI feature spaces.
+// Graphite and silver 3D feature gallery for Naeem AI.
 
 
 @Composable
