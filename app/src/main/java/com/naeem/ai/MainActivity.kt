@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -49,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -104,6 +106,9 @@ fun NaeemApp(store: SecureConfigStore) {
     val deepSearchClient = remember { DeepSearchClient() }
     var memories by remember { mutableStateOf(dataStore.memories()) }
     var albumImages by remember { mutableStateOf(dataStore.images()) }
+    val ledgerStore = remember { LedgerStore(context) }
+    var ledgerEntries by remember { mutableStateOf(ledgerStore.entries()) }
+    var showFinance by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
     var showAlbum by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
@@ -226,6 +231,12 @@ fun NaeemApp(store: SecureConfigStore) {
             error = ""
             scope.launch {
                 try {
+                    val financeReply = recordFinanceCommand(question)
+                    if (financeReply != null) {
+                        messages.add(ChatMessage(financeReply, false))
+                        playAnswer(financeReply, continueListening = true)
+                        return@launch
+                    }
                     val answer = client.send(baseUrl, model, apiKey, question)
                     messages.add(ChatMessage(answer, false))
                     playAnswer(answer, continueListening = true)
@@ -250,6 +261,14 @@ fun NaeemApp(store: SecureConfigStore) {
     }
     SideEffect { startVoiceCapture = beginListening }
 
+    fun recordFinanceCommand(question: String): String? {
+        val transaction = LedgerStore.parseVoiceCommand(question) ?: return null
+        ledgerStore.add(transaction.amountToman, transaction.category, transaction.note, transaction.isIncome)
+        ledgerEntries = ledgerStore.entries()
+        val formatted = java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(transaction.amountToman)
+        return if (transaction.isIncome) "درآمد $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
+        else "هزینهٔ $formatted تومان ثبت شد؛ دسته‌بندی: ${transaction.category}."
+    }
 
     fun sendMessage(speakAnswer: Boolean = false) {
         val question = prompt.trim()
@@ -272,6 +291,12 @@ fun NaeemApp(store: SecureConfigStore) {
                     albumImages = dataStore.images()
                     messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))
                 } else {
+                    val financeReply = recordFinanceCommand(finalQuestion)
+                    if (financeReply != null) {
+                        messages.add(ChatMessage(financeReply, false))
+                        if (speakAnswer) playAnswer(financeReply)
+                        return@launch
+                    }
                     val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
                     val answer = if (searchMode) {
                         val findings = deepSearchClient.search(finalQuestion, 8)
@@ -320,6 +345,9 @@ fun NaeemApp(store: SecureConfigStore) {
                     actions = {
                         IconButton(onClick = { showAlbum = true; albumImages = dataStore.images() }) {
                             Icon(Icons.Default.Collections, contentDescription = "آلبوم تصاویر", tint = Gold)
+                        }
+                        IconButton(onClick = { showFinance = true; ledgerEntries = ledgerStore.entries() }) {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = "دفتر مالی", tint = Gold)
                         }
                         IconButton(onClick = { showMemory = true; memories = dataStore.memories() }) {
                             Icon(Icons.Default.Bookmark, contentDescription = "حافظه", tint = Gold)
@@ -414,6 +442,16 @@ fun NaeemApp(store: SecureConfigStore) {
                         Text(error, color = Color(0xFFFFC4C4), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                if (conversationMode || listening || speechPlaying) {
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        ThinkingOrb()
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(if (speechPlaying) "در حال صحبت با تو" else if (listening) "در حال شنیدن صدای تو" else if (busy) "در حال فکر کردن" else "حالت مکالمه فعال است", color = Gold, fontWeight = FontWeight.SemiBold)
+                            Text("گوی زندهٔ Naeem AI", color = Muted, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
                 if (busy) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         ThinkingOrb()
@@ -463,6 +501,19 @@ fun NaeemApp(store: SecureConfigStore) {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (showFinance) {
+            Dialog(onDismissRequest = { showFinance = false }) {
+                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.94f), shape = RoundedCornerShape(24.dp), color = Ink) {
+                    FinanceDashboard(
+                        entries = ledgerEntries,
+                        onAdd = { amount, category, note, income -> ledgerStore.add(amount, category, note, income); ledgerEntries = ledgerStore.entries() },
+                        onDelete = { id -> ledgerStore.delete(id); ledgerEntries = ledgerStore.entries() },
+                        onClose = { showFinance = false }
+                    )
                 }
             }
         }
@@ -554,32 +605,32 @@ fun NaeemApp(store: SecureConfigStore) {
 
 @Composable
 private fun ThinkingOrb() {
-    val transition = rememberInfiniteTransition()
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(animation = tween(2200, easing = LinearEasing), repeatMode = RepeatMode.Restart)
-    )
-    Canvas(Modifier.size(104.dp)) {
+    val transition = rememberInfiniteTransition(label = "naeem-orb")
+    val phase by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(6200, easing = LinearEasing)), label = "orb-rotation")
+    val pulse by transition.animateFloat(0.94f, 1.06f, infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "orb-pulse")
+    Canvas(Modifier.size(118.dp)) {
         val center = Offset(size.width / 2f, size.height / 2f)
-        val maxRadius = size.minDimension * 0.46f
-        for (ring in 0..2) {
-            val progress = (phase + ring / 3f) % 1f
-            drawCircle(
-                color = Color(0xFFD1B078).copy(alpha = (1f - progress) * 0.42f),
-                radius = maxRadius * (0.35f + progress * 0.65f),
-                center = center,
-                style = Stroke(width = 1.5.dp.toPx())
-            )
-        }
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0xFFFFE3AE), Color(0xFFD1B078), Color(0xFF745A37), Color.Transparent),
-                center = center,
-                radius = maxRadius * 0.55f
-            ),
-            radius = maxRadius * 0.34f,
-            center = center
-        )
+        val radius = size.minDimension * 0.34f * pulse
+        drawCircle(Color(0xFF000000).copy(alpha = 0.38f), radius * 1.23f, Offset(center.x + radius * 0.12f, center.y + radius * 0.28f))
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color(0xFFFFF4D9), Color(0xFFE7C58E), Color(0xFFB8864C), Color(0xFF5B422B), Color(0xFF17191F)),
+            center = Offset(center.x - radius * 0.34f, center.y - radius * 0.42f), radius = radius * 2.15f
+        ), radius = radius, center = center)
+        drawCircle(brush = Brush.radialGradient(
+            colors = listOf(Color.White.copy(alpha = 0.72f), Color(0xFFFFE8C1).copy(alpha = 0.16f), Color.Transparent),
+            center = Offset(center.x - radius * 0.38f, center.y - radius * 0.52f), radius = radius * 0.9f
+        ), radius = radius * 0.9f, center = center)
+        drawArc(Color(0xFFFFE5B4).copy(alpha = 0.82f), phase, 205f, false,
+            Offset(center.x - radius * 1.38f, center.y - radius * 0.43f),
+            androidx.compose.ui.geometry.Size(radius * 2.76f, radius * 0.86f), style = Stroke(width = 1.6.dp.toPx()))
+        drawArc(Color(0xFFB98A55).copy(alpha = 0.72f), phase + 180f, 205f, false,
+            Offset(center.x - radius * 1.42f, center.y - radius * 0.31f),
+            androidx.compose.ui.geometry.Size(radius * 2.84f, radius * 0.62f), style = Stroke(width = 1.dp.toPx()))
+        val orbitAngle = Math.toRadians(phase.toDouble())
+        drawCircle(Color(0xFFFFE8C1), 3.4.dp.toPx(), Offset(
+            center.x + (radius * 1.34f * kotlin.math.cos(orbitAngle)).toFloat(),
+            center.y + (radius * 0.42f * kotlin.math.sin(orbitAngle)).toFloat()
+        ))
+        drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.16f), radius * 1.48f, center, style = Stroke(width = 1.dp.toPx()))
     }
 }
