@@ -964,7 +964,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         onMarkets = { showHub = false; showMarkets = true },
                         onWrapped = { showHub = false; showWrapped = true },
                         onTrail = { showHub = false; showTrail = true }
-                    )
+                    ) }
                 }
                 }
             }
