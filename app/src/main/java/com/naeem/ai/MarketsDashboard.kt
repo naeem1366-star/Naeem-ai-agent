@@ -1,6 +1,9 @@
 package com.naeem.ai
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -201,7 +204,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 }
             }
 
-            Text("منبع داده: NerkhAra  •  نرخ‌های بازار آزاد ایران و بازار جهانی. قیمت‌ها صرفاً جهت اطلاع‌اند.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp))
+            Text("منبع داده: NerkhAra  •  نرخ‌های بازار آزاد ایران و بازار جهانی. قیمت‌ها صرفاً جهت اطلاع‌اند.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp).clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nerkhara.com/en/"))) })
         }
     }
 }
