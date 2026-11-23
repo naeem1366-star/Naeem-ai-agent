@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Pause
@@ -110,6 +111,10 @@ fun NaeemApp(store: SecureConfigStore) {
     val ledgerStore = remember { LedgerStore(context) }
     var ledgerEntries by remember { mutableStateOf(ledgerStore.entries()) }
     var showFinance by remember { mutableStateOf(false) }
+    var showHub by remember { mutableStateOf(false) }
+    var showHealth by remember { mutableStateOf(false) }
+    var showGames by remember { mutableStateOf(false) }
+    var showDiscover by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
     var showAlbum by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
@@ -344,6 +349,9 @@ fun NaeemApp(store: SecureConfigStore) {
                             Text("دستیار هوشمند شخصی", style = MaterialTheme.typography.labelSmall, color = Muted)
                         }
                     },
+                    navigationIcon = {
+                        IconButton(onClick = { showHub = true }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
+                    },
                     actions = {
                         IconButton(onClick = { showAlbum = true; albumImages = dataStore.images() }) {
                             Icon(Icons.Default.Collections, contentDescription = "آلبوم تصاویر", tint = Gold)
@@ -507,6 +515,43 @@ fun NaeemApp(store: SecureConfigStore) {
             }
         }
 
+        if (showHub) {
+            Dialog(onDismissRequest = { showHub = false }) {
+                Surface(modifier = Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.94f), shape = RoundedCornerShape(24.dp), color = Ink) {
+                    FeatureHub(
+                        onClose = { showHub = false },
+                        onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
+                        onHealth = { showHub = false; showHealth = true },
+                        onGames = { showHub = false; showGames = true },
+                        onDiscover = { showHub = false; showDiscover = true },
+                        onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
+                        onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
+                        onSettings = { showHub = false; showSettings = true }
+                    )
+                }
+            }
+        }
+        if (showHealth) {
+            Dialog(onDismissRequest = { showHealth = false }) {
+                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.96f), shape = RoundedCornerShape(24.dp), color = Ink) {
+                    HealthDashboard(onClose = { showHealth = false })
+                }
+            }
+        }
+        if (showGames) {
+            Dialog(onDismissRequest = { showGames = false }) {
+                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.96f), shape = RoundedCornerShape(24.dp), color = Ink) {
+                    GamesHub(onClose = { showGames = false })
+                }
+            }
+        }
+        if (showDiscover) {
+            Dialog(onDismissRequest = { showDiscover = false }) {
+                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.96f), shape = RoundedCornerShape(24.dp), color = Ink) {
+                    DiscoverDashboard(onClose = { showDiscover = false }, onAskAi = { question -> showDiscover = false; prompt = question })
+                }
+            }
+        }
         if (showFinance) {
             Dialog(onDismissRequest = { showFinance = false }) {
                 Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.94f), shape = RoundedCornerShape(24.dp), color = Ink) {
