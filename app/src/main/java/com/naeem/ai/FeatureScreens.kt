@@ -104,7 +104,6 @@ fun FeatureHub(
                     modifier=Modifier.fillMaxWidth().height(150.dp).graphicsLayer{
                         val depth=relative.coerceIn(-1.4f,1.4f)
                         rotationX=depth * -6.5f
-                        translationZ=-kotlin.math.abs(depth)*42f
                         scaleX=1f-kotlin.math.abs(depth)*0.045f
                         scaleY=1f-kotlin.math.abs(depth)*0.045f
                         alpha=(1f-kotlin.math.abs(depth)*0.16f).coerceIn(0.72f,1f)
