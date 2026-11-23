@@ -2,6 +2,8 @@ package com.naeem.ai
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import android.content.Context
@@ -50,6 +52,30 @@ private val FG=Color(0xFFD4D9E0)
 private val FB=Color(0xFF111318)
 private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
+
+// Mountain watermark: monochrome layered ridgelines kept deliberately faint.
+fun Modifier.mountainBackdrop(accent: Color): Modifier = this.drawBehind {
+    val w = size.width
+    val h = size.height
+    if (w > 0f && h > 0f) {
+        val rear = Path().apply {
+            moveTo(0f, h * 0.73f)
+            cubicTo(w * 0.16f, h * 0.55f, w * 0.22f, h * 0.37f, w * 0.38f, h * 0.59f)
+            cubicTo(w * 0.53f, h * 0.35f, w * 0.62f, h * 0.43f, w * 0.76f, h * 0.61f)
+            cubicTo(w * 0.86f, h * 0.49f, w * 0.93f, h * 0.54f, w, h * 0.65f)
+            lineTo(w, h); lineTo(0f, h); close()
+        }
+        val front = Path().apply {
+            moveTo(0f, h * 0.83f)
+            cubicTo(w * 0.17f, h * 0.68f, w * 0.26f, h * 0.72f, w * 0.42f, h * 0.82f)
+            cubicTo(w * 0.58f, h * 0.66f, w * 0.73f, h * 0.69f, w, h * 0.79f)
+            lineTo(w, h); lineTo(0f, h); close()
+        }
+        drawPath(rear, accent.copy(alpha = 0.055f))
+        drawPath(front, accent.copy(alpha = 0.035f))
+    }
+}
+
 
 @Composable
 fun FeatureHub(
@@ -120,7 +146,7 @@ fun FeatureHub(
             }
         )
     }
-    Column(Modifier.fillMaxSize().background(hubBg.copy(alpha=0.84f)).padding(horizontal=18.dp, vertical=14.dp)){
+    Column(Modifier.fillMaxSize().background(hubBg).mountainBackdrop(Color(0xFF9BAFC4)).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -213,9 +239,9 @@ fun FeatureHub(
                                 Box(
                                     Modifier.fillMaxSize().background(
                                         ComposeBrush.linearGradient(
-                                            listOf(accent.copy(alpha = 0.24f), Color(0xFF202731), Color(0xFF0B0E13))
+                                            listOf(accent.copy(alpha = 0.20f), Color(0xFF202731), Color(0xFF0B0E13))
                                         )
-                                    ),
+                                    ).mountainBackdrop(accent),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(
@@ -306,7 +332,7 @@ private val HMuted=Color(0xFF9AA3AE)
  val today=java.util.Calendar.getInstance().apply{set(java.util.Calendar.HOUR_OF_DAY,0);set(java.util.Calendar.MINUTE,0);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0)}.timeInMillis
  val todayLogs=logs.filter{it.at>=today};val eaten=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.kcal};val burned=todayLogs.filter{it.type=="فعالیت"}.sumOf{it.kcal}
  val nf=remember{NumberFormat.getNumberInstance(Locale.US)}
- Column(Modifier.fillMaxSize().background(HBg).padding(16.dp)){
+ Column(Modifier.fillMaxSize().background(HBg).mountainBackdrop(HMint).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
    Box(Modifier.size(48.dp).background(Color(0xFF24372F),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
    Spacer(Modifier.width(11.dp))
@@ -397,7 +423,7 @@ private val HMuted=Color(0xFF9AA3AE)
  val decks=remember{mapOf("ترکیبی" to listOf("فضانورد","چتر نجات","آشپز","ترافیک","کارآگاه","کتابخانه","آتش‌نشان","ماهیگیری","ربات","سینما","دوچرخه","آبشار","جادوگر","بستنی","قطار","عکاس","دندان‌پزشک","کوه‌نوردی","بادبادک","خواب‌آلود"),"سینما" to listOf("کارگردان","فرش قرمز","اسکار","دوربین","فیلمنامه","اکران","جلوه‌های ویژه","بازیگر","سکانس"),"سخت" to listOf("پارادوکس","ناخودآگاه","جاذبه","معماری","دیپلماسی","فرسایش","کهکشان","نوستالژی","الگوریتم","توربین"))}
  LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
  fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
- Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10).copy(alpha = 0.84f))){
+ Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10)).mountainBackdrop(Color(0xFFE0A68E))){
   Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("پانتومیم؛ فعلاً تنها بازی فعال این مجموعه",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
@@ -526,7 +552,7 @@ private class TrackSearch{
  val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
  DisposableEffect(Unit){onDispose{player?.runCatching{stop()};player?.runCatching{release()}}}
- Column(Modifier.fillMaxSize().background(FB).padding(16.dp)){
+ Column(Modifier.fillMaxSize().background(FB).mountainBackdrop(if (standalone) Color(0xFFC2A8E8) else Color(0xFFD9A6B8)).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(if(standalone)"موسیقی" else "سینما",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(if(standalone)"جست‌وجو کن، گوش بده و هنرمندهای تازه پیدا کن" else "پوسترها، فیلم‌ها و پیشنهاد تماشا",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
   if(!standalone) Row{listOf("فیلم امروز","جست‌وجوی فیلم").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}}
   if(tab=="فیلم امروز"){
@@ -653,7 +679,7 @@ fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
     var posts by remember { mutableStateOf("") }
     val platforms = listOf("Instagram", "TikTok", "YouTube", "Telegram", "LinkedIn", "X", "سایر")
     Column(
-        Modifier.fillMaxSize().background(FB).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
+        Modifier.fillMaxSize().background(FB).mountainBackdrop(Color(0xFFE0A0B8)).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
