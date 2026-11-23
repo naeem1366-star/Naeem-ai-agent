@@ -134,8 +134,8 @@ fun MarketsDashboard(onClose: () -> Unit) {
         else -> unit
     }
 
-    Surface(Modifier.fillMaxSize(), color = MarketInk) {
-        Column(Modifier.fillMaxSize().mountainBackdrop(Color(0xFFD8BD83)).padding(horizontal = 18.dp)) {
+    Surface(Modifier.fillMaxSize(), color = MarketInk.copy(alpha = 0.84f)) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
                 Column(Modifier.weight(1f)) {
