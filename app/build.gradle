@@ -55,10 +55,15 @@ def vazirmatnFontFiles = [
     "Vazirmatn-Bold.ttf"
 ]
 tasks.register("downloadVazirmatnFonts") {
-    outputs.files(vazirmatnFontFiles.collect { file("$projectDir/src/main/res/font/" + it.toLowerCase().replace("-", "_")) })
+    outputs.files(vazirmatnFontFiles.collect { file("$projectDir/src/main/res/font/" + it.toLowerCase().replace("-", "_")) } + [file("$projectDir/src/main/assets/fonts/OFL.txt")])
     doLast {
         def fontDir = file("$projectDir/src/main/res/font")
         fontDir.mkdirs()
+        def licenseFile = file("$projectDir/src/main/assets/fonts/OFL.txt")
+        licenseFile.parentFile.mkdirs()
+        if (!licenseFile.exists() || licenseFile.length() < 1000L) {
+            new URL("https://raw.githubusercontent.com/rastikerdar/vazirmatn/master/OFL.txt").withInputStream { input -> licenseFile.withOutputStream { output -> output << input } }
+        }
         vazirmatnFontFiles.each { fontName ->
             def targetName = fontName.toLowerCase().replace("-", "_")
             def target = new File(fontDir, targetName)
