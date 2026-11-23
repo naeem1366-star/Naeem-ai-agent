@@ -398,7 +398,7 @@ private val HMuted=Color(0xFF9AA3AE)
  LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
  fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
  Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10).copy(alpha=0.84f))){
-  Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("پانتومیم؛ فعلاً تنها بازی فعال این مجموعه",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
+  Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("پانتومیم، محاسبه سریع، حافظه رنگ‌ها و مافیای گروهی",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=Color(0xFF303741),shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
@@ -410,6 +410,7 @@ private val HMuted=Color(0xFF9AA3AE)
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF303741) else Color(0xFF20252D)),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFFD4D9E0),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
    item { QuickMathGame() }
    item { ColorMemoryGame() }
+   item { MafiaGame() }
   }
  }
 }
@@ -446,6 +447,70 @@ private val HMuted=Color(0xFF9AA3AE)
    if(sequence.isNotEmpty()) Text("الگو: "+sequence.joinToString(" ← "){names[it]},color=Color.White,fontWeight=FontWeight.SemiBold)
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){colors.forEachIndexed{index,c->Box(Modifier.weight(1f).height(58.dp).background(c,RoundedCornerShape(14.dp)).clickable{if(sequence.isNotEmpty()){val next=chosen+index;chosen=next;if(next.size==sequence.size){if(next==sequence){level++;sequence=sequence+(0..3).random();message="درست بود! مرحله بعدی آماده است."}else{level=1;sequence=emptyList();message="ترتیب اشتباه بود؛ دوباره شروع کن."};chosen=emptyList()}}},contentAlignment=Alignment.Center){Text(names[index],color=Color.Black,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.labelSmall)}}}
    Button(onClick={sequence=List((level+1).coerceAtMost(8)){(0..3).random()};chosen=emptyList();message="حالا رنگ‌ها را به همان ترتیب لمس کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFBFC6D0))){Text("ساخت الگوی مرحله بعد")}
+  }
+ }
+}
+
+
+@Composable private fun MafiaGame(){
+ var namesText by remember{mutableStateOf("آرمان، نیما، سارا، علی، مهسا، رضا")}
+ var names by remember{mutableStateOf(listOf<String>())}
+ var roles by remember{mutableStateOf(emptyMap<String,String>())}
+ var alive by remember{mutableStateOf(listOf<String>())}
+ var phase by remember{mutableStateOf("setup")}
+ var index by remember{mutableIntStateOf(0)}
+ var target by remember{mutableStateOf("")}
+ var round by remember{mutableIntStateOf(1)}
+ var note by remember{mutableStateOf("نام بازیکن‌ها را با ویرگول جدا کن.")}
+ val mafia=roles.entries.firstOrNull{it.value=="مافیا"}?.key
+ fun resolve(remaining:List<String>){
+  val count=remaining.count{roles[it]=="مافیا"}
+  if(count==0){phase="end";note="شهروندها برنده شدند؛ مافیا حذف شد."}
+  else if(count>=remaining.size-count){phase="end";note="مافیا برنده شد؛ تعدادش به شهروندها رسید."}
+ }
+ Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF17182A)),shape=RoundedCornerShape(24.dp)){
+  Column(Modifier.fillMaxWidth().padding(17.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
+   Row(verticalAlignment=Alignment.CenterVertically){
+    Box(Modifier.size(44.dp).background(ComposeBrush.linearGradient(listOf(Color(0xFF6546A8),Color(0xFF24294C))),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text("♟",color=Color.White,style=MaterialTheme.typography.headlineMedium)}
+    Spacer(Modifier.width(10.dp))
+    Column(Modifier.weight(1f)){Text("مافیا",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black);Text("بازی گروهی با نقش مخفی",color=Color(0xFFB99AFF),style=MaterialTheme.typography.labelSmall)}
+    Text(if(phase=="setup")"شروع بازی" else "دور $round",color=Color(0xFFD9D0FF),style=MaterialTheme.typography.labelSmall)
+   }
+   Text(note,color=Color(0xFFCFD0E0),style=MaterialTheme.typography.bodySmall)
+   when(phase){
+    "setup"->{
+     OutlinedTextField(namesText,{namesText=it},modifier=Modifier.fillMaxWidth(),minLines=2,label={Text("نام بازیکن‌ها")},supportingText={Text("حداقل ۵ نفر؛ نام‌ها را با ویرگول جدا کن.")})
+     Button(onClick={
+      val list=namesText.split(",", "،", "\n").map{it.trim()}.filter{it.isNotBlank()}.distinct()
+      if(list.size<5)note="برای شروع حداقل ۵ بازیکن لازم است."
+      else{names=list;alive=list;roles=list.shuffled().mapIndexed{i,n->n to if(i==0)"مافیا" else "شهروند"}.toMap();index=0;phase="deal";note="نقش‌ها ساخته شد. هر نفر جداگانه نقش خودش را ببیند."}
+     },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("ساخت بازی و تقسیم نقش‌ها")}
+    }
+    "deal"->{
+     Text("گوشی دست "+names[index]+" است",color=Color.White,fontWeight=FontWeight.Bold)
+     var shown by remember(index){mutableStateOf(false)}
+     Box(Modifier.fillMaxWidth().height(88.dp).background(Color(0xFF24213D),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Text(if(shown)roles[names[index]].orEmpty() else "نقش مخفی",color=Color(0xFFE4D8FF),style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)}
+     Button(onClick={shown=!shown},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF51417D))){Text(if(shown)"پنهان کردن نقش" else "نمایش نقش من")}
+     Button(onClick={if(index<names.lastIndex)index++ else{phase="night";round=1;note="شب شد؛ گرداننده هدف مافیا را وارد کند."}},enabled=shown,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text(if(index<names.lastIndex)"تحویل گوشی به نفر بعد" else "پایان تقسیم نقش‌ها")}
+    }
+    "night"->{
+     Text("شب؛ هدف مافیا",color=Color.White,fontWeight=FontWeight.Bold)
+     OutlinedTextField(target,{target=it},modifier=Modifier.fillMaxWidth(),label={Text("نام بازیکن هدف")},singleLine=true)
+     Button(onClick={if(target in alive&&target!=mafia){val rest=alive-target;alive=rest;note=target+" در شب حذف شد.";target="";resolve(rest);if(phase!="end")phase="day"}else note="نام یک بازیکن زنده و غیرمافیا را دقیق وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("اعلام صبح")}
+    }
+    "day"->{
+     Text("روز؛ گفت‌وگو و رأی‌گیری",color=Color.White,fontWeight=FontWeight.Bold)
+     Text("پس از بحث گروهی، نام کسی را که بیشترین رأی را گرفته وارد کن.",color=Color(0xFFB9BBD0),style=MaterialTheme.typography.bodySmall)
+     OutlinedTextField(target,{target=it},modifier=Modifier.fillMaxWidth(),label={Text("نام بازیکن منتخب")},singleLine=true)
+     Button(onClick={if(target in alive){val out=target;val rest=alive-out;alive=rest;note=out+" با رأی گروه حذف شد؛ نقش: "+roles[out];target="";resolve(rest);if(phase!="end"){phase="night";round++}}else note="نام یک بازیکن زنده را دقیق وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("ثبت رأی و شروع شب")}
+    }
+    "end"->{
+     Text(note,color=Color(0xFFE4D8FF),fontWeight=FontWeight.Bold)
+     Text("نقش مافیا: "+(mafia ?: "—"),color=Color.White)
+     Button(onClick={phase="setup";names=emptyList();roles=emptyMap();alive=emptyList();target="";note="نام بازیکن‌ها را وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("بازی جدید")}
+    }
+   }
+   if(phase=="night"||phase=="day"){Divider(color=Color(0xFF393653));Text("بازیکنان باقی‌مانده: "+alive.joinToString("، "),color=Color(0xFFD9D0FF),style=MaterialTheme.typography.bodySmall)}
   }
  }
 }
