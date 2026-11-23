@@ -39,6 +39,12 @@ class LedgerStore(context: Context) {
 
     fun delete(id: Long) = save(entries().filterNot { it.id == id })
 
+    fun replaceAll(items: List<LedgerEntry>) {
+        require(items.all { it.amountToman > 0L }) { "پشتیبان شامل مبلغ نامعتبر است." }
+        require(items.map { it.id }.distinct().size == items.size) { "شناسهٔ تراکنش تکراری است." }
+        save(items.sortedByDescending { it.timestamp }.take(5000))
+    }
+
     private fun save(items: List<LedgerEntry>) {
         val array = JSONArray()
         items.forEach { item ->
