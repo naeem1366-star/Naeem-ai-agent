@@ -622,7 +622,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text("NAEEM AI  •  PERSONAL INTELLIGENCE", color = Gold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                ThinkingOrb(size = 174.dp, active = false)
+                                ThinkingOrb(diameter = 174.dp, active = false)
                                 Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                                 Text("امروز از کجا شروع کنیم؟", color = Color(0xFFD8C6A8), style = MaterialTheme.typography.titleMedium)
                                 Text(
@@ -680,7 +680,7 @@ fun NaeemApp(store: SecureConfigStore) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            ThinkingOrb(size = 158.dp, active = true)
+                            ThinkingOrb(diameter = 158.dp, active = true)
                             Text(
                                 when {
                                     speechPlaying -> "در حال صحبت با تو"
