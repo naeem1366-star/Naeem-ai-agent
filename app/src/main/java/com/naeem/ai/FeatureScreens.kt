@@ -56,7 +56,12 @@ fun FeatureHub(
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onTrail:()->Unit
 ){
     var query by remember { mutableStateOf("") }
+    var showFeatureMap by remember { mutableStateOf(false) }
     val carouselState = rememberLazyListState()
+    if (showFeatureMap) {
+        FeatureMapTree(onClose = { showFeatureMap = false })
+        return
+    }
     data class Entry(val title:String,val subtitle:String,val detail:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val action:()->Unit,val keywords:String)
     val entries=listOf(
         Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","سفرها، همراهان و مخارج",Icons.Default.Luggage,onTravel,"سفر مسافرت مقصد همسفر هزینه"),
@@ -84,6 +89,7 @@ fun FeatureHub(
                 Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                 Text("هر فضا را با انتخاب آیکون خودش باز کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall)
             }
+            IconButton(onClick={showFeatureMap=true}){Icon(Icons.Default.AccountTree,null,tint=gold)}
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
         }
         Spacer(Modifier.height(16.dp))
@@ -410,3 +416,82 @@ private class TrackSearch{
 @Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ DiscoverDashboard(onClose,onAskAi,"موسیقی",true) }
 
 // Horizontal gold carousel layout for the Naeem AI feature spaces.
+
+
+@Composable
+private fun FeatureMapTree(onClose: () -> Unit) {
+    val silver = Color(0xFFD4D9E0)
+    val muted = Color(0xFF9AA3AE)
+    val panel = Color(0xFF171B20)
+    val line = Color(0xFF626C78)
+    data class Branch(val title: String, val items: List<String>, val status: String = "در کد برنامه")
+    val branches = listOf(
+        Branch("هوش مصنوعی و گفتگو", listOf("چت هوشمند و پاسخ‌گویی", "گفت‌وگوی صوتی و خواندن پاسخ", "تحلیل تصویر و ساخت تصویر", "جست‌وجو و پژوهش وب", "تاریخچه و چند گفت‌وگو")),
+        Branch("حافظه هوشمند", listOf("یادداشت‌های قابل مدیریت", "استفاده از یادداشت‌های منتخب در گفتگو")),
+        Branch("مدیریت مالی", listOf("ثبت درآمد و هزینه", "دسته‌بندی تراکنش‌ها", "گزارش ماهانه و تراز مالی")),
+        Branch("ورزش", listOf("ثبت تمرین و فعالیت", "مدت، مسافت و جزئیات تمرین", "برنامه و سوابق ورزشی")),
+        Branch("سفر", listOf("مدیریت سفر و همراهان", "ثبت مخارج و سهم افراد", "آب‌وهوا و مسیر‌یابی آنلاین")),
+        Branch("سلامت و تغذیه", listOf("پروفایل بدن و محاسبه شاخص‌ها", "ثبت غذا و کالری", "تقویم چرخه قاعدگی", "یادآور و ثبت مصرف دارو"), "بخشی در حال توسعه"),
+        Branch("طبیعت‌گردی | Naeem Trail", listOf("ثبت مسیر با GPS", "ذخیره نقاط و محاسبه مسافت", "ورود و خروجی GPX", "نقشه توپوگرافی آفلاین سراسر ایران", "مسیریابی آفلاین و هشدار خروج از مسیر"), "نقشه و مسیریابی آفلاین در حال توسعه"),
+        Branch("ابزارها و امنیت", listOf("قفل اثر انگشت یا قفل دستگاه", "تنظیم نشانی API و مدل هوش مصنوعی", "ذخیره امن کلید API"))
+    )
+    Column(Modifier.fillMaxSize().background(Color(0xFF090B0E)).padding(horizontal=18.dp, vertical=14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("NAEEM AI  /  FEATURE MAP", color = muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text("نقشه قابلیت‌های نرم‌افزار", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
+            IconButton(onClick = onClose) { Icon(Icons.Default.Close, null, tint = silver) }
+        }
+        Spacer(Modifier.height(14.dp))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Surface(color = Color(0xFF242A32), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.AccountTree, null, tint = silver, modifier = Modifier.size(30.dp))
+                        Spacer(Modifier.height(5.dp))
+                        Text("Naeem AI", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                        Text("هسته هوشمند مرکزی و هماهنگ‌کننده ماژول‌ها", color = muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Box(Modifier.width(2.dp).height(18.dp).background(line))
+            }
+            items(branches.size) { index ->
+                val branch = branches[index]
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.width(2.dp).height(12.dp).background(line))
+                    Surface(
+                        color = panel,
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF343B45)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(8.dp).background(silver, CircleShape))
+                                Spacer(Modifier.width(9.dp))
+                                Text(branch.title, color = silver, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Text(branch.status, color = muted, style = MaterialTheme.typography.labelSmall)
+                            }
+                            branch.items.forEach { item ->
+                                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("└", color = line)
+                                    Text(item, color = Color(0xFFD0D5DC), style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Spacer(Modifier.height(4.dp))
+                Text("وضعیت قابلیت‌ها بر اساس کد فعلی برنامه است؛ موارد در حال توسعه هنوز قابلیت کامل و آزموده‌شده محسوب نمی‌شوند.", color = muted, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
