@@ -50,7 +50,7 @@ fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()-
     Text("NAEEM AI",color=FG,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
     Text("مرکز فرماندهی زندگی دیجیتال",color=FM,style=MaterialTheme.typography.bodySmall)
    }
-   Surface(color=Color(0xFF29251E),shape=RoundedCornerShape(14.dp)){Text("v1.2",color=FG,modifier=Modifier.padding(horizontal=12.dp,vertical=7.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)}
+   Surface(color=Color(0xFF29251E),shape=RoundedCornerShape(14.dp)){Text("v1.3",color=FG,modifier=Modifier.padding(horizontal=12.dp,vertical=7.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)}
    IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}
   }
   Spacer(Modifier.height(14.dp))
@@ -238,7 +238,7 @@ private class TrackSearch{
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
  DisposableEffect(Unit){onDispose{player?.runCatching{stop()};player?.runCatching{release()}}}
  Column(Modifier.fillMaxSize().background(FB).padding(16.dp)){
-  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("اتاق کشف",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("فیلم و موسیقی متناسب با حال‌وهوایت",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
+  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(if(standalone)"موسیقی" else "سینما",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(if(standalone)"جست‌وجو کن، گوش بده و هنرمندهای تازه پیدا کن" else "پوسترها، فیلم‌ها و پیشنهاد تماشا",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
   if(!standalone) Row{listOf("فیلم امروز","جست‌وجوی فیلم").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}}
   if(tab=="فیلم امروز"){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=24.dp)){
