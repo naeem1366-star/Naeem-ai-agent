@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -45,59 +48,90 @@ private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
 
 @Composable
-fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,onSettings:()->Unit){
- var query by remember { mutableStateOf("") }
- Column(Modifier.fillMaxSize().background(Color(0xFF101519)).padding(horizontal=17.dp, vertical=13.dp)){
-  Row(verticalAlignment=Alignment.CenterVertically){
-   Column(Modifier.weight(1f)){
-    Text("NAEEM AI  /  APP SPACE",color=Color(0xFF8CE0B5),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
-    Text("فضای برنامه‌ها",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
-    Text("هر بخش، تجربه‌ای مستقل در یک اپلیکیشن",color=Color(0xFFA9B8B2),style=MaterialTheme.typography.bodySmall)
-   }
-   IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color(0xFF8CE0B5))}
-  }
-  Spacer(Modifier.height(12.dp))
-  Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF1D302B)),shape=RoundedCornerShape(26.dp)){
-   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF315B4A),Color(0xFF202F38),Color(0xFF28263C)))).padding(17.dp)){
-    Row(verticalAlignment=Alignment.CenterVertically){
-     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)){
-      Text("YOUR DIGITAL WORLD",color=Color(0xFFB5F0D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
-      Text("همه ابزارها،\nبا هویت مخصوص خودشان",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
-      Text("برای ورود، یکی از فضاها را انتخاب کن.",color=Color(0xFFD0DED8),style=MaterialTheme.typography.bodySmall)
-     }
-     Box(Modifier.size(76.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFF9CE8C0),Color(0xFF376C58),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
-      Icon(Icons.Default.Widgets,null,tint=Color(0xFFD5FFE5),modifier=Modifier.size(38.dp))
-     }
+fun FeatureHub(
+    onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
+    onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
+    onSettings:()->Unit,onTravel:()->Unit
+){
+    var query by remember { mutableStateOf("") }
+    val listState= rememberLazyListState()
+    data class Entry(val title:String,val subtitle:String,val detail:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val color:Color,val action:()->Unit,val keywords:String)
+    val entries=listOf(
+        Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","ساخت سفر، افزودن همراهان و ثبت مخارج",Icons.Default.Luggage,Color(0xFF73D2D0),onTravel,"سفر مسافرت مقصد همسفر هزینه"),
+        Entry("دفتر مالی","مدیریت پول","ثبت درآمد و هزینه و گزارش مالی",Icons.Default.AccountBalanceWallet,Color(0xFFFFC477),onFinance,"مالی پول هزینه درآمد"),
+        Entry("سلامت و تغذیه","بدن و انرژی","تغذیه، کالری و فعالیت روزانه",Icons.Default.Favorite,Color(0xFF8CE0B5),onHealth,"سلامت تغذیه کالری غذا"),
+        Entry("حافظه هوشمند","یادداشت‌های من","نگهداری نکته‌ها و اطلاعات مهم",Icons.Default.Bookmark,Color(0xFFB9A4FF),onMemory,"حافظه یادداشت"),
+        Entry("آلبوم تصاویر","آرشیو آثار","تصاویر ساخته‌شده با هوش مصنوعی",Icons.Default.Collections,Color(0xFF8CCCF1),onAlbum,"آلبوم تصویر عکس"),
+        Entry("بازی‌ها","چالش و سرگرمی","بازی‌های کوتاه و گروهی",Icons.Default.SportsEsports,Color(0xFFB5A2FF),onGames,"بازی سرگرمی"),
+        Entry("سینما","فیلم و پوستر","کشف فیلم و پیشنهاد تماشا",Icons.Default.Movie,Color(0xFFFFB987),onDiscover,"فیلم سینما"),
+        Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و شنیدن پیش‌نمایش آهنگ",Icons.Default.MusicNote,Color(0xFF83CFF0),onMusic,"موسیقی آهنگ"),
+        Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال هوش مصنوعی",Icons.Default.Settings,Color(0xFFD1D5DD),onSettings,"تنظیمات اتصال")
+    )
+    val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
+    Column(Modifier.fillMaxSize().background(Color(0xFF0C1118)).padding(horizontal=18.dp, vertical=12.dp)){
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){
+                Text("NAEEM AI  /  SPACES",color=Color(0xFF8CE0B5),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                Text("جهان ابزارهای تو",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                Text("برای ورود، روی هر فضا بزن.",color=Color(0xFFA9B8B2),style=MaterialTheme.typography.bodySmall)
+            }
+            IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color(0xFF8CE0B5))}
+        }
+        Spacer(Modifier.height(12.dp))
+        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF172B2A)),shape=RoundedCornerShape(24.dp)){
+            Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF28594C),Color(0xFF1B3440),Color(0xFF25243A)))).padding(17.dp)){
+                Row(verticalAlignment=Alignment.CenterVertically){
+                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                        Text("SCROLL TO EXPLORE",color=Color(0xFFB5F0D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                        Text("هر قابلیت، یک فضای مستقل",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+                        Text("با اسکرول، فضاها در عمق صحنه حرکت می‌کنند.",color=Color(0xFFD0DED8),style=MaterialTheme.typography.bodySmall)
+                    }
+                    Box(Modifier.size(62.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFF9CE8C0),Color(0xFF376C58),Color.Transparent)),RoundedCornerShape(22.dp)),contentAlignment=Alignment.Center){
+                        Icon(Icons.Default.ViewInAr,null,tint=Color(0xFFD5FFE5),modifier=Modifier.size(34.dp))
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(11.dp))
+        OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},leadingIcon={Icon(Icons.Default.Search,null,tint=Color(0xFF8CE0B5))},colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Color(0xFF8CE0B5),unfocusedBorderColor=Color(0xFF394640),focusedContainerColor=Color(0xFF151F24),unfocusedContainerColor=Color(0xFF151F24)))
+        Spacer(Modifier.height(8.dp))
+        LazyColumn(state=listState,modifier=Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(13.dp),contentPadding=PaddingValues(top=8.dp,bottom=28.dp)){
+            itemsIndexed(filtered,key={_,entry->entry.title}){index,entry->
+                val relative=index-listState.firstVisibleItemIndex-listState.firstVisibleItemScrollOffset/520f
+                Card(
+                    onClick=entry.action,
+                    modifier=Modifier.fillMaxWidth().height(150.dp).graphicsLayer{
+                        val depth=relative.coerceIn(-1.4f,1.4f)
+                        rotationX=depth * -6.5f
+                        translationZ=-kotlin.math.abs(depth)*42f
+                        scaleX=1f-kotlin.math.abs(depth)*0.045f
+                        scaleY=1f-kotlin.math.abs(depth)*0.045f
+                        alpha=(1f-kotlin.math.abs(depth)*0.16f).coerceIn(0.72f,1f)
+                        cameraDistance=24f*density
+                    },
+                    colors=CardDefaults.cardColors(containerColor=Color(0xFF19232B)),
+                    shape=RoundedCornerShape(23.dp),
+                    elevation=CardDefaults.cardElevation(defaultElevation=8.dp)
+                ){
+                    Box(Modifier.fillMaxSize().background(ComposeBrush.linearGradient(listOf(entry.color.copy(alpha=.25f),Color(0xFF19232B),Color(0xFF111820)))).padding(17.dp)){
+                        Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxSize()){
+                            Box(Modifier.size(58.dp).background(entry.color.copy(alpha=.17f),RoundedCornerShape(19.dp)),contentAlignment=Alignment.Center){
+                                Icon(entry.icon,null,tint=entry.color,modifier=Modifier.size(31.dp))
+                            }
+                            Spacer(Modifier.width(15.dp))
+                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                                Text(entry.title,color=Color.White,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+                                Text(entry.subtitle,color=entry.color,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.SemiBold)
+                                Text(entry.detail,color=Color(0xFFB0BCB8),style=MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.Default.ArrowOutward,null,tint=entry.color,modifier=Modifier.size(21.dp))
+                        }
+                    }
+                }
+            }
+            if(filtered.isEmpty()) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
+        }
     }
-   }
-  }
-  Spacer(Modifier.height(12.dp))
-  OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(17.dp),placeholder={Text("جست‌وجو در برنامه‌ها…")},leadingIcon={Icon(Icons.Default.Search,null,tint=Color(0xFF8CE0B5))},colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Color(0xFF8CE0B5),unfocusedBorderColor=Color(0xFF394640),focusedContainerColor=Color(0xFF1B2424),unfocusedContainerColor=Color(0xFF1B2424)))
-  Spacer(Modifier.height(12.dp))
-  LazyVerticalGrid(columns=GridCells.Fixed(2),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(11.dp),verticalArrangement=Arrangement.spacedBy(11.dp),contentPadding=PaddingValues(bottom=14.dp)){
-   if(query.isBlank()||"دفتر مالی هزینه درآمد گزارش ماهانه".contains(query,true)) item { HubItem("دفتر مالی","مدیریت پول و گزارش",Icons.Default.AccountBalanceWallet,Color(0xFFFFC477),onFinance) }
-   if(query.isBlank()||"حافظه هوشمند یادداشت اطلاعات".contains(query,true)) item { HubItem("حافظه هوشمند","یادداشت و اطلاعات",Icons.Default.Bookmark,Color(0xFFB9A4FF),onMemory) }
-   if(query.isBlank()||"آلبوم تصاویر هوش مصنوعی".contains(query,true)) item { HubItem("آلبوم تصاویر","آرشیو آثار تصویری",Icons.Default.Collections,Color(0xFF8CCCF1),onAlbum) }
-   if(query.isBlank()||"سلامت تغذیه BMI کالری غذا وزن".contains(query,true)) item { HubItem("سلامت و تغذیه","بدن، غذا و فعالیت",Icons.Default.Favorite,Color(0xFF8CE0B5),onHealth) }
-   if(query.isBlank()||"بازی پانتومیم حدس کلمه تیمی سرگرمی".contains(query,true)) item { HubItem("بازی‌ها","چالش و سرگرمی",Icons.Default.SportsEsports,Color(0xFFB5A2FF),onGames) }
-   if(query.isBlank()||"فیلم سینما پوستر بازیگر ژانر".contains(query,true)) item { HubItem("سینما","فیلم و پوستر",Icons.Default.Movie,Color(0xFFFFB987),onDiscover) }
-   if(query.isBlank()||"موسیقی آهنگ خواننده پلیر پخش".contains(query,true)) item { HubItem("موسیقی","آهنگ و هنرمند",Icons.Default.MusicNote,Color(0xFF83CFF0),onMusic) }
-   if(query.isBlank()||"تنظیمات اتصال مدل API".contains(query,true)) item { HubItem("تنظیمات","اتصال و حریم خصوصی",Icons.Default.Settings,Color(0xFFD1D5DD),onSettings) }
-   if(query.isNotBlank() && listOf("دفتر مالی هزینه درآمد گزارش ماهانه","حافظه هوشمند یادداشت اطلاعات","آلبوم تصاویر هوش مصنوعی","سلامت تغذیه BMI کالری غذا وزن","بازی پانتومیم حدس کلمه تیمی سرگرمی","فیلم سینما پوستر بازیگر ژانر","موسیقی آهنگ خواننده پلیر پخش","تنظیمات اتصال مدل API").none{it.contains(query,true)}) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
-  }
- }
-}
-@Composable private fun HubItem(title:String,sub:String,icon:androidx.compose.ui.graphics.vector.ImageVector,accent:Color,click:()->Unit){
- Card(Modifier.fillMaxWidth().height(139.dp).clickable{click()},colors=CardDefaults.cardColors(containerColor=Color(0xFF20282A)),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
-  Box(Modifier.fillMaxSize().background(ComposeBrush.linearGradient(listOf(accent.copy(alpha=.19f),Color(0xFF20282A)))).padding(13.dp)){
-   Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-    Box(Modifier.size(42.dp).background(accent.copy(alpha=.18f),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Icon(icon,null,tint=accent,modifier=Modifier.size(25.dp))}
-    Text(title,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall)
-    Text(sub,color=Color(0xFFB0BCB8),style=MaterialTheme.typography.labelSmall)
-   }
-   Icon(Icons.Default.ArrowOutward,null,tint=accent,modifier=Modifier.align(Alignment.BottomEnd).size(17.dp))
-  }
- }
 }
 @Composable private fun FCard(content:@Composable ColumnScope.()->Unit){Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp),content=content)}}
 @Composable private fun FInput(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier){OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=FG,unfocusedBorderColor=Color(0xFF454954)))}
