@@ -30,7 +30,8 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.MEMORY, "list", ActionAccess.READ)
 
         if (text.contains("سفر") && listOf("هزینه", "خرج", "پرداخت").any { text.contains(it) }) {
-            val amount = parseAmount(text) ?: return AssistantIntentResolution.Clarify("مبلغ هزینهٔ سفر را با واحد مشخص بگو؛ مثلاً «۲۵۰ هزار تومان».")
+            if (hasAmbiguousToman(text)) return AssistantIntentResolution.Clarify("منظورت مبلغ واقعی به تومان است یا هزار تومان؟ مثلاً «۲۰۰ تومان» یا «۲۰۰ هزار تومان»؟")
+            val amount = parseAmount(text) ?: return AssistantIntentResolution.Clarify("مبلغ هزینهٔ سفر را با واحد مشخص بگو؛ مثلاً «۲۵۰ هزار تومان»." )
             val matches = trips.filter { text.contains(normalize(it.title)) || text.contains(normalize(it.destination)) }
             val trip = when {
                 matches.size == 1 -> matches.first()
@@ -90,6 +91,7 @@ object PersianAssistantIntentResolver {
         val income = listOf("درآمد", "واریز", "حقوق گرفتم", "دریافت کردم", "فروختم").any { text.contains(it) }
         val expense = listOf("خرج کردم", "هزینه کردم", "پرداخت کردم", "خریدم", "پول دادم", "هزینه").any { text.contains(it) }
         if (income || expense) {
+            if (hasAmbiguousToman(text)) return AssistantIntentResolution.Clarify("منظورت مبلغ واقعی به تومان است یا هزار تومان؟ مثلاً «۲۰۰ تومان» یا «۲۰۰ هزار تومان»؟")
             val amount = parseAmount(text) ?: return AssistantIntentResolution.Clarify("مبلغ را همراه واحد مشخص کن؛ مثلاً «۲۰۰ هزار تومان خرج غذا کردم».")
             val category = if (income) "درآمد" else when {
                 listOf("غذا", "رستوران", "ناهار", "شام", "کافه", "سوپر").any { text.contains(it) } -> "خوراک"
@@ -115,6 +117,11 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.FINANCE, "recent", ActionAccess.READ)
 
         return AssistantIntentResolution.NoMatch
+    }
+
+    private fun hasAmbiguousToman(text: String): Boolean {
+        val match = Regex("""(\\d+)\\s*تومن""").find(text) ?: return false
+        return (match.groupValues[1].toLongOrNull() ?: 0L) in 1L..999L
     }
 
     private fun parseAmount(text: String): Long? {
