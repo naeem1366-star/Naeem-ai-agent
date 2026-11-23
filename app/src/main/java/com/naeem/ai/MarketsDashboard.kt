@@ -40,9 +40,9 @@ private data class MarketQuote(
     val stale: Boolean
 )
 
-private val MarketInk = Color(0xFF11131A)
-private val MarketPanel = Color(0xFF1D202A)
-private val MarketAccent = Color(0xFF76D6C5)
+private val MarketInk = Color(0xFF0A0C10)
+private val MarketPanel = Color(0xFF1B1F25)
+private val MarketAccent = Color(0xFFD4D9E0)
 
 @Composable
 fun MarketsDashboard(onClose: () -> Unit) {
@@ -194,7 +194,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                                     val positive = it >= 0
                                     Text(
                                         "${if (positive) "▲" else "▼"} ${formatted(kotlin.math.abs(it))}٪",
-                                        color = if (positive) Color(0xFF70D6A8) else Color(0xFFFF8C85),
+                                        color = if (positive) Color(0xFFD4D9E0) else Color(0xFFFF8C85),
                                         fontSize = 11.sp
                                     )
                                 }
