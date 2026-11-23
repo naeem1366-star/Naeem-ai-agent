@@ -621,9 +621,9 @@ fun NaeemApp(store: SecureConfigStore) {
 
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = Gold, onPrimary = Ink, background = Ink, onBackground = Color(0xFFF2F0EA),
-            surface = Panel, onSurface = Color(0xFFF2F0EA), surfaceVariant = Color(0xFF292C33),
-            onSurfaceVariant = Color(0xFFE0DED8), secondary = Color(0xFFBFC6D0)
+            primary = Gold, onPrimary = Ink, background = Ink, onBackground = Color(0xFFE7ECF2),
+            surface = Panel, onSurface = Color(0xFFE7ECF2), surfaceVariant = Color(0xFF292C33),
+            onSurfaceVariant = Color(0xFFBFC6D0), secondary = Color(0xFFBFC6D0)
         )
     ) {
         Scaffold(
@@ -854,7 +854,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 Column(Modifier.padding(14.dp)) {
                                     Text(if (msg.fromUser) "شما" else "Naeem AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(5.dp))
-                                    Text(msg.text, color = Color(0xFFF2F0EA), style = MaterialTheme.typography.bodyLarge)
+                                    Text(msg.text, color = Color(0xFFE7ECF2), style = MaterialTheme.typography.bodyLarge)
                                     msg.image?.let { image ->
                                         Spacer(Modifier.height(8.dp))
                                         Image(bitmap = image, contentDescription = "تصویر گفتگو", modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp), contentScale = ContentScale.Fit)
