@@ -3,12 +3,14 @@ package com.naeem.ai
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
+import androidx.compose.foundation.paint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush as ComposeBrush
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,29 +56,22 @@ private val FB=Color(0xFF111318)
 private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
 
-// Mountain watermark: monochrome layered ridgelines kept deliberately faint.
-fun Modifier.mountainBackdrop(accent: Color): Modifier = this.drawBehind {
-    val w = size.width
-    val h = size.height
-    if (w > 0f && h > 0f) {
-        val rear = Path().apply {
-            moveTo(0f, h * 0.73f)
-            cubicTo(w * 0.16f, h * 0.55f, w * 0.22f, h * 0.37f, w * 0.38f, h * 0.59f)
-            cubicTo(w * 0.53f, h * 0.35f, w * 0.62f, h * 0.43f, w * 0.76f, h * 0.61f)
-            cubicTo(w * 0.86f, h * 0.49f, w * 0.93f, h * 0.54f, w, h * 0.65f)
-            lineTo(w, h); lineTo(0f, h); close()
-        }
-        val front = Path().apply {
-            moveTo(0f, h * 0.83f)
-            cubicTo(w * 0.17f, h * 0.68f, w * 0.26f, h * 0.72f, w * 0.42f, h * 0.82f)
-            cubicTo(w * 0.58f, h * 0.66f, w * 0.73f, h * 0.69f, w, h * 0.79f)
-            lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(rear, accent.copy(alpha = 0.055f))
-        drawPath(front, accent.copy(alpha = 0.035f))
+// Shared monochrome mountain photograph used as a faint module watermark.
+@Composable
+fun Modifier.mountainBackdrop(accent: Color): Modifier {
+    val mountain = painterResource(id = R.drawable.bg_mountain)
+    val monochrome = remember {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
     }
+    return this
+        .paint(
+            painter = mountain,
+            contentScale = ContentScale.Crop,
+            alpha = 0.15f,
+            colorFilter = monochrome
+        )
+        .drawBehind { drawRect(accent.copy(alpha = 0.035f)) }
 }
-
 
 @Composable
 fun FeatureHub(
@@ -102,7 +98,7 @@ fun FeatureHub(
         Entry("Naeem Trail","ناوبری طبیعت‌گردی","GPS، ثبت مسیر و فایل نقشه آفلاین","مسیر و مقصد طبیعت‌گردی را در گفتگو تعریف می‌کنی؛ هدف این است که مغز هوشمند برنامه و نکات مسیر را به این بخش وصل کند. ثبت و تحلیل خودکار مسیر و نقشه آفلاین هنوز کامل نشده‌اند.","اتصال دستیار: در حال توسعه",Icons.Default.Terrain,onTrail,"طبیعت گردی کوه پیمایی مسیر جی پی اس نقشه آفلاین پیمایش"),
         Entry("باشگاه ورزش","تمرین و آمادگی","تمرین، برنامه و رکوردها","تمرینت را با متن یا گفتار تعریف کن؛ مغز هوشمند نوع تمرین، مدت و مسافت را تشخیص می‌دهد، اگر چیزی مبهم باشد می‌پرسد و پس از تأیید، آن را در سوابق ورزشی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.FitnessCenter,onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
         Entry("نبض بازار","قیمت دارایی‌ها","طلا، ارز و بازارهای جهانی","نام دارایی یا پرسشت را در گفتگو مطرح کن؛ مغز هوشمند می‌تواند داده‌های در دسترس را توضیح دهد و مقایسه کند. به‌روز بودن قیمت به اتصال منبع زنده و معتبر وابسته است.","تحلیل با دستیار: از طریق گفتگو",Icons.Default.TrendingUp,onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
-        Entry("اخبار مهم","خبرهای مهم ایران و جهان","تیترهای مهم، فوری و اثرگذار","مغز هوشمند باید خبرهای مهم را از منابع معتبر گردآوری کند، خبرهای تکراری را کنار بگذارد، آن‌ها را بر اساس موضوع و میزان اهمیت مرتب کند و خلاصه‌ای روشن همراه با منبع و زمان انتشار ارائه دهد. می‌توانی درباره هر خبر سؤال تکمیلی بپرسی.","بخش خبری و دریافت زنده خبر: هنوز پیاده‌سازی نشده",Icons.Default.Newspaper,{},"اخبار مهم خبر فوری ایران جهان سیاست اقتصاد فناوری جنگ بحران رویداد")
+        Entry("اخبار مهم","خبرهای مهم ایران و جهان","تیترهای مهم، فوری و اثرگذار","مغز هوشمند باید خبرهای مهم را از منابع معتبر گردآوری کند، خبرهای تکراری را کنار بگذارد، آن‌ها را بر اساس موضوع و میزان اهمیت مرتب کند و خلاصه‌ای روشن همراه با منبع و زمان انتشار ارائه دهد. می‌توانی درباره هر خبر سؤال تکمیلی بپرسی.","بخش خبری و دریافت زنده خبر: هنوز پیاده‌سازی نشده",Icons.Default.Newspaper,{},"اخبار مهم خبر فوری ایران جهان سیاست اقتصاد فناوری جنگ بحران رویداد"),
         Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی","فقط در گفتگو بگو چه مبلغی خرج کردی یا درآمد داشتی؛ مغز هوشمند مبلغ، تاریخ و دسته را درمی‌آورد، ابهام را می‌پرسد و پس از تأییدت در دفتر مالی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
         Entry("روایت ماه","گزارش ماهانه","خلاصه عملکرد و اتفاق‌های ماه","مغز هوشمند اطلاعات ثبت‌شده در بخش‌های مختلف را کنار هم می‌گذارد و از آن‌ها گزارش ماهانه می‌سازد؛ هرچه ثبت‌ها کامل‌تر باشند، جمع‌بندی دقیق‌تر است.","گزارش از داده‌های ذخیره‌شده",Icons.Default.AutoAwesome,onWrapped,"گزارش ماهانه جمع‌بندی عملکرد"),
         Entry("سلامت و تغذیه","بدن، تغذیه و مراقبت‌های روزانه","غذا، کالری، چرخه قاعدگی و داروها","در گفتگو بگو چه خورده‌ای، چه فعالیتی داشته‌ای یا چه دارویی را در چه ساعتی مصرف می‌کنی؛ مغز هوشمند باید اطلاعات را تشخیص دهد و در دفتر سلامت ثبت کند. این فضا همچنین برای تقویم چرخه قاعدگی، ثبت علائم و یادآوری زمان دارو در نظر گرفته شده است. ثبت خودکار از گفتگو، تقویم چرخه و یادآور دارو هنوز پیاده‌سازی نشده‌اند.","اتصال کامل سلامت به دستیار: در حال توسعه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
