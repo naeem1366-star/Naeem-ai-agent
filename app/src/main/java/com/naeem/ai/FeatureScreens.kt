@@ -119,6 +119,30 @@ private class HStore(c:Context){
  fun add(x:HLog){val a=org.json.JSONArray();(logs()+x).takeLast(500).forEach{a.put(org.json.JSONObject().put("n",it.name).put("c",it.kcal).put("t",it.type).put("a",it.at).put("p",it.protein).put("b",it.carbs).put("f",it.fat))};p.edit().putString("logs",a.toString()).apply()}
  fun remove(at:Long){val a=org.json.JSONArray();logs().filterNot{it.at==at}.forEach{a.put(org.json.JSONObject().put("n",it.name).put("c",it.kcal).put("t",it.type).put("a",it.at))};p.edit().putString("logs",a.toString()).apply()}
 }
+
+private val HBg=Color(0xFF101815)
+private val HPanel=Color(0xFF1B2923)
+private val HMint=Color(0xFF8CE0B5)
+private val HMuted=Color(0xFFA0B5AA)
+@Composable private fun HCard(content:@Composable ColumnScope.()->Unit){
+ Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
+  Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
+ }
+}
+@Composable private fun HInput(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier){
+ OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(15.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=HMint,unfocusedBorderColor=Color(0xFF496456),focusedContainerColor=Color(0xFF17231D),unfocusedContainerColor=Color(0xFF17231D),focusedLabelColor=HMint,cursorColor=HMint))
+}
+@Composable private fun HMetric(title:String,value:String,sub:String,modifier:Modifier){
+ val icon=when(title){"BMI"->Icons.Default.Favorite;"کالری پایه"->Icons.Default.LocalFireDepartment;"هدف کالری"->Icons.Default.Flag;else->Icons.Default.Restaurant}
+ Card(modifier,colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(19.dp),elevation=CardDefaults.cardElevation(defaultElevation=2.dp)){
+  Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){Icon(icon,null,tint=HMint,modifier=Modifier.size(16.dp));Text(title,color=HMuted,style=MaterialTheme.typography.labelSmall)}
+   Text(value,color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black)
+   Text(sub,color=HMuted,style=MaterialTheme.typography.labelSmall)
+  }
+ }
+}
+
 @Composable fun HealthDashboard(onClose:()->Unit){
  val ctx=LocalContext.current;val store=remember{HStore(ctx)}
  var height by remember{mutableStateOf(store.get("h"))};var weight by remember{mutableStateOf(store.get("w"))};var age by remember{mutableStateOf(store.get("age"))}
@@ -135,57 +159,77 @@ private class HStore(c:Context){
  val today=java.util.Calendar.getInstance().apply{set(java.util.Calendar.HOUR_OF_DAY,0);set(java.util.Calendar.MINUTE,0);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0)}.timeInMillis
  val todayLogs=logs.filter{it.at>=today};val eaten=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.kcal};val burned=todayLogs.filter{it.type=="فعالیت"}.sumOf{it.kcal}
  val nf=remember{NumberFormat.getNumberInstance(Locale.US)}
- Column(Modifier.fillMaxSize().background(FB).padding(16.dp)){
-  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("سلامت و تغذیه",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("داشبورد بدن و انرژی",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
+ Column(Modifier.fillMaxSize().background(HBg).padding(16.dp)){
+  Row(verticalAlignment=Alignment.CenterVertically){
+   Box(Modifier.size(48.dp).background(Color(0xFF244B3B),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
+   Spacer(Modifier.width(11.dp))
+   Column(Modifier.weight(1f)){Text("سلامت و تغذیه",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("داشبورد بدن و انرژی",color=HMuted,style=MaterialTheme.typography.bodySmall)}
+   IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=HMint)}
+  }
+  Card(colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()){
+   Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF244D3D),Color(0xFF1D3430),Color(0xFF202D2D)))).padding(17.dp)){
+    Row(verticalAlignment=Alignment.CenterVertically){
+     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
+      Text("HEALTH SPACE",color=Color(0xFFA9EAC7),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+      Text("قدم‌به‌قدم، سالم‌تر",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
+      Text("تغذیه، تحرک و حال خوبت را یک‌جا دنبال کن.",color=Color(0xFFC2D8CD),style=MaterialTheme.typography.bodySmall)
+     }
+     Box(Modifier.size(68.dp).background(Brush.radialGradient(listOf(Color(0xFF9AE9BD),Color(0xFF326A50),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
+      Icon(Icons.Default.HealthAndSafety,null,tint=Color(0xFFE0FFEA),modifier=Modifier.size(37.dp))
+     }
+    }
+   }
+  }
+  Spacer(Modifier.height(12.dp))
   LazyColumn(verticalArrangement=Arrangement.spacedBy(11.dp),contentPadding=PaddingValues(bottom=24.dp)){
-   item{FCard{
-    Text("پروفایل بدن",color=FG,fontWeight=FontWeight.Bold)
-    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){FInput("قد cm",height,{height=it.filter(Char::isDigit)},Modifier.weight(1f));FInput("وزن kg",weight,{weight=it.filter{c->c.isDigit()||c=='.'}},Modifier.weight(1f));FInput("سن",age,{age=it.filter(Char::isDigit)},Modifier.weight(1f))}
+   item{HCard{
+    Text("پروفایل بدن",color=HMint,fontWeight=FontWeight.Bold)
+    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){HInput("قد cm",height,{height=it.filter(Char::isDigit)},Modifier.weight(1f));HInput("وزن kg",weight,{weight=it.filter{c->c.isDigit()||c=='.'}},Modifier.weight(1f));HInput("سن",age,{age=it.filter(Char::isDigit)},Modifier.weight(1f))}
     Row{listOf("مرد","زن").forEach{FilterChip(selected=sex==it,onClick={sex=it},label={Text(it)})}}
     Text("فعالیت روزانه",color=FM);Row{listOf("کم‌تحرک","سبک","متوسط","زیاد").forEach{FilterChip(selected=activity==it,onClick={activity=it},label={Text(it,style=MaterialTheme.typography.labelSmall)})}}
     Text("هدف",color=FM);Row{listOf("کاهش وزن","حفظ وزن","افزایش وزن").forEach{FilterChip(selected=goal==it,onClick={goal=it},label={Text(it,style=MaterialTheme.typography.labelSmall)})}}
-    Button(onClick={store.put("h",height);store.put("w",weight);store.put("age",age);store.put("sex",sex);store.put("activity",activity);store.put("goal",goal)},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ذخیرهٔ پروفایل")}
+    Button(onClick={store.put("h",height);store.put("w",weight);store.put("age",age);store.put("sex",sex);store.put("activity",activity);store.put("goal",goal)},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("ذخیرهٔ پروفایل")}
    }}
    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    FMetric("BMI",bmi?.let{String.format(Locale.US,"%.1f",it)}?:"—",bmi?.let{when{it<18.5->"کمبود وزن";it<25->"محدوده معمول";it<30->"اضافه‌وزن";else->"بالا"}}?:"قد و وزن را وارد کن",Modifier.weight(1f))
-    FMetric("کالری پایه",bmr?.toInt()?.toString()?:"—","BMR روزانه",Modifier.weight(1f))
-   };Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=7.dp)){FMetric("هدف کالری",target?.toString()?:"—","برآورد روزانه",Modifier.weight(1f));FMetric("مصرف امروز",eaten.toString(),"فعالیت: "+burned+" kcal",Modifier.weight(1f))}
+    HMetric("BMI",bmi?.let{String.format(Locale.US,"%.1f",it)}?:"—",bmi?.let{when{it<18.5->"کمبود وزن";it<25->"محدوده معمول";it<30->"اضافه‌وزن";else->"بالا"}}?:"قد و وزن را وارد کن",Modifier.weight(1f))
+    HMetric("کالری پایه",bmr?.toInt()?.toString()?:"—","BMR روزانه",Modifier.weight(1f))
+   };Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=7.dp)){HMetric("هدف کالری",target?.toString()?:"—","برآورد روزانه",Modifier.weight(1f));HMetric("مصرف امروز",eaten.toString(),"فعالیت: "+burned+" kcal",Modifier.weight(1f))}
     val pToday=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.protein};val cToday=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.carbs};val fToday=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.fat}
-   Text("درشت‌مغذی‌های امروز  •  پروتئین "+String.format(Locale.US,"%.1f",pToday)+"g  •  کربوهیدرات "+String.format(Locale.US,"%.1f",cToday)+"g  •  چربی "+String.format(Locale.US,"%.1f",fToday)+"g",color=FG,style=MaterialTheme.typography.labelSmall)
+   Text("درشت‌مغذی‌های امروز  •  پروتئین "+String.format(Locale.US,"%.1f",pToday)+"g  •  کربوهیدرات "+String.format(Locale.US,"%.1f",cToday)+"g  •  چربی "+String.format(Locale.US,"%.1f",fToday)+"g",color=HMint,style=MaterialTheme.typography.labelSmall)
    if(bmi!=null)Text("BMI فقط شاخص غربالگری است، نه تشخیص پزشکی.",color=FM,style=MaterialTheme.typography.labelSmall)
    }
-   item{FCard{
-    Text("بانک غذایی؛ محاسبه بر اساس گرم",color=FG,fontWeight=FontWeight.Bold)
+   item{HCard{
+    Text("بانک غذایی؛ محاسبه بر اساس گرم",color=HMint,fontWeight=FontWeight.Bold)
     OutlinedTextField(foodSearch,{foodSearch=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("جست‌وجوی ماده غذایی")},leadingIcon={Icon(Icons.Default.Search,null)})
-    foodBank.filter{it.name.contains(foodSearch,true)}.forEach{food->TextButton(onClick={selectedFood=food}){Text(food.name+" • "+food.kcal.toInt()+" kcal / ۱۰۰ گرم",color=if(selectedFood==food)FG else Color.White)}}
+    foodBank.filter{it.name.contains(foodSearch,true)}.forEach{food->TextButton(onClick={selectedFood=food}){Text(food.name+" • "+food.kcal.toInt()+" kcal / ۱۰۰ گرم",color=if(selectedFood==food)HMint else Color.White)}}
     if(selectedFood!=null){
-     Text("انتخاب: "+selectedFood!!.name,color=FG,fontWeight=FontWeight.SemiBold)
-     FInput("مقدار به گرم",grams,{grams=it.filter{c->c.isDigit()||c=='.'}},Modifier.fillMaxWidth())
+     Text("انتخاب: "+selectedFood!!.name,color=HMint,fontWeight=FontWeight.SemiBold)
+     HInput("مقدار به گرم",grams,{grams=it.filter{c->c.isDigit()||c=='.'}},Modifier.fillMaxWidth())
      Row{listOf("صبحانه","ناهار","شام","میان‌وعده").forEach{FilterChip(selected=meal==it,onClick={meal=it},label={Text(it,style=MaterialTheme.typography.labelSmall)})}}
      val g=grams.toDoubleOrNull()?:0.0;val factor=g/100.0
-     Text("انرژی: "+(selectedFood!!.kcal*factor).toInt()+" kcal • پروتئین: "+String.format(Locale.US,"%.1f",selectedFood!!.protein*factor)+" g",color=FG)
+     Text("انرژی: "+(selectedFood!!.kcal*factor).toInt()+" kcal • پروتئین: "+String.format(Locale.US,"%.1f",selectedFood!!.protein*factor)+" g",color=HMint)
      Text("کربوهیدرات: "+String.format(Locale.US,"%.1f",selectedFood!!.carbs*factor)+" g • چربی: "+String.format(Locale.US,"%.1f",selectedFood!!.fat*factor)+" g",color=FM,style=MaterialTheme.typography.bodySmall)
-     Button(onClick={store.add(HLog(selectedFood!!.name,(selectedFood!!.kcal*factor).roundToInt(),"غذا • "+meal,System.currentTimeMillis(),selectedFood!!.protein*factor,selectedFood!!.carbs*factor,selectedFood!!.fat*factor));logs=store.logs();selectedFood=null;grams="100"},enabled=g>0,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت در دفترچه غذایی")}
+     Button(onClick={store.add(HLog(selectedFood!!.name,(selectedFood!!.kcal*factor).roundToInt(),"غذا • "+meal,System.currentTimeMillis(),selectedFood!!.protein*factor,selectedFood!!.carbs*factor,selectedFood!!.fat*factor));logs=store.logs();selectedFood=null;grams="100"},enabled=g>0,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("ثبت در دفترچه غذایی")}
     }
    }}
-   item{FCard{Text("ثبت خوراکی و کالری",color=FG,fontWeight=FontWeight.Bold);FInput("نام غذا یا وعده",name,{name=it},Modifier.fillMaxWidth());FInput("کالری kcal",kcal,{kcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth());Button(onClick={val c=kcal.toIntOrNull()?:0;if(name.isNotBlank()&&c>0){store.add(HLog(name,c,"غذا",System.currentTimeMillis()));logs=store.logs();name="";kcal=""}},enabled=name.isNotBlank()&&kcal.toIntOrNull()!=null,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت وعده")};Text("برای خوراکی‌هایی که در بانک نیستند، کالری را می‌توانی دستی ثبت کنی.",color=FM,style=MaterialTheme.typography.labelSmall)}}
-   item{FCard{Text("آب روزانه",color=FG,fontWeight=FontWeight.Bold);Text(water.toString()+" از ۸ لیوان",color=Color.White,style=MaterialTheme.typography.titleLarge);LinearProgressIndicator(progress={(water/8f).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth(),color=FG,trackColor=FB);Row{OutlinedButton(onClick={water=(water-1).coerceAtLeast(0);store.put("water",water.toString())}){Text("−۱")};Button(onClick={water++;store.put("water",water.toString())},colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("+ یک لیوان")}}}}
-   item{FCard{
+   item{HCard{Text("ثبت خوراکی و کالری",color=HMint,fontWeight=FontWeight.Bold);HInput("نام غذا یا وعده",name,{name=it},Modifier.fillMaxWidth());HInput("کالری kcal",kcal,{kcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth());Button(onClick={val c=kcal.toIntOrNull()?:0;if(name.isNotBlank()&&c>0){store.add(HLog(name,c,"غذا",System.currentTimeMillis()));logs=store.logs();name="";kcal=""}},enabled=name.isNotBlank()&&kcal.toIntOrNull()!=null,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("ثبت وعده")};Text("برای خوراکی‌هایی که در بانک نیستند، کالری را می‌توانی دستی ثبت کنی.",color=FM,style=MaterialTheme.typography.labelSmall)}}
+   item{HCard{Text("آب روزانه",color=HMint,fontWeight=FontWeight.Bold);Text(water.toString()+" از ۸ لیوان",color=Color.White,style=MaterialTheme.typography.titleLarge);LinearProgressIndicator(progress={(water/8f).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth(),color=HMint,trackColor=HBg);Row{OutlinedButton(onClick={water=(water-1).coerceAtLeast(0);store.put("water",water.toString())}){Text("−۱")};Button(onClick={water++;store.put("water",water.toString())},colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("+ یک لیوان")}}}}
+   item{HCard{
     var actName by remember{mutableStateOf("تمرین ورزشی")};var actKcal by remember{mutableStateOf("")}
     val walkEstimate=((walkKm.toDoubleOrNull()?:0.0)*(w?:0.0)*0.75).toInt()
-    Text("فعالیت و پیاده‌روی",color=FG,fontWeight=FontWeight.Bold)
+    Text("فعالیت و پیاده‌روی",color=HMint,fontWeight=FontWeight.Bold)
     Text("برآورد پیاده‌روی بر اساس مسافت و وزن ثبت‌شده",color=FM,style=MaterialTheme.typography.bodySmall)
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FInput("مسافت km",walkKm,{walkKm=it.filter{c->c.isDigit()||c=='.'}},Modifier.weight(1f));FInput("مدت دقیقه",walkMinutes,{walkMinutes=it.filter(Char::isDigit)},Modifier.weight(1f))}
-    Text("کالری تخمینی پیاده‌روی: "+walkEstimate+" kcal",color=FG,fontWeight=FontWeight.Bold)
-    Button(onClick={if(walkEstimate>0){store.add(HLog("پیاده‌روی "+walkKm+" کیلومتر • "+walkMinutes+" دقیقه",walkEstimate,"فعالیت",System.currentTimeMillis()));logs=store.logs()}},enabled=walkEstimate>0,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت پیاده‌روی")}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){HInput("مسافت km",walkKm,{walkKm=it.filter{c->c.isDigit()||c=='.'}},Modifier.weight(1f));HInput("مدت دقیقه",walkMinutes,{walkMinutes=it.filter(Char::isDigit)},Modifier.weight(1f))}
+    Text("کالری تخمینی پیاده‌روی: "+walkEstimate+" kcal",color=HMint,fontWeight=FontWeight.Bold)
+    Button(onClick={if(walkEstimate>0){store.add(HLog("پیاده‌روی "+walkKm+" کیلومتر • "+walkMinutes+" دقیقه",walkEstimate,"فعالیت",System.currentTimeMillis()));logs=store.logs()}},enabled=walkEstimate>0,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("ثبت پیاده‌روی")}
     Divider(color=FB)
-    Text("فعالیت دیگر",color=FG,fontWeight=FontWeight.SemiBold)
-    FInput("نوع فعالیت",actName,{actName=it},Modifier.fillMaxWidth());FInput("کالری سوزانده‌شده",actKcal,{actKcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth())
-    Button(onClick={val c=actKcal.toIntOrNull()?:0;if(c>0){store.add(HLog(actName,c,"فعالیت",System.currentTimeMillis()));logs=store.logs();actKcal=""}},enabled=actKcal.toIntOrNull()!=null,colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("ثبت فعالیت")}
+    Text("فعالیت دیگر",color=HMint,fontWeight=FontWeight.SemiBold)
+    HInput("نوع فعالیت",actName,{actName=it},Modifier.fillMaxWidth());HInput("کالری سوزانده‌شده",actKcal,{actKcal=it.filter(Char::isDigit)},Modifier.fillMaxWidth())
+    Button(onClick={val c=actKcal.toIntOrNull()?:0;if(c>0){store.add(HLog(actName,c,"فعالیت",System.currentTimeMillis()));logs=store.logs();actKcal=""}},enabled=actKcal.toIntOrNull()!=null,colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("ثبت فعالیت")}
    }}
-   item{FCard{Text("پیشنهاد تغذیه‌ای",color=FG,fontWeight=FontWeight.Bold);val tips=when(goal){"کاهش وزن"->listOf("در هر وعده پروتئین و سبزیجات داشته باش.","نوشیدنی شیرین را با آب جایگزین کن.","کاهش کالری را تدریجی نگه دار.");"افزایش وزن"->listOf("از میان‌وعده‌های مغذی استفاده کن.","پروتئین را در وعده‌ها پخش کن.","افزایش انرژی را تدریجی انجام بده.");else->listOf("وعده‌ها را متعادل و متنوع نگه دار.","در طول روز آب کافی بنوش.","پروتئین، سبزیجات و غلات کامل را ترکیب کن.")};tips.forEach{Text("• "+it,color=Color.White,style=MaterialTheme.typography.bodySmall)}}}
-   item{Text("ثبت‌های امروز",color=FG,fontWeight=FontWeight.Bold)}
-   items(todayLogs.reversed(),key={it.at}){log->Card(colors=CardDefaults.cardColors(containerColor=FC)){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(log.name,color=Color.White);Text(log.type,color=FM,style=MaterialTheme.typography.labelSmall)};Text(log.kcal.toString()+" kcal",color=FG);IconButton(onClick={store.remove(log.at);logs=store.logs()}){Icon(Icons.Default.Delete,null,tint=Color(0xFFFF9A91))}}}}
+   item{HCard{Text("پیشنهاد تغذیه‌ای",color=HMint,fontWeight=FontWeight.Bold);val tips=when(goal){"کاهش وزن"->listOf("در هر وعده پروتئین و سبزیجات داشته باش.","نوشیدنی شیرین را با آب جایگزین کن.","کاهش کالری را تدریجی نگه دار.");"افزایش وزن"->listOf("از میان‌وعده‌های مغذی استفاده کن.","پروتئین را در وعده‌ها پخش کن.","افزایش انرژی را تدریجی انجام بده.");else->listOf("وعده‌ها را متعادل و متنوع نگه دار.","در طول روز آب کافی بنوش.","پروتئین، سبزیجات و غلات کامل را ترکیب کن.")};tips.forEach{Text("• "+it,color=Color.White,style=MaterialTheme.typography.bodySmall)}}}
+   item{Text("ثبت‌های امروز",color=HMint,fontWeight=FontWeight.Bold)}
+   items(todayLogs.reversed(),key={it.at}){log->Card(colors=CardDefaults.cardColors(containerColor=HPanel)){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(log.name,color=Color.White);Text(log.type,color=FM,style=MaterialTheme.typography.labelSmall)};Text(log.kcal.toString()+" kcal",color=HMint);IconButton(onClick={store.remove(log.at);logs=store.logs()}){Icon(Icons.Default.Delete,null,tint=Color(0xFFFF9A91))}}}}
   }
  }
 }
