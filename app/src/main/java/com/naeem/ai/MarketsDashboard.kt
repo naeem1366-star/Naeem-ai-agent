@@ -186,7 +186,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(quote.name, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                Text("${quote.id.uppercase()}  •  ${if (quote.stale) "داده قدیمی" else "به‌روز"}", color = Color(0xFF8D97A8), fontSize = 10.sp)
+                                Text("${quote.id.uppercase()}  •  ${if (quote.stale) "داده قدیمی" else "به‌روز"}  •  ${quote.updated.replace("T", " ")} UTC", color = Color(0xFF8D97A8), fontSize = 10.sp)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("${formatted(quote.price)} ${unitLabel(quote.unit)}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
