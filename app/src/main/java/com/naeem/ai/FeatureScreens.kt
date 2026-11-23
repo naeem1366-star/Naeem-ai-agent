@@ -53,7 +53,7 @@ private val FM=Color(0xFFA8ADB8)
 fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
-    onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onTrail:()->Unit
+    onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onTrail:()->Unit,onSocial:()->Unit
 ){
     var query by remember { mutableStateOf("") }
     var showFeatureMap by remember { mutableStateOf(false) }
@@ -82,6 +82,7 @@ fun FeatureHub(
         Entry("بازی‌ها","چالش و سرگرمی","پانتومیم و تجربه‌های هوشمند آینده","پانتومیم فعلی بازی گروهی با زمان‌سنج و امتیاز تیمی است. بازی‌های تازه مثل اتاق فرار، پرونده محرمانه و نبرد ذهن در مرحله طراحی‌اند؛ هدف این است که مغز هوشمند داستان، معما، نقش‌ها و سطح دشواری را بسازد و هدایت کند.","بازی‌های متصل به AI: در حال توسعه",Icons.Default.SportsEsports,onGames,"بازی سرگرمی پانتومیم"),
         Entry("سینما","فیلم و پوستر","کشف فیلم و پیشنهاد تماشا","از دستیار بخواه فیلمی متناسب با سلیقه یا حال‌وهوایت پیشنهاد کند، بدون اسپویل معرفی کند یا درباره سبک و داستان آن تحلیل بنویسد. جست‌وجو و آرشیو فیلم در فضای سینما انجام می‌شود.","درخواست تحلیل از دستیار: فعال",Icons.Default.Movie,onDiscover,"فیلم سینما"),
         Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی","در این فضا موسیقی جست‌وجو و پیش‌نمایش پخش می‌شود. می‌توانی از مغز هوشمند برای پیشنهاد سبک، حال‌وهوا یا هنرمند مناسب کمک بگیری؛ کنترل پخش در خود بخش است.","پیشنهاد از دستیار: از طریق گفتگو",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
+        Entry("تحلیل اینستاگرام","رشد و عملکرد پیج","اتصال حساب و تحلیل محتوا","برای تحلیل صفحه شخصی خودت، حساب حرفه‌ای را متصل کن یا فعلاً آمار را وارد کن. اتصال رسمی پس از تنظیم مجوزهای Meta فعال می‌شود.","تحلیل آمار: آماده؛ ورود رسمی: نیازمند تنظیم Meta",Icons.Default.Insights,onSocial,"اینستاگرام شبکه اجتماعی تحلیل پیج رشد محتوا") ,
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","مرکز مدیریت اتصال مدل هوش مصنوعی، نشانی سرویس، کلید API و تنظیمات امنیتی برنامه است. وضعیت اتصال به ارائه‌دهنده و تنظیمات ذخیره‌شده وابسته است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال")
     )
     val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
@@ -615,5 +616,89 @@ private fun FeatureMapTree(onClose: () -> Unit) {
                 Text("وضعیت قابلیت‌ها بر اساس کد فعلی برنامه است؛ موارد در حال توسعه هنوز قابلیت کامل و آزموده‌شده محسوب نمی‌شوند.", color = muted, style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+}
+
+
+@Composable
+fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
+    var platform by remember { mutableStateOf("Instagram") }
+    var account by remember { mutableStateOf("") }
+    var followers by remember { mutableStateOf("") }
+    var reach by remember { mutableStateOf("") }
+    var views by remember { mutableStateOf("") }
+    var likes by remember { mutableStateOf("") }
+    var comments by remember { mutableStateOf("") }
+    var saves by remember { mutableStateOf("") }
+    var shares by remember { mutableStateOf("") }
+    var posts by remember { mutableStateOf("") }
+    val platforms = listOf("Instagram", "TikTok", "YouTube", "Telegram", "LinkedIn", "X", "سایر")
+    Column(
+        Modifier.fillMaxSize().background(FB).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, contentDescription = "بازگشت", tint = FG) }
+            Column(Modifier.weight(1f)) {
+                Text("تحلیل شبکه‌های اجتماعی", color = FG, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("تحلیل صفحه خودت، مستقل از هر برند", color = FM, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Surface(color = FC, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF80CFA6))
+                    Spacer(Modifier.width(8.dp))
+                    Text("ورود امن و حریم خصوصی", color = FG, fontWeight = FontWeight.SemiBold)
+                }
+                Text("رمز عبورت را داخل Naeem AI وارد نکن. اتصال مستقیم اینستاگرام از مسیر رسمی Meta در حال آماده‌سازی است و پس از ثبت اپ و مجوزها فعال می‌شود. فعلاً می‌توانی آمار Insights را وارد کنی و تحلیل بگیری.", color = FM, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Text("پلتفرم", color = FG, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            platforms.take(4).forEach { p ->
+                FilterChip(selected = platform == p, onClick = { platform = p }, label = { Text(p) })
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+            platforms.drop(4).forEach { p ->
+                FilterChip(selected = platform == p, onClick = { platform = p }, label = { Text(p) })
+            }
+        }
+        OutlinedTextField(value = account, onValueChange = { account = it }, modifier = Modifier.fillMaxWidth(), label = { Text("نام کاربری یا لینک صفحه") }, singleLine = true)
+        Text("آمار دوره اخیر (مثلاً ۳۰ روز گذشته)", color = FG, fontWeight = FontWeight.SemiBold)
+        @Composable fun statField(label: String, value: String, onValue: (String) -> Unit) {
+            OutlinedTextField(value = value, onValueChange = onValue, modifier = Modifier.fillMaxWidth(), label = { Text(label) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        }
+        statField("تعداد دنبال‌کننده", followers) { followers = it }
+        statField("Reach / دسترسی", reach) { reach = it }
+        statField("بازدید محتوا", views) { views = it }
+        statField("لایک", likes) { likes = it }
+        statField("کامنت", comments) { comments = it }
+        statField("ذخیره", saves) { saves = it }
+        statField("اشتراک‌گذاری", shares) { shares = it }
+        statField("تعداد پست و ریلز منتشرشده", posts) { posts = it }
+        Button(
+            onClick = {
+                val prompt = """این داده‌ها را به‌عنوان تحلیل‌گر حرفه‌ای شبکه‌های اجتماعی بررسی کن.
+پلتفرم: $platform
+صفحه: $account
+دوره: ۳۰ روز اخیر
+دنبال‌کننده: $followers
+Reach: $reach
+بازدید: $views
+لایک: $likes
+کامنت: $comments
+ذخیره: $saves
+اشتراک‌گذاری: $shares
+تعداد پست/ریلز: $posts
+
+نرخ تعامل را فقط با داده‌های موجود و با ذکر فرمول محاسبه کن. نقاط قوت و ضعف، کیفیت عملکرد محتوا، نسبت دسترسی به دنبال‌کننده، نشانه‌های رشد یا افت و ۵ اقدام اولویت‌دار و یک برنامه محتوایی ۷ روزه ارائه بده. داده‌های خالی را حدس نزن و برای تحلیل دقیق‌تر بگو چه آمار دیگری لازم است."""
+                onAskAi(prompt)
+            },
+            enabled = account.isNotBlank() && (followers.isNotBlank() || reach.isNotBlank() || views.isNotBlank()),
+            modifier = Modifier.fillMaxWidth()
+        ) { Icon(Icons.Default.Analytics, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("تحلیل صفحه با هوش مصنوعی") }
+        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("بازگشت") }
     }
 }
