@@ -62,21 +62,27 @@ fun FeatureHub(
         FeatureMapTree(onClose = { showFeatureMap = false })
         return
     }
-    data class Entry(val title:String,val subtitle:String,val detail:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val action:()->Unit,val keywords:String)
+    data class Entry(
+        val title:String,val subtitle:String,val detail:String,
+        val aiRole:String,val aiStatus:String,
+        val icon:androidx.compose.ui.graphics.vector.ImageVector,
+        val action:()->Unit,val keywords:String
+    )
+    var selectedEntry by remember { mutableStateOf<Entry?>(null) }
     val entries=listOf(
-        Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","سفرها، همراهان و مخارج",Icons.Default.Luggage,onTravel,"سفر مسافرت مقصد همسفر هزینه"),
-        Entry("Naeem Trail","ناوبری طبیعت‌گردی","GPS، ثبت مسیر و نقشه آفلاین ایران",Icons.Default.Terrain,onTrail,"طبیعت گردی کوه پیمایی مسیر جی پی اس نقشه آفلاین پیمایش"),
-        Entry("باشگاه ورزش","تمرین و آمادگی","تمرین، برنامه و رکوردها",Icons.Default.FitnessCenter,onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
-        Entry("نبض بازار","قیمت دارایی‌ها","طلا، ارز و بازارهای جهانی",Icons.Default.TrendingUp,onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
-        Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
-        Entry("روایت ماه","گزارش ماهانه","خلاصه عملکرد و اتفاق‌های ماه",Icons.Default.AutoAwesome,onWrapped,"گزارش ماهانه جمع‌بندی عملکرد"),
-        Entry("سلامت و تغذیه","بدن و انرژی","تغذیه، کالری و فعالیت روزانه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
-        Entry("حافظه هوشمند","یادداشت‌های من","نکته‌ها و اطلاعات مهم",Icons.Default.Bookmark,onMemory,"حافظه یادداشت"),
-        Entry("آلبوم تصاویر","آرشیو آثار","تصاویر ساخته‌شده",Icons.Default.Collections,onAlbum,"آلبوم تصویر عکس"),
-        Entry("بازی‌ها","چالش و سرگرمی","بازی‌های کوتاه و گروهی",Icons.Default.SportsEsports,onGames,"بازی سرگرمی"),
-        Entry("سینما","فیلم و پوستر","کشف فیلم و پیشنهاد تماشا",Icons.Default.Movie,onDiscover,"فیلم سینما"),
-        Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
-        Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت",Icons.Default.Settings,onSettings,"تنظیمات اتصال")
+        Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","سفرها، همراهان و مخارج","مغز هوشمند می‌تواند اطلاعات سفر و هزینه‌های گفته‌شده در گفتگو را استخراج کند، مقصد و سفر مرتبط را پیدا کند و پیش از ثبت هزینه یا تغییر اطلاعات، جزئیات را برای تأیید نشان دهد.","اتصال دستیار: فعال",Icons.Default.Luggage,onTravel,"سفر مسافرت مقصد همسفر هزینه"),
+        Entry("Naeem Trail","ناوبری طبیعت‌گردی","GPS، ثبت مسیر و فایل نقشه آفلاین","این فضا برای ثبت پیمایش، موقعیت و نقاط مسیر طراحی شده است. در نسخه فعلی، اتصال مستقیم مغز هوشمند برای تحلیل مسیر و پیشنهادهای ناوبری هنوز کامل نشده است؛ نقشه آفلاین نیز نیازمند وارد کردن فایل نقشه است.","اتصال دستیار: در حال توسعه",Icons.Default.Terrain,onTrail,"طبیعت گردی کوه پیمایی مسیر جی پی اس نقشه آفلاین پیمایش"),
+        Entry("باشگاه ورزش","تمرین و آمادگی","تمرین، برنامه و رکوردها","می‌توانی تمرین را در گفتگو توصیف کنی؛ دستیار جزئیات قابل تشخیص را استخراج می‌کند، برای اطلاعات مبهم سؤال می‌پرسد و پس از تأیید، آن را در سوابق ورزشی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.FitnessCenter,onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
+        Entry("نبض بازار","قیمت دارایی‌ها","طلا، ارز و بازارهای جهانی","این بخش برای نمایش و بررسی داده‌های بازار است. می‌توانی از مغز هوشمند بخواهی داده‌ها را توضیح دهد؛ اما صحت و به‌روز بودن منبع قیمت باید جداگانه بررسی شود و تحلیل AI جای داده زنده تأییدشده نیست.","تحلیل با دستیار: از طریق گفتگو",Icons.Default.TrendingUp,onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
+        Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی","هزینه یا درآمدت را طبیعی در گفتگو بگو؛ دستیار مبلغ، دسته و تاریخ را استخراج می‌کند، ابهام را می‌پرسد و فقط پس از تأیید تو، تراکنش را در دفتر مالی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
+        Entry("روایت ماه","گزارش ماهانه","خلاصه عملکرد و اتفاق‌های ماه","روایت ماه داده‌های ثبت‌شده در بخش‌های پشتیبانی‌شده را به یک جمع‌بندی قابل مرور تبدیل می‌کند. کیفیت گزارش به کامل بودن اطلاعات ثبت‌شده وابسته است.","گزارش از داده‌های ذخیره‌شده",Icons.Default.AutoAwesome,onWrapped,"گزارش ماهانه جمع‌بندی عملکرد"),
+        Entry("سلامت و تغذیه","بدن و انرژی","تغذیه، کالری و فعالیت روزانه","این بخش ثبت غذا، کالری و فعالیت را در اختیار می‌گذارد. اتصال مستقیم آن به مغز هوشمند برای ثبت خودکار از گفتگو هنوز فعال نشده است؛ اطلاعات فعلاً از داخل خود بخش ثبت می‌شوند.","اتصال دستیار: در حال توسعه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
+        Entry("حافظه هوشمند","یادداشت‌های من","نکته‌ها و اطلاعات مهم","از دستیار بخواه نکته‌ای را به خاطر بسپارد؛ پیش از ذخیره، متن پیشنهادی را می‌بینی و با تأیید تو در حافظه برنامه قرار می‌گیرد. یادداشت‌ها در گفتگوهای بعدی برای پاسخ مرتبط‌تر استفاده می‌شوند.","اتصال دستیار: فعال",Icons.Default.Bookmark,onMemory,"حافظه یادداشت"),
+        Entry("آلبوم تصاویر","آرشیو آثار","تصاویر ساخته‌شده","تصاویر تولیدشده در این فضا نگهداری می‌شوند. مغز گفتگو می‌تواند در ساخت و اصلاح توضیح تصویری کمک کند؛ مدیریت و مشاهده آرشیو از همین بخش انجام می‌شود.","همراه با ابزار تصویر؛ اتصال مستقیم آرشیو به دستیار محدود است",Icons.Default.Collections,onAlbum,"آلبوم تصویر عکس"),
+        Entry("بازی‌ها","چالش و سرگرمی","پانتومیم و تجربه‌های هوشمند آینده","پانتومیم فعلی بازی گروهی با زمان‌سنج و امتیاز تیمی است. بازی‌های تازه مثل اتاق فرار، پرونده محرمانه و نبرد ذهن در مرحله طراحی‌اند؛ هدف این است که مغز هوشمند داستان، معما، نقش‌ها و سطح دشواری را بسازد و هدایت کند.","بازی‌های متصل به AI: در حال توسعه",Icons.Default.SportsEsports,onGames,"بازی سرگرمی پانتومیم"),
+        Entry("سینما","فیلم و پوستر","کشف فیلم و پیشنهاد تماشا","از دستیار بخواه فیلمی متناسب با سلیقه یا حال‌وهوایت پیشنهاد کند، بدون اسپویل معرفی کند یا درباره سبک و داستان آن تحلیل بنویسد. جست‌وجو و آرشیو فیلم در فضای سینما انجام می‌شود.","درخواست تحلیل از دستیار: فعال",Icons.Default.Movie,onDiscover,"فیلم سینما"),
+        Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی","در این فضا موسیقی جست‌وجو و پیش‌نمایش پخش می‌شود. می‌توانی از مغز هوشمند برای پیشنهاد سبک، حال‌وهوا یا هنرمند مناسب کمک بگیری؛ کنترل پخش در خود بخش است.","پیشنهاد از دستیار: از طریق گفتگو",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
+        Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","مرکز مدیریت اتصال مدل هوش مصنوعی، نشانی سرویس، کلید API و تنظیمات امنیتی برنامه است. وضعیت اتصال به ارائه‌دهنده و تنظیمات ذخیره‌شده وابسته است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال")
     )
     val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
     val gold=Color(0xFFD4D9E0)
@@ -91,6 +97,20 @@ fun FeatureHub(
             }
             IconButton(onClick={showFeatureMap=true}){Icon(Icons.Default.AccountTree,null,tint=gold)}
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFF171C23),
+            shape = RoundedCornerShape(18.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF46515F))
+        ) {
+            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Icon(Icons.Default.Hub, null, tint = Color(0xFFE0E6EE), modifier = Modifier.size(27.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("مغز هوشمند Naeem AI", color = Color(0xFFE0E6EE), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    Text("درخواستت را می‌فهمد، به فضای مرتبط هدایت می‌کند و پیش از ثبت تغییرات از تو اجازه می‌گیرد.", color = Color(0xFFADB7C4), style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(
@@ -123,7 +143,7 @@ fun FeatureHub(
                 items(filtered.size) { index ->
                     val entry = filtered[index]
                     Column(
-                        Modifier.fillMaxWidth().clickable(onClick = entry.action),
+                        Modifier.fillMaxWidth().clickable(onClick = { selectedEntry = entry }),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -165,7 +185,7 @@ fun FeatureHub(
                                 }
                             }
                         }
-                        Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)\n                        IconButton(onClick = { selectedEntry = entry }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "توضیحات " + entry.title, tint = Color(0xFF9BA7B5), modifier = Modifier.size(16.dp)) }
                     }
                 }
             }
