@@ -23,7 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,14 +58,14 @@ fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()-
   }
   Spacer(Modifier.height(12.dp))
   Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF1D302B)),shape=RoundedCornerShape(26.dp)){
-   Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF315B4A),Color(0xFF202F38),Color(0xFF28263C)))).padding(17.dp)){
+   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF315B4A),Color(0xFF202F38),Color(0xFF28263C)))).padding(17.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){
      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)){
       Text("YOUR DIGITAL WORLD",color=Color(0xFFB5F0D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
       Text("همه ابزارها،\nبا هویت مخصوص خودشان",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
       Text("برای ورود، یکی از فضاها را انتخاب کن.",color=Color(0xFFD0DED8),style=MaterialTheme.typography.bodySmall)
      }
-     Box(Modifier.size(76.dp).background(Brush.radialGradient(listOf(Color(0xFF9CE8C0),Color(0xFF376C58),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
+     Box(Modifier.size(76.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFF9CE8C0),Color(0xFF376C58),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
       Icon(Icons.Default.Widgets,null,tint=Color(0xFFD5FFE5),modifier=Modifier.size(38.dp))
      }
     }
@@ -89,7 +89,7 @@ fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()-
 }
 @Composable private fun HubItem(title:String,sub:String,icon:androidx.compose.ui.graphics.vector.ImageVector,accent:Color,click:()->Unit){
  Card(Modifier.fillMaxWidth().height(139.dp).clickable{click()},colors=CardDefaults.cardColors(containerColor=Color(0xFF20282A)),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
-  Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha=.19f),Color(0xFF20282A)))).padding(13.dp)){
+  Box(Modifier.fillMaxSize().background(ComposeBrush.linearGradient(listOf(accent.copy(alpha=.19f),Color(0xFF20282A)))).padding(13.dp)){
    Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
     Box(Modifier.size(42.dp).background(accent.copy(alpha=.18f),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Icon(icon,null,tint=accent,modifier=Modifier.size(25.dp))}
     Text(title,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall)
@@ -168,14 +168,14 @@ private val HMuted=Color(0xFFA0B5AA)
    IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=HMint)}
   }
   Card(colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()){
-   Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF244D3D),Color(0xFF1D3430),Color(0xFF202D2D)))).padding(17.dp)){
+   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF244D3D),Color(0xFF1D3430),Color(0xFF202D2D)))).padding(17.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){
      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
       Text("HEALTH SPACE",color=Color(0xFFA9EAC7),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
       Text("قدم‌به‌قدم، سالم‌تر",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
       Text("تغذیه، تحرک و حال خوبت را یک‌جا دنبال کن.",color=Color(0xFFC2D8CD),style=MaterialTheme.typography.bodySmall)
      }
-     Box(Modifier.size(68.dp).background(Brush.radialGradient(listOf(Color(0xFF9AE9BD),Color(0xFF326A50),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
+     Box(Modifier.size(68.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFF9AE9BD),Color(0xFF326A50),Color.Transparent)),CircleShape),contentAlignment=Alignment.Center){
       Icon(Icons.Default.HealthAndSafety,null,tint=Color(0xFFE0FFEA),modifier=Modifier.size(37.dp))
      }
     }
