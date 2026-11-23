@@ -174,10 +174,10 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
     }
 }
 
-private val Ink = Color(0xFF101114)
-private val Panel = Color(0xFF1B1D22)
-private val Gold = Color(0xFFD1B078)
-private val Muted = Color(0xFF9A9DA6)
+private val Ink = Color(0xFF080A0D)
+private val Panel = Color(0xFF191D22)
+private val Gold = Color(0xFFD4D9E0)
+private val Muted = Color(0xFF929BA6)
 
 
 @Composable
@@ -700,7 +700,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         ThinkingOrb(diameter = 142.dp, active = false)
                         Spacer(Modifier.height(15.dp))
                         Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFD8C6A8), style = MaterialTheme.typography.bodyMedium)
+                        Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFB7BEC8), style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(22.dp))
                         OutlinedButton(
                             onClick = { showHub = true },
@@ -722,7 +722,7 @@ fun NaeemApp(store: SecureConfigStore) {
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                         shape = RoundedCornerShape(26.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1A18))
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF191D22))
                     ) {
                         Column(
                             Modifier.fillMaxWidth()
@@ -791,7 +791,7 @@ fun NaeemApp(store: SecureConfigStore) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(0.88f),
                                 shape = RoundedCornerShape(18.dp),
-                                colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF34302A) else Panel)
+                                colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF30363E) else Panel)
                             ) {
                                 Column(Modifier.padding(14.dp)) {
                                     Text(if (msg.fromUser) "شما" else "Naeem AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
@@ -1191,77 +1191,74 @@ private fun ThinkingOrb(
     diameter: androidx.compose.ui.unit.Dp = 118.dp,
     active: Boolean = true
 ) {
-    val transition = rememberInfiniteTransition(label = "naeem-orb")
+    val transition = rememberInfiniteTransition(label = "liquid-mercury")
     val phase by transition.animateFloat(
-        0f, 360f,
-        infiniteRepeatable(tween(if (active) 4300 else 7600, easing = LinearEasing)),
-        label = "orb-rotation"
+        0f, 6.28318f,
+        infiniteRepeatable(tween(if (active) 3600 else 6200, easing = LinearEasing)),
+        label = "mercury-flow"
     )
     val pulse by transition.animateFloat(
-        if (active) 0.94f else 0.985f,
-        if (active) 1.065f else 1.015f,
-        infiniteRepeatable(tween(if (active) 1150 else 2300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "orb-pulse"
+        0.97f, 1.035f,
+        infiniteRepeatable(tween(if (active) 1500 else 2600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "mercury-breath"
     )
     Canvas(Modifier.size(diameter)) {
-        val center = Offset(this.size.width / 2f, this.size.height / 2f)
-        val radius = size.minDimension * 0.285f * pulse
-        val glowRadius = radius * if (active) 2.2f else 1.8f
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val base = size.minDimension * 0.285f * pulse
+        val glow = base * 2.15f
         drawCircle(
-            brush = Brush.radialGradient(
-                listOf(Color(0x66E6B66D), Color(0x22B9874B), Color.Transparent),
-                center, glowRadius
-            ),
-            radius = glowRadius, center = center
+            Brush.radialGradient(
+                listOf(Color(0x559AA6B5), Color(0x223F4854), Color.Transparent),
+                c, glow
+            ), glow, c
         )
-        drawCircle(
-            Color.Black.copy(alpha = 0.48f), radius * 1.12f,
-            Offset(center.x + radius * 0.10f, center.y + radius * 0.30f)
-        )
-        drawCircle(
-            brush = Brush.radialGradient(
+        val blob = Path()
+        val steps = 100
+        for (i in 0..steps) {
+            val a = (i.toFloat() / steps) * 6.28318f
+            val wave = 1f + 0.105f * kotlin.math.sin(3f * a + phase) +
+                0.052f * kotlin.math.sin(5f * a - phase * 1.31f) +
+                0.025f * kotlin.math.cos(2f * a + phase * 0.72f)
+            val r = base * wave
+            val x = c.x + kotlin.math.cos(a) * r * 1.04f
+            val y = c.y + kotlin.math.sin(a) * r * 0.94f
+            if (i == 0) blob.moveTo(x, y) else blob.lineTo(x, y)
+        }
+        blob.close()
+        drawPath(
+            blob,
+            Brush.linearGradient(
                 colors = listOf(
-                    Color(0xFFFFF8E8), Color(0xFFFFE2A9), Color(0xFFD8A65E),
-                    Color(0xFF9B6635), Color(0xFF493322), Color(0xFF17191F)
+                    Color(0xFFF8FAFC), Color(0xFFBFC6CF), Color(0xFF59616B),
+                    Color(0xFFE8ECF0), Color(0xFF737C87), Color(0xFF252B33)
                 ),
-                center = Offset(center.x - radius * 0.38f, center.y - radius * 0.48f),
-                radius = radius * 2.05f
-            ),
-            radius = radius, center = center
-        )
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Color.White.copy(alpha = 0.88f), Color(0xFFFFE8C1).copy(alpha = 0.22f), Color.Transparent),
-                center = Offset(center.x - radius * 0.42f, center.y - radius * 0.57f),
-                radius = radius * 0.92f
-            ),
-            radius = radius * 0.92f, center = center
-        )
-        drawArc(
-            Color(0xFFFFE7BE).copy(alpha = 0.9f), phase, 205f, false,
-            Offset(center.x - radius * 1.72f, center.y - radius * 0.48f),
-            androidx.compose.ui.geometry.Size(radius * 3.44f, radius * 0.96f),
-            style = Stroke(width = 1.8.dp.toPx())
-        )
-        drawArc(
-            Color(0xFFB98A55).copy(alpha = 0.78f), phase + 178f, 205f, false,
-            Offset(center.x - radius * 1.80f, center.y - radius * 0.34f),
-            androidx.compose.ui.geometry.Size(radius * 3.60f, radius * 0.68f),
-            style = Stroke(width = 1.2.dp.toPx())
-        )
-        val orbitAngle = Math.toRadians(phase.toDouble())
-        drawCircle(
-            Color(0xFFFFF0D2), if (active) 4.dp.toPx() else 3.dp.toPx(),
-            Offset(
-                center.x + (radius * 1.68f * kotlin.math.cos(orbitAngle)).toFloat(),
-                center.y + (radius * 0.50f * kotlin.math.sin(orbitAngle)).toFloat()
+                start = Offset(c.x - base, c.y - base),
+                end = Offset(c.x + base, c.y + base)
             )
         )
-        drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.20f), radius * 1.88f, center, style = Stroke(width = 1.dp.toPx()))
-        drawCircle(Color(0xFFFFE8C1).copy(alpha = 0.09f), radius * 2.12f, center, style = Stroke(width = 0.7.dp.toPx()))
+        drawPath(
+            blob,
+            Brush.radialGradient(
+                listOf(Color.White.copy(alpha = 0.88f), Color(0x44FFFFFF), Color.Transparent),
+                Offset(c.x - base * 0.34f, c.y - base * 0.48f), base * 1.18f
+            )
+        )
+        drawArc(
+            Color.White.copy(alpha = 0.78f), 205f + phase * 22f, 72f, false,
+            androidx.compose.ui.geometry.Offset(c.x - base * 0.72f, c.y - base * 0.68f),
+            androidx.compose.ui.geometry.Size(base * 1.35f, base * 0.82f),
+            style = Stroke(width = 2.1.dp.toPx())
+        )
+        drawArc(
+            Color(0xFF303943).copy(alpha = 0.72f), 28f - phase * 18f, 105f, false,
+            androidx.compose.ui.geometry.Offset(c.x - base * 0.48f, c.y - base * 0.12f),
+            androidx.compose.ui.geometry.Size(base * 1.55f, base * 1.10f),
+            style = Stroke(width = 1.4.dp.toPx())
+        )
+        drawCircle(Color(0x66FFFFFF), base * 0.11f,
+            Offset(c.x - base * 0.38f, c.y - base * 0.53f))
     }
 }
-
 
 private fun assistantActionPreview(action: AssistantAction): String {
     val p = action.parameters
