@@ -39,7 +39,11 @@ class AssistantDataStore(context: Context) {
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             ?: throw IllegalArgumentException("یکی از تصاویر پشتیبان قابل خواندن نیست.")
         val file = File(albumDir, "naeem_$createdAt.jpg")
-        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 94, it) }
+        try {
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 94, it) }
+        } finally {
+            bitmap.recycle()
+        }
         val all = prefs.getStringSet("album_items", emptySet())?.toMutableSet() ?: mutableSetOf()
         all.add("$createdAt|$prompt")
         prefs.edit().putStringSet("album_items", all).apply()
