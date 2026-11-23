@@ -145,7 +145,7 @@ fun FeatureHub(
                             ) {
                                 Box(
                                     Modifier.fillMaxSize().background(
-                                        Brush.linearGradient(
+                                        ComposeBrush.linearGradient(
                                             listOf(Color(0xFF414B58), Color(0xFF202731), Color(0xFF0B0E13))
                                         )
                                     ),
