@@ -168,6 +168,7 @@ class MainActivity : FragmentActivity() {
         super.onStop()
         if (unlocked.value) {
             unlocked.value = false
+            introCompleted.value = false
             requireAuthentication = true
         }
     }
