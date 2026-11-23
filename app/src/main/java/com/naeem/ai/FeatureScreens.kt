@@ -39,19 +39,36 @@ private val FM=Color(0xFFA8ADB8)
 
 @Composable
 fun FeatureHub(onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,onDiscover:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,onSettings:()->Unit){
- Column(Modifier.fillMaxSize().background(FB).padding(20.dp)){
-  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("NAEEM AI",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("مرکز ابزارهای شخصی تو",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
-  Text("دستیار و مدیریت",color=FG,fontWeight=FontWeight.Bold)
-  HubItem("دفتر مالی","هزینه‌ها، درآمدها و گزارش ماهانه",Icons.Default.AccountBalanceWallet,onFinance)
-  HubItem("حافظهٔ هوشمند","یادداشت‌ها و اطلاعات ذخیره‌شده",Icons.Default.Bookmark,onMemory)
-  HubItem("آلبوم تصاویر","تصاویر ساخته‌شده با هوش مصنوعی",Icons.Default.Collections,onAlbum)
-  Spacer(Modifier.height(12.dp));Text("زندگی و تندرستی",color=FG,fontWeight=FontWeight.Bold)
-  HubItem("سلامت و تغذیه","BMI، کالری، وعده‌ها، آب و فعالیت",Icons.Default.Favorite,onHealth)
-  Spacer(Modifier.height(12.dp));Text("سرگرمی و کشف",color=FG,fontWeight=FontWeight.Bold)
-  HubItem("بازی‌ها","بازی گروهی کلمه‌ای و چالش ذهن",Icons.Default.SportsEsports,onGames)
-  HubItem("فیلم و موسیقی","پیشنهاد روز فیلم و جست‌وجوی آهنگ",Icons.Default.Movie,onDiscover)
-  Spacer(Modifier.weight(1f))
-  OutlinedButton(onClick=onSettings,modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Settings,null);Text("تنظیمات و اتصال")}
+ var query by remember { mutableStateOf("") }
+ Column(Modifier.fillMaxSize().background(FB).padding(horizontal=18.dp, vertical=14.dp)){
+  Row(verticalAlignment=Alignment.CenterVertically){
+   Column(Modifier.weight(1f)){
+    Text("NAEEM AI",color=FG,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
+    Text("مرکز فرماندهی زندگی دیجیتال",color=FM,style=MaterialTheme.typography.bodySmall)
+   }
+   Surface(color=Color(0xFF29251E),shape=RoundedCornerShape(14.dp)){Text("v1.2",color=FG,modifier=Modifier.padding(horizontal=12.dp,vertical=7.dp),style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Bold)}
+   IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}
+  }
+  Spacer(Modifier.height(14.dp))
+  Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF29251E)),shape=RoundedCornerShape(22.dp)){
+   Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically){
+    Surface(color=Color(0xFF403625),shape=CircleShape,modifier=Modifier.size(54.dp)){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.AutoAwesome,null,tint=FG,modifier=Modifier.size(30.dp))}}
+    Spacer(Modifier.width(13.dp))
+    Column(Modifier.weight(1f)){Text("همه‌چیز در یک جا",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Text("ابزارها، سلامت، امور مالی و سرگرمی",color=FM,style=MaterialTheme.typography.bodySmall)}
+   }
+  }
+  Spacer(Modifier.height(12.dp))
+  OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در قابلیت‌ها…")},leadingIcon={Icon(Icons.Default.Search,null,tint=FG)},colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=FG,unfocusedBorderColor=Color(0xFF414550),focusedContainerColor=FC,unfocusedContainerColor=FC))
+  LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp),contentPadding=PaddingValues(top=13.dp,bottom=14.dp)){
+   if(query.isBlank()||"دفتر مالی هزینه درآمد گزارش ماهانه".contains(query,true)) item { HubItem("دفتر مالی","هزینه‌ها، درآمدها و تحلیل بیشترین مخارج",Icons.Default.AccountBalanceWallet,onFinance) }
+   if(query.isBlank()||"حافظه هوشمند یادداشت اطلاعات".contains(query,true)) item { HubItem("حافظهٔ هوشمند","یادداشت‌ها و اطلاعات ذخیره‌شده",Icons.Default.Bookmark,onMemory) }
+   if(query.isBlank()||"آلبوم تصاویر هوش مصنوعی".contains(query,true)) item { HubItem("آلبوم تصاویر","آرشیو خروجی‌های تصویری ساخته‌شده",Icons.Default.Collections,onAlbum) }
+   if(query.isBlank()||"سلامت تغذیه BMI کالری غذا وزن".contains(query,true)) item { HubItem("سلامت و تغذیه","BMI، کالری، مواد غذایی، آب و فعالیت",Icons.Default.Favorite,onHealth) }
+   if(query.isBlank()||"بازی پانتومیم حدس کلمه تیمی سرگرمی".contains(query,true)) item { HubItem("بازی‌ها و پانتومیم","بازی تیمی، کارت کلمه و امتیازدهی",Icons.Default.SportsEsports,onGames) }
+   if(query.isBlank()||"فیلم سینما موسیقی آهنگ پلیر".contains(query,true)) item { HubItem("سینما و موسیقی","پیشنهاد فیلم، جست‌وجوی آهنگ و پخش",Icons.Default.Movie,onDiscover) }
+   if(query.isBlank()||"تنظیمات اتصال مدل API".contains(query,true)) item { HubItem("تنظیمات و اتصال","مدیریت سرویس هوش مصنوعی و کلید API",Icons.Default.Settings,onSettings) }
+   if(query.isNotBlank() && listOf("دفتر مالی هزینه درآمد گزارش ماهانه","حافظه هوشمند یادداشت اطلاعات","آلبوم تصاویر هوش مصنوعی","سلامت تغذیه BMI کالری غذا وزن","بازی پانتومیم حدس کلمه تیمی سرگرمی","فیلم سینما موسیقی آهنگ پلیر","تنظیمات اتصال مدل API").none{it.contains(query,true)}) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
+  }
  }
 }
 @Composable private fun HubItem(title:String,sub:String,icon:androidx.compose.ui.graphics.vector.ImageVector,click:()->Unit){
@@ -153,11 +170,47 @@ private class HStore(c:Context){
 @Composable private fun FMetric(title:String,value:String,sub:String,modifier:Modifier){Card(modifier,colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(title,color=FM,style=MaterialTheme.typography.labelSmall);Text(value,color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(sub,color=FM,style=MaterialTheme.typography.labelSmall)}}}
 
 @Composable fun GamesHub(onClose:()->Unit){
+ var pantomimeSeconds by remember{mutableIntStateOf(60)}
+ var pantomimeRunning by remember{mutableStateOf(false)}
+ var pantomimeTeam by remember{mutableIntStateOf(1)}
+ LaunchedEffect(pantomimeRunning,pantomimeSeconds){
+  if(pantomimeRunning && pantomimeSeconds>0){
+   kotlinx.coroutines.delay(1000)
+   pantomimeSeconds=(pantomimeSeconds-1).coerceAtLeast(0)
+   if(pantomimeSeconds<=1) pantomimeRunning=false
+  }
+ }
  var team1 by remember{mutableStateOf("تیم طلایی")};var team2 by remember{mutableStateOf("تیم مشکی")};var score1 by remember{mutableIntStateOf(0)};var score2 by remember{mutableIntStateOf(0)};var category by remember{mutableStateOf("ترکیبی")};var word by remember{mutableStateOf("برای شروع کلمهٔ بعدی را بزن")};var round by remember{mutableIntStateOf(0)}
  val decks=remember{mapOf("ترکیبی" to listOf("چتر","فضانورد","آشپز","ترافیک","شطرنج","کوهستان","دندان‌پزشک","هواپیما","کارآگاه","کتابخانه","آتش‌نشان","ماهیگیری","ربات","سینما","دوچرخه","آبشار","جادوگر","بستنی"),"سخت" to listOf("پارادوکس","ناخودآگاه","جاذبه","معماری","دیپلماسی","فرسایش","کهکشان","نوستالژی","الگوریتم"),"سینما" to listOf("کارگردان","اسکار","دوربین","فیلمنامه","اکران","جلوه‌های ویژه","سکانس","بازیگر"))}
  Column(Modifier.fillMaxSize().background(FB).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("باشگاه بازی",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("بازی‌های دورهمی و چالش ذهن",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
   LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=25.dp)){
+   item{FCard{
+    Text("پانتومیم تیمی",color=FG,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleLarge)
+    Text("یک نفر اجرا می‌کند، تیمش حدس می‌زند؛ زمان و امتیاز را برنامه مدیریت می‌کند.",color=FM,style=MaterialTheme.typography.bodySmall)
+    Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
+     FilterChip(selected=pantomimeTeam==1,onClick={pantomimeTeam=1},label={Text(team1.ifBlank{"تیم اول"})})
+     FilterChip(selected=pantomimeTeam==2,onClick={pantomimeTeam=2},label={Text(team2.ifBlank{"تیم دوم"})})
+    }
+    Box(Modifier.fillMaxWidth().background(Color(0xFF302B22),RoundedCornerShape(18.dp)).padding(22.dp),contentAlignment=Alignment.Center){
+     Column(horizontalAlignment=Alignment.CenterHorizontally){
+      Text("کلمه برای اجرا",color=FM,style=MaterialTheme.typography.labelMedium)
+      Text(word,color=FG,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
+      Text("زمان باقی‌مانده",color=FM,style=MaterialTheme.typography.labelSmall)
+      Text(String.format(Locale.US,"%02d:%02d",pantomimeSeconds/60,pantomimeSeconds%60),color=if(pantomimeSeconds<=10)Color(0xFFFF8B80) else Color.White,style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Bold)
+     }
+    }
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+     Button(onClick={pantomimeRunning=!pantomimeRunning},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text(if(pantomimeRunning)"مکث" else "شروع زمان‌سنج")}
+     OutlinedButton(onClick={pantomimeSeconds=60;pantomimeRunning=false}){Text("۶۰ ثانیه")}
+    }
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+     OutlinedButton(onClick={word=decks[category].orEmpty().random();pantomimeSeconds=60;pantomimeRunning=false},modifier=Modifier.weight(1f)){Text("کلمه بعدی")}
+     Button(onClick={if(pantomimeTeam==1)score1++ else score2++;word=decks[category].orEmpty().random();pantomimeSeconds=60;pantomimeRunning=false},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF9BD6B0),contentColor=FB)){Text("حدس درست +۱")}
+    }
+    Text("امتیاز  "+team1+": "+score1+"     "+team2+": "+score2,color=FG,fontWeight=FontWeight.Bold)
+    Text("برای رد کردن کلمه، «کلمه بعدی» را بزن. با پایان زمان، نوبت تیم بعدی را انتخاب کن.",color=FM,style=MaterialTheme.typography.labelSmall)
+   }}
    item{FCard{
     Text("حدس کلمه؛ بازی تیمی",color=FG,fontWeight=FontWeight.Bold)
     Row{listOf("ترکیبی","سخت","سینما").forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it)})}}
