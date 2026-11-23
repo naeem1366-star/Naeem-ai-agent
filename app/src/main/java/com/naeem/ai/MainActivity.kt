@@ -535,29 +535,29 @@ fun NaeemApp(store: SecureConfigStore) {
             }
         }
         if (showHealth) {
-            Dialog(onDismissRequest = { showHealth = false }) {
-                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.96f), shape = RoundedCornerShape(24.dp), color = Ink) {
+            Dialog(onDismissRequest = { showHealth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     HealthDashboard(onClose = { showHealth = false })
                 }
             }
         }
         if (showGames) {
-            Dialog(onDismissRequest = { showGames = false }) {
-                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.96f), shape = RoundedCornerShape(24.dp), color = Ink) {
+            Dialog(onDismissRequest = { showGames = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     GamesHub(onClose = { showGames = false })
                 }
             }
         }
         if (showDiscover) {
-            Dialog(onDismissRequest = { showDiscover = false }) {
-                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.96f), shape = RoundedCornerShape(24.dp), color = Ink) {
+            Dialog(onDismissRequest = { showDiscover = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     DiscoverDashboard(onClose = { showDiscover = false }, onAskAi = { question -> showDiscover = false; prompt = question })
                 }
             }
         }
         if (showFinance) {
-            Dialog(onDismissRequest = { showFinance = false }) {
-                Surface(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.94f), shape = RoundedCornerShape(24.dp), color = Ink) {
+            Dialog(onDismissRequest = { showFinance = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     FinanceDashboard(
                         entries = ledgerEntries,
                         onAdd = { amount, category, note, income -> ledgerStore.add(amount, category, note, income); ledgerEntries = ledgerStore.entries() },
