@@ -2,15 +2,11 @@ package com.naeem.ai
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
-import androidx.compose.foundation.paint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush as ComposeBrush
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,23 +50,6 @@ private val FG=Color(0xFFD4D9E0)
 private val FB=Color(0xFF111318)
 private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
-
-// Shared monochrome mountain photograph used as a faint module watermark.
-@Composable
-fun Modifier.mountainBackdrop(accent: Color): Modifier {
-    val mountain = painterResource(id = R.drawable.bg_mountain)
-    val monochrome = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-    }
-    return this
-        .paint(
-            painter = mountain,
-            contentScale = ContentScale.Crop,
-            alpha = 0.15f,
-            colorFilter = monochrome
-        )
-        .drawBehind { drawRect(accent.copy(alpha = 0.035f)) }
-}
 
 @Composable
 fun FeatureHub(
@@ -98,7 +76,7 @@ fun FeatureHub(
         Entry("Naeem Trail","ناوبری طبیعت‌گردی","GPS، ثبت مسیر و فایل نقشه آفلاین","مسیر و مقصد طبیعت‌گردی را در گفتگو تعریف می‌کنی؛ هدف این است که مغز هوشمند برنامه و نکات مسیر را به این بخش وصل کند. ثبت و تحلیل خودکار مسیر و نقشه آفلاین هنوز کامل نشده‌اند.","اتصال دستیار: در حال توسعه",Icons.Default.Terrain,onTrail,"طبیعت گردی کوه پیمایی مسیر جی پی اس نقشه آفلاین پیمایش"),
         Entry("باشگاه ورزش","تمرین و آمادگی","تمرین، برنامه و رکوردها","تمرینت را با متن یا گفتار تعریف کن؛ مغز هوشمند نوع تمرین، مدت و مسافت را تشخیص می‌دهد، اگر چیزی مبهم باشد می‌پرسد و پس از تأیید، آن را در سوابق ورزشی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.FitnessCenter,onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
         Entry("نبض بازار","قیمت دارایی‌ها","طلا، ارز و بازارهای جهانی","نام دارایی یا پرسشت را در گفتگو مطرح کن؛ مغز هوشمند می‌تواند داده‌های در دسترس را توضیح دهد و مقایسه کند. به‌روز بودن قیمت به اتصال منبع زنده و معتبر وابسته است.","تحلیل با دستیار: از طریق گفتگو",Icons.Default.TrendingUp,onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
-        Entry("اخبار مهم","خبرهای مهم ایران و جهان","تیترهای مهم، فوری و اثرگذار","مغز هوشمند باید خبرهای مهم را از منابع معتبر گردآوری کند، خبرهای تکراری را کنار بگذارد، آن‌ها را بر اساس موضوع و میزان اهمیت مرتب کند و خلاصه‌ای روشن همراه با منبع و زمان انتشار ارائه دهد. می‌توانی درباره هر خبر سؤال تکمیلی بپرسی.","بخش خبری و دریافت زنده خبر: هنوز پیاده‌سازی نشده",Icons.Default.Newspaper,{},"اخبار مهم خبر فوری ایران جهان سیاست اقتصاد فناوری جنگ بحران رویداد"),
+        Entry("اخبار مهم","خبرهای مهم ایران و جهان","تیترهای مهم، فوری و اثرگذار","مغز هوشمند باید خبرهای مهم را از منابع معتبر گردآوری کند، خبرهای تکراری را کنار بگذارد، آن‌ها را بر اساس موضوع و میزان اهمیت مرتب کند و خلاصه‌ای روشن همراه با منبع و زمان انتشار ارائه دهد. می‌توانی درباره هر خبر سؤال تکمیلی بپرسی.","بخش خبری و دریافت زنده خبر: هنوز پیاده‌سازی نشده",Icons.Default.Newspaper,{},"اخبار مهم خبر فوری ایران جهان سیاست اقتصاد فناوری جنگ بحران رویداد"),,
         Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی","فقط در گفتگو بگو چه مبلغی خرج کردی یا درآمد داشتی؛ مغز هوشمند مبلغ، تاریخ و دسته را درمی‌آورد، ابهام را می‌پرسد و پس از تأییدت در دفتر مالی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
         Entry("روایت ماه","گزارش ماهانه","خلاصه عملکرد و اتفاق‌های ماه","مغز هوشمند اطلاعات ثبت‌شده در بخش‌های مختلف را کنار هم می‌گذارد و از آن‌ها گزارش ماهانه می‌سازد؛ هرچه ثبت‌ها کامل‌تر باشند، جمع‌بندی دقیق‌تر است.","گزارش از داده‌های ذخیره‌شده",Icons.Default.AutoAwesome,onWrapped,"گزارش ماهانه جمع‌بندی عملکرد"),
         Entry("سلامت و تغذیه","بدن، تغذیه و مراقبت‌های روزانه","غذا، کالری، چرخه قاعدگی و داروها","در گفتگو بگو چه خورده‌ای، چه فعالیتی داشته‌ای یا چه دارویی را در چه ساعتی مصرف می‌کنی؛ مغز هوشمند باید اطلاعات را تشخیص دهد و در دفتر سلامت ثبت کند. این فضا همچنین برای تقویم چرخه قاعدگی، ثبت علائم و یادآوری زمان دارو در نظر گرفته شده است. ثبت خودکار از گفتگو، تقویم چرخه و یادآور دارو هنوز پیاده‌سازی نشده‌اند.","اتصال کامل سلامت به دستیار: در حال توسعه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
@@ -142,7 +120,7 @@ fun FeatureHub(
             }
         )
     }
-    Column(Modifier.fillMaxSize().background(hubBg).mountainBackdrop(Color(0xFF9BAFC4)).padding(horizontal=18.dp, vertical=14.dp)){
+    Column(Modifier.fillMaxSize().background(hubBg.copy(alpha=0.84f)).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -237,7 +215,7 @@ fun FeatureHub(
                                         ComposeBrush.linearGradient(
                                             listOf(accent.copy(alpha = 0.20f), Color(0xFF202731), Color(0xFF0B0E13))
                                         )
-                                    ).mountainBackdrop(accent),
+                                    ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(
@@ -328,7 +306,7 @@ private val HMuted=Color(0xFF9AA3AE)
  val today=java.util.Calendar.getInstance().apply{set(java.util.Calendar.HOUR_OF_DAY,0);set(java.util.Calendar.MINUTE,0);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0)}.timeInMillis
  val todayLogs=logs.filter{it.at>=today};val eaten=todayLogs.filter{it.type.startsWith("غذا")}.sumOf{it.kcal};val burned=todayLogs.filter{it.type=="فعالیت"}.sumOf{it.kcal}
  val nf=remember{NumberFormat.getNumberInstance(Locale.US)}
- Column(Modifier.fillMaxSize().background(HBg).mountainBackdrop(HMint).padding(16.dp)){
+ Column(Modifier.fillMaxSize().background(HBg.copy(alpha=0.84f)).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
    Box(Modifier.size(48.dp).background(Color(0xFF24372F),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
    Spacer(Modifier.width(11.dp))
@@ -419,7 +397,7 @@ private val HMuted=Color(0xFF9AA3AE)
  val decks=remember{mapOf("ترکیبی" to listOf("فضانورد","چتر نجات","آشپز","ترافیک","کارآگاه","کتابخانه","آتش‌نشان","ماهیگیری","ربات","سینما","دوچرخه","آبشار","جادوگر","بستنی","قطار","عکاس","دندان‌پزشک","کوه‌نوردی","بادبادک","خواب‌آلود"),"سینما" to listOf("کارگردان","فرش قرمز","اسکار","دوربین","فیلمنامه","اکران","جلوه‌های ویژه","بازیگر","سکانس"),"سخت" to listOf("پارادوکس","ناخودآگاه","جاذبه","معماری","دیپلماسی","فرسایش","کهکشان","نوستالژی","الگوریتم","توربین"))}
  LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
  fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
- Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10)).mountainBackdrop(Color(0xFFE0A68E))){
+ Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10).copy(alpha=0.84f))){
   Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("پانتومیم؛ فعلاً تنها بازی فعال این مجموعه",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
@@ -548,7 +526,7 @@ private class TrackSearch{
  val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
  DisposableEffect(Unit){onDispose{player?.runCatching{stop()};player?.runCatching{release()}}}
- Column(Modifier.fillMaxSize().background(FB).mountainBackdrop(if (standalone) Color(0xFFC2A8E8) else Color(0xFFD9A6B8)).padding(16.dp)){
+ Column(Modifier.fillMaxSize().background(FB.copy(alpha=0.84f)).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(if(standalone)"موسیقی" else "سینما",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(if(standalone)"جست‌وجو کن، گوش بده و هنرمندهای تازه پیدا کن" else "پوسترها، فیلم‌ها و پیشنهاد تماشا",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
   if(!standalone) Row{listOf("فیلم امروز","جست‌وجوی فیلم").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}}
   if(tab=="فیلم امروز"){
@@ -675,7 +653,7 @@ fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
     var posts by remember { mutableStateOf("") }
     val platforms = listOf("Instagram", "TikTok", "YouTube", "Telegram", "LinkedIn", "X", "سایر")
     Column(
-        Modifier.fillMaxSize().background(FB).mountainBackdrop(Color(0xFFE0A0B8)).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
+        Modifier.fillMaxSize().background(FB.copy(alpha=0.84f)).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
