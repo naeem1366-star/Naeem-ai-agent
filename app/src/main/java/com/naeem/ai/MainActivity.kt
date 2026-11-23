@@ -53,6 +53,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -83,27 +85,34 @@ private fun ModuleScreenBackdrop(
     module: String,
     content: @Composable () -> Unit
 ) {
-    val imageRes = when (module) {
-        "trail", "sports", "health" -> R.drawable.bg_mountain
-        "travel" -> R.drawable.bg_travel
-        "finance", "markets" -> R.drawable.bg_finance
-        "gallery", "discover", "music" -> R.drawable.bg_art
-        "games" -> R.drawable.bg_games
-        "wrapped" -> R.drawable.bg_wrapped
-        "hub" -> R.drawable.bg_abstract
-        else -> R.drawable.bg_abstract
+    val accent = when (module) {
+        "health" -> Color(0xFF9AD6B0)
+        "sports" -> Color(0xFF91BFE8)
+        "finance", "markets" -> Color(0xFFD8BD83)
+        "travel", "trail" -> Color(0xFFA8C99A)
+        "music" -> Color(0xFFC2A8E8)
+        "discover", "gallery" -> Color(0xFFD9A6B8)
+        "games" -> Color(0xFFE0A68E)
+        "wrapped" -> Color(0xFFB9C5D8)
+        "social" -> Color(0xFFE0A0B8)
+        else -> Color(0xFF9BAFC4)
+    }
+    val monochrome = remember {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
     }
     Box(Modifier.fillMaxSize().background(Color(0xFF090B0E))) {
         Image(
-            painter = painterResource(imageRes),
+            painter = painterResource(R.drawable.bg_mountain),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.105f },
-            contentScale = ContentScale.Crop
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.15f },
+            contentScale = ContentScale.Crop,
+            colorFilter = monochrome
         )
+        Box(Modifier.fillMaxSize().background(accent.copy(alpha = 0.035f)))
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    listOf(Color(0xCC090B0E), Color(0x99090B0E), Color(0xE6090B0E))
+                    listOf(Color(0xD9090B0E), Color(0xA6090B0E), Color(0xEB090B0E))
                 )
             )
         )
