@@ -125,6 +125,16 @@ class ConversationStore(context: Context) {
     }
 
     @Synchronized
+    fun replaceAll(threads: List<StoredConversation>, activeConversationId: String?) {
+        require(threads.map { it.id }.distinct().size == threads.size) { "شناسهٔ گفت‌وگوی تکراری در پشتیبان وجود دارد." }
+        require(threads.all { it.id.isNotBlank() && it.title.isNotBlank() }) { "اطلاعات یکی از گفت‌وگوها ناقص است." }
+        persist(threads)
+        val active = threads.firstOrNull { it.id == activeConversationId && it.archivedAt == null }?.id
+            ?: threads.filter { it.archivedAt == null }.maxByOrNull { it.updatedAt }?.id
+        if (active == null) create() else prefs.edit().putString("active_id", active).apply()
+    }
+
+    @Synchronized
     fun clear() {
         val id = activeId()
         save(id, emptyList())
