@@ -454,11 +454,54 @@ private class TrackSearch{
 }
 @Composable private fun FilmPoster(title:String){
  var bitmap by remember(title){mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)}
- LaunchedEffect(title){try{
-  val url=withContext(Dispatchers.IO){val q=URLEncoder.encode(title,"UTF-8");val req=Request.Builder().url("https://itunes.apple.com/search?term="+q+"&entity=movie&limit=1").build();OkHttpClient().newCall(req).execute().use{res->JSONObject(res.body?.string().orEmpty()).optJSONArray("results")?.optJSONObject(0)?.optString("artworkUrl100")?.replace("100x100","600x900").orEmpty()}}
-  if(url.isNotBlank()){val bytes=withContext(Dispatchers.IO){OkHttpClient().newCall(Request.Builder().url(url).build()).execute().use{it.body?.bytes()}};if(bytes!=null)bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.size)?.asImageBitmap()}
- }catch(_:Exception){}}
- Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF303741),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){if(bitmap!=null)Image(bitmap!!,contentDescription=title,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Movie,null,tint=Color(0xFFD4D9E0),modifier=Modifier.size(32.dp));Text("POSTER",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}}
+ var failed by remember(title){mutableStateOf(false)}
+ LaunchedEffect(title){
+  bitmap=null
+  failed=false
+  try{
+   val http=OkHttpClient.Builder()
+    .connectTimeout(12,java.util.concurrent.TimeUnit.SECONDS)
+    .readTimeout(18,java.util.concurrent.TimeUnit.SECONDS)
+    .build()
+   val artworkUrl=withContext(Dispatchers.IO){
+    val q=URLEncoder.encode(title,"UTF-8")
+    val api="https://itunes.apple.com/search?term="+q+"&media=movie&entity=movie&limit=15&country=us"
+    http.newCall(Request.Builder().url(api).header("User-Agent","NaeemAI/2.0 Android").build()).execute().use{response->
+     if(!response.isSuccessful) throw IllegalStateException("جست‌وجوی پوستر ناموفق بود: "+response.code)
+     val results=JSONObject(response.body?.string().orEmpty()).optJSONArray("results")?:org.json.JSONArray()
+     val candidates=(0 until results.length()).mapNotNull{index->results.optJSONObject(index)}
+     val match=candidates.firstOrNull{item->
+      val name=item.optString("trackName").ifBlank{item.optString("collectionName")}
+      name.equals(title,true)||name.contains(title,true)||title.contains(name,true)
+     }?:candidates.firstOrNull()
+     match?.let{item->
+      item.optString("artworkUrl600").takeIf{it.startsWith("https://")}
+       ?:item.optString("artworkUrl512").takeIf{it.startsWith("https://")}
+       ?:item.optString("artworkUrl100").takeIf{it.startsWith("https://")}
+     }.orEmpty()
+    }
+   }
+   if(artworkUrl.isNotBlank()){
+    val imageBytes=withContext(Dispatchers.IO){
+     http.newCall(Request.Builder().url(artworkUrl.replace("100x100","600x900").replace("100x100bb","600x900bb")).header("User-Agent","NaeemAI/2.0 Android").build()).execute().use{response->
+      if(!response.isSuccessful) throw IllegalStateException("دریافت تصویر ناموفق بود")
+      response.body?.bytes()
+     }
+    }
+    if(imageBytes!=null){
+     val decoded=withContext(Dispatchers.Default){BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.size)?.asImageBitmap()}
+     if(decoded!=null) bitmap=decoded else failed=true
+    }else failed=true
+   }else failed=true
+  }catch(_:Exception){failed=true}
+ }
+ Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF303741),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){
+  if(bitmap!=null) Image(bitmap!!,contentDescription="پوستر فیلم $title",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+  else Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)){
+   Icon(Icons.Default.Movie,null,tint=Color(0xFFD4D9E0),modifier=Modifier.size(32.dp))
+   Text(if(failed)"پوستر موجود نیست" else "در حال دریافت…",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)
+  }
+ }
 }
 @Composable fun DiscoverDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="فیلم امروز",standalone:Boolean=false){
  val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
