@@ -38,7 +38,7 @@ import java.text.NumberFormat
 import java.util.Locale
 import java.util.UUID
 
-data class TripExpense(val id:String, val title:String, val amount:Long, val payer:String)
+data class TripExpense(val id:String, val title:String, val amount:Long, val payer:String, val beneficiaries:List<String> = emptyList())
 data class LocalTrip(
     val id:String, val title:String, val destination:String, val dates:String,
     val members:List<String>, val expenses:List<TripExpense>
@@ -55,7 +55,12 @@ class TravelStore(context:Context) {
                 o.optString("id"),o.optString("title"),o.optString("destination"),o.optString("dates"),
                 (0 until membersJson.length()).map { membersJson.optString(it) },
                 (0 until expensesJson.length()).mapNotNull { j ->
-                    expensesJson.optJSONObject(j)?.let { e -> TripExpense(e.optString("id"),e.optString("title"),e.optLong("amount"),e.optString("payer")) }
+                    expensesJson.optJSONObject(j)?.let { e ->
+                        val beneficiaryJson = e.optJSONArray("beneficiaries")
+                        val beneficiaries = if (beneficiaryJson == null) (0 until membersJson.length()).map { membersJson.optString(it) }
+                            else (0 until beneficiaryJson.length()).map { beneficiaryJson.optString(it) }
+                        TripExpense(e.optString("id"),e.optString("title"),e.optLong("amount"),e.optString("payer"),beneficiaries)
+                    }
                 }
             )
         }
@@ -64,7 +69,10 @@ class TravelStore(context:Context) {
         val a=JSONArray()
         trips.forEach { t ->
             val m=JSONArray(); t.members.forEach(m::put)
-            val e=JSONArray(); t.expenses.forEach { x -> e.put(JSONObject().put("id",x.id).put("title",x.title).put("amount",x.amount).put("payer",x.payer)) }
+            val e=JSONArray(); t.expenses.forEach { x ->
+                val beneficiaries = JSONArray(); x.beneficiaries.forEach(beneficiaries::put)
+                e.put(JSONObject().put("id",x.id).put("title",x.title).put("amount",x.amount).put("payer",x.payer).put("beneficiaries",beneficiaries))
+            }
             a.put(JSONObject().put("id",t.id).put("title",t.title).put("destination",t.destination).put("dates",t.dates).put("members",m).put("expenses",e))
         }
         prefs.edit().putString("trips",a.toString()).apply()
@@ -123,12 +131,14 @@ fun TravelDashboard(onClose:()->Unit) {
     var expenseTitle by remember { mutableStateOf("") }
     var expenseAmount by remember { mutableStateOf("") }
     var payer by remember { mutableStateOf("") }
+    var expenseBeneficiaries by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteTarget by remember { mutableStateOf<LocalTrip?>(null) }
     var weatherText by remember { mutableStateOf("") }
     var weatherError by remember { mutableStateOf("") }
     var weatherLoading by remember { mutableStateOf(false) }
     val scope= rememberCoroutineScope()
     val selected=trips.firstOrNull { it.id==selectedId }
+    LaunchedEffect(selectedId) { expenseBeneficiaries = selected?.members?.toSet().orEmpty() }
     val number= remember { NumberFormat.getNumberInstance(Locale("fa","IR")) }
     val bg=Color(0xFF0D1820); val panel=Color(0xFF172A36); val accent=Color(0xFF73D2D0); val muted=Color(0xFFA8BDC5)
     fun persist(next:List<LocalTrip>) { trips=next; store.save(next) }
@@ -259,12 +269,25 @@ fun TravelDashboard(onClose:()->Unit) {
                                     selected.members.forEach { name -> DropdownMenuItem(text={Text(name)},onClick={payer=name;expanded=false}) }
                                 }
                             }
+                            Text("این هزینه بین چه کسانی تقسیم شود؟", color=muted, style=MaterialTheme.typography.labelMedium)
+                            Row(horizontalArrangement=Arrangement.spacedBy(5.dp), modifier=Modifier.fillMaxWidth()) {
+                                selected.members.forEach { name ->
+                                    FilterChip(
+                                        selected = expenseBeneficiaries.contains(name),
+                                        onClick = {
+                                            expenseBeneficiaries = if (expenseBeneficiaries.contains(name)) expenseBeneficiaries - name else expenseBeneficiaries + name
+                                        },
+                                        label = { Text(name, style=MaterialTheme.typography.labelSmall) }
+                                    )
+                                }
+                            }
                             Button(onClick={
                                 val amount=expenseAmount.toLongOrNull()?:0L
                                 if(expenseTitle.isNotBlank()&&amount>0) {
-                                    val x=TripExpense(UUID.randomUUID().toString(),expenseTitle.trim(),amount,payer.ifBlank{selected.members.firstOrNull().orEmpty()})
+                                    val beneficiaries = expenseBeneficiaries.filter { it in selected.members }.ifEmpty { selected.members }
+                                    val x=TripExpense(UUID.randomUUID().toString(),expenseTitle.trim(),amount,payer.ifBlank{selected.members.firstOrNull().orEmpty()},beneficiaries)
                                     persist(trips.map{if(it.id==selected.id)it.copy(expenses=it.expenses+x)else it})
-                                    expenseTitle="";expenseAmount="";payer=""
+                                    expenseTitle="";expenseAmount="";payer="";expenseBeneficiaries=selected.members.toSet()
                                 }
                             },enabled=expenseTitle.isNotBlank()&&(expenseAmount.toLongOrNull()?:0L)>0,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent,contentColor=bg)) { Text("ثبت هزینه") }
                         }
@@ -275,13 +298,24 @@ fun TravelDashboard(onClose:()->Unit) {
                 items(selected.expenses.reversed(),key={it.id}) { expense ->
                     Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(16.dp)) {
                         Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) { Text(expense.title,color=Color.White,fontWeight=FontWeight.SemiBold); Text("پرداخت توسط "+expense.payer,color=muted,style=MaterialTheme.typography.labelSmall) }
+                            Column(Modifier.weight(1f)) {
+                                Text(expense.title,color=Color.White,fontWeight=FontWeight.SemiBold)
+                                Text("پرداخت توسط "+expense.payer+" • سهم: "+(expense.beneficiaries.ifEmpty { selected.members }.joinToString("، ")),color=muted,style=MaterialTheme.typography.labelSmall)
+                            }
                             Text(number.format(expense.amount)+" تومان",color=accent,fontWeight=FontWeight.Bold)
                         }
                     }
                 }
                 item {
-                    Text("سهم مساوی تقریبی هر نفر: "+number.format(if(selected.members.isEmpty())0 else selected.expenses.sumOf{it.amount}/selected.members.size)+" تومان",color=muted,style=MaterialTheme.typography.bodySmall)
+                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF203B48)),shape=RoundedCornerShape(20.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                            Text("تسویهٔ هوشمند سهم‌ها",color=accent,fontWeight=FontWeight.Bold)
+                            Text("سهم هر نفر بر اساس افراد انتخاب‌شده برای هر هزینه محاسبه می‌شود؛ نه تقسیم مساوی کل سفر.",color=muted,style=MaterialTheme.typography.labelSmall)
+                            val settlements = calculateTripSettlements(selected)
+                            if(settlements.isEmpty()) Text("در حال حاضر کسی به دیگری بدهکار نیست.",color=Color.White)
+                            else settlements.forEach { line -> Text(line,color=Color.White,fontWeight=FontWeight.SemiBold) }
+                        }
+                    }
                     Text("این نسخه هزینه‌ها را روی همین گوشی نگه می‌دارد؛ دعوت و همگام‌سازی آنلاین هنوز فعال نیست.",color=muted,style=MaterialTheme.typography.labelSmall)
                 }
             }
@@ -308,4 +342,41 @@ fun TravelDashboard(onClose:()->Unit) {
             textContentColor = muted
         )
     }
+}
+
+
+private fun calculateTripSettlements(trip: LocalTrip): List<String> {
+    val members = trip.members.distinct()
+    if (members.isEmpty()) return emptyList()
+    val paid = members.associateWith { member -> trip.expenses.filter { it.payer == member }.sumOf { it.amount } }
+    val owed = members.associateWith { 0L }.toMutableMap()
+    trip.expenses.forEach { expense ->
+        val beneficiaries = expense.beneficiaries.ifEmpty { members }.filter { it in members }.distinct()
+        if (beneficiaries.isEmpty()) return@forEach
+        val base = expense.amount / beneficiaries.size
+        val remainder = expense.amount % beneficiaries.size
+        beneficiaries.forEachIndexed { index, person ->
+            owed[person] = (owed[person] ?: 0L) + base + if (index < remainder) 1L else 0L
+        }
+    }
+    data class Balance(val person: String, var amount: Long)
+    val debtors = members.map { Balance(it, ((owed[it] ?: 0L) - (paid[it] ?: 0L)).coerceAtLeast(0L)) }
+        .filter { it.amount > 0L }.toMutableList()
+    val creditors = members.map { Balance(it, ((paid[it] ?: 0L) - (owed[it] ?: 0L)).coerceAtLeast(0L)) }
+        .filter { it.amount > 0L }.toMutableList()
+    val number = NumberFormat.getNumberInstance(Locale("fa", "IR"))
+    val result = mutableListOf<String>()
+    var debtorIndex = 0
+    var creditorIndex = 0
+    while (debtorIndex < debtors.size && creditorIndex < creditors.size) {
+        val debtor = debtors[debtorIndex]
+        val creditor = creditors[creditorIndex]
+        val amount = minOf(debtor.amount, creditor.amount)
+        if (amount > 0L) result.add(debtor.person + " ← " + creditor.person + " : " + number.format(amount) + " تومان")
+        debtor.amount -= amount
+        creditor.amount -= amount
+        if (debtor.amount == 0L) debtorIndex++
+        if (creditor.amount == 0L) creditorIndex++
+    }
+    return result
 }
