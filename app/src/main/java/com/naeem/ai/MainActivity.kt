@@ -502,6 +502,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         IconButton(onClick = { showHub = true }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
                     },
                     actions = {
+                        var showQuickMenu by remember { mutableStateOf(false) }
                         IconButton(onClick = {
                             conversationStore.save(activeConversationId, messages)
                             activeConversationId = conversationStore.create()
@@ -515,22 +516,19 @@ fun NaeemApp(store: SecureConfigStore) {
                             conversationMode = false
                             stopSpeech()
                         }) {
-                            Icon(Icons.Default.AddComment, contentDescription = "شروع گفت‌وگوی تازه", tint = Gold)
+                            Icon(Icons.Default.AddComment, contentDescription = "گفت‌وگوی تازه", tint = Gold)
                         }
-                        IconButton(onClick = { showConversationManager = true; conversationRefresh++ }) {
-                            Icon(Icons.Default.Forum, contentDescription = "گفت‌وگوها", tint = Gold)
-                        }
-                        IconButton(onClick = { showAlbum = true; albumImages = dataStore.images() }) {
-                            Icon(Icons.Default.Collections, contentDescription = "آلبوم تصاویر", tint = Gold)
-                        }
-                        IconButton(onClick = { showFinance = true; ledgerEntries = ledgerStore.entries() }) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = "دفتر مالی", tint = Gold)
-                        }
-                        IconButton(onClick = { showMemory = true; memories = dataStore.memories() }) {
-                            Icon(Icons.Default.Bookmark, contentDescription = "حافظه", tint = Gold)
-                        }
-                        IconButton(onClick = { showSettings = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "تنظیمات", tint = Gold)
+                        Box {
+                            IconButton(onClick = { showQuickMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "دسترسی‌های بیشتر", tint = Gold)
+                            }
+                            DropdownMenu(expanded = showQuickMenu, onDismissRequest = { showQuickMenu = false }, containerColor = Panel) {
+                                DropdownMenuItem(text = { Text("گفت‌وگوهای من") }, leadingIcon = { Icon(Icons.Default.Forum, null, tint = Gold) }, onClick = { showQuickMenu = false; showConversationManager = true; conversationRefresh++ })
+                                DropdownMenuItem(text = { Text("آلبوم تصاویر") }, leadingIcon = { Icon(Icons.Default.Collections, null, tint = Gold) }, onClick = { showQuickMenu = false; showAlbum = true; albumImages = dataStore.images() })
+                                DropdownMenuItem(text = { Text("دفتر مالی") }, leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, null, tint = Gold) }, onClick = { showQuickMenu = false; showFinance = true; ledgerEntries = ledgerStore.entries() })
+                                DropdownMenuItem(text = { Text("حافظه هوشمند") }, leadingIcon = { Icon(Icons.Default.Bookmark, null, tint = Gold) }, onClick = { showQuickMenu = false; showMemory = true; memories = dataStore.memories() })
+                                DropdownMenuItem(text = { Text("تنظیمات") }, leadingIcon = { Icon(Icons.Default.Settings, null, tint = Gold) }, onClick = { showQuickMenu = false; showSettings = true })
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Ink)
@@ -604,63 +602,29 @@ fun NaeemApp(store: SecureConfigStore) {
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
                 if (messages.isEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(30.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF191A1E)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    Spacer(Modifier.height(28.dp))
+                    Column(
+                        Modifier.fillMaxWidth().weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Box(
-                            Modifier.fillMaxWidth()
-                                .background(Brush.verticalGradient(listOf(Color(0xFF30271D), Color(0xFF1D1E22), Color(0xFF151619))))
-                                .padding(horizontal = 20.dp, vertical = 22.dp)
+                        Text("NAEEM AI", color = Gold.copy(alpha = 0.78f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        ThinkingOrb(diameter = 142.dp, active = false)
+                        Spacer(Modifier.height(15.dp))
+                        Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFD8C6A8), style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(22.dp))
+                        OutlinedButton(
+                            onClick = { showHub = true },
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.65f)),
+                            shape = RoundedCornerShape(18.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text("NAEEM AI  •  PERSONAL INTELLIGENCE", color = Gold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                ThinkingOrb(diameter = 174.dp, active = false)
-                                Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                                Text("امروز از کجا شروع کنیم؟", color = Color(0xFFD8C6A8), style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "اینجا فضای گفت‌وگوی توست؛ ایده‌ها، پرسش‌ها و کارهایت را با هم پیش می‌بریم.",
-                                    color = Muted, style = MaterialTheme.typography.bodyMedium
-                                )
-                                Row(
-                                    Modifier.fillMaxWidth().padding(top = 5.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(9.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showHub = true },
-                                        modifier = Modifier.weight(1f).height(52.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink),
-                                        shape = RoundedCornerShape(17.dp)
-                                    ) {
-                                        Icon(Icons.Default.GridView, null)
-                                        Spacer(Modifier.width(7.dp))
-                                        Text("فضای برنامه‌ها", fontWeight = FontWeight.Bold)
-                                    }
-                                    OutlinedButton(
-                                        onClick = {
-                                            showConversationManager = true
-                                            conversationRefresh++
-                                        },
-                                        modifier = Modifier.weight(1f).height(52.dp),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.55f)),
-                                        shape = RoundedCornerShape(17.dp)
-                                    ) {
-                                        Icon(Icons.Default.Forum, null, tint = Gold)
-                                        Spacer(Modifier.width(7.dp))
-                                        Text("گفت‌وگوها", color = Gold)
-                                    }
-                                }
-                            }
+                            Icon(Icons.Default.GridView, null, tint = Gold)
+                            Spacer(Modifier.width(8.dp))
+                            Text("مرور فضاها", color = Gold)
                         }
                     }
-
                 }
                 if (error.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF3A2425)), modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
