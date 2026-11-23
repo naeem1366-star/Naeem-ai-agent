@@ -143,7 +143,7 @@ fun TravelDashboard(onClose:()->Unit) {
     val bg=Color(0xFF0A0C10); val panel=Color(0xFF1B1F25); val accent=Color(0xFFD4D9E0); val muted=Color(0xFF9AA3AE)
     fun persist(next:List<LocalTrip>) { trips=next; store.save(next) }
 
-    Column(Modifier.fillMaxSize().background(bg).padding(horizontal=18.dp, vertical=14.dp)) {
+    Column(Modifier.fillMaxSize().background(bg).mountainBackdrop(Color(0xFFA8C99A)).padding(horizontal=18.dp, vertical=14.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             if(selected!=null) IconButton(onClick={selectedId=null}) { Icon(Icons.Default.ArrowBack,null,tint=accent) }
             Column(Modifier.weight(1f)) {
