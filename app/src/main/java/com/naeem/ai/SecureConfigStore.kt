@@ -28,7 +28,7 @@ class SecureConfigStore(context: Context) {
     fun baseUrl(): String {
         val saved = prefs.getString("base_url", null)?.trim()?.trimEnd('/')
         // Migrate existing installs that still have the old OpenAI default.
-        if (saved.isNullOrBlank() || saved == "https://api.openai.com/v1") {
+        if (saved.isNullOrBlank() || saved == "https://api.openai.com/v1" || saved == "https://api.gapgpt.app/v1") {
             prefs.edit().putString("base_url", ProviderConfig.DEFAULT_BASE_URL).apply()
             return ProviderConfig.DEFAULT_BASE_URL
         }
