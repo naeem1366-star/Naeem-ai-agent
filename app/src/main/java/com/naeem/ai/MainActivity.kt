@@ -375,6 +375,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showTravel by remember { mutableStateOf(false) }
     var showSports by remember { mutableStateOf(false) }
     var showTrail by remember { mutableStateOf(false) }
+    var showSocialAnalytics by remember { mutableStateOf(false) }
     var showMarkets by remember { mutableStateOf(false) }
     var showWrapped by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
@@ -963,7 +964,8 @@ fun NaeemApp(store: SecureConfigStore) {
                         onSport = { showHub = false; showSports = true },
                         onMarkets = { showHub = false; showMarkets = true },
                         onWrapped = { showHub = false; showWrapped = true },
-                        onTrail = { showHub = false; showTrail = true }
+                        onTrail = { showHub = false; showTrail = true },
+                        onSocial = { showHub = false; showSocialAnalytics = true }
                     ) }
                 }
                 }
@@ -1032,6 +1034,19 @@ fun NaeemApp(store: SecureConfigStore) {
                 }
             }
         }
+        if (showSocialAnalytics) {
+            Dialog(onDismissRequest = { showSocialAnalytics = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ModuleScreenBackdrop("social") {
+                        SocialAnalyticsDashboard(
+                            onClose = { showSocialAnalytics = false },
+                            onAskAi = { question -> showSocialAnalytics = false; prompt = question }
+                        )
+                    }
+                }
+            }
+        }
+
         if (showFinance) {
             Dialog(onDismissRequest = { showFinance = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
