@@ -88,6 +88,34 @@ fun FeatureHub(
     val gold=Color(0xFFD4D9E0)
     val champagne=Color(0xFFE8ECF0)
     val hubBg=Color(0xFF090B0E)
+    selectedEntry?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { selectedEntry = null },
+            containerColor = Color(0xFF171C23),
+            titleContentColor = Color(0xFFE0E6EE),
+            textContentColor = Color(0xFFB8C2CE),
+            title = { Text(entry.title, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(entry.detail, style = MaterialTheme.typography.bodyMedium)
+                    Divider(color = Color(0xFF3B4551))
+                    Text("ارتباط با مغز هوشمند", color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold)
+                    Text(entry.aiRole, style = MaterialTheme.typography.bodySmall)
+                    Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(10.dp)) {
+                        Text(entry.aiStatus, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color(0xFFD4DCE6), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedEntry = null; entry.action() }) {
+                    Text("ورود به این بخش", color = Color(0xFFE0E6EE))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedEntry = null }) { Text("بستن", color = Color(0xFF9BA7B5)) }
+            }
+        )
+    }
     Column(Modifier.fillMaxSize().background(hubBg).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
