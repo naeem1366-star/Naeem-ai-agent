@@ -1194,43 +1194,87 @@ private fun ThinkingOrb(
     val transition = rememberInfiniteTransition(label = "liquid-mercury")
     val phase by transition.animateFloat(
         0f, 6.28318f,
-        infiniteRepeatable(tween(if (active) 3600 else 6200, easing = LinearEasing)),
+        infiniteRepeatable(tween(if (active) 4200 else 7000, easing = LinearEasing)),
         label = "mercury-flow"
     )
+    val secondaryPhase by transition.animateFloat(
+        0f, 6.28318f,
+        infiniteRepeatable(tween(if (active) 6900 else 9800, easing = LinearEasing)),
+        label = "mercury-secondary-flow"
+    )
     val pulse by transition.animateFloat(
-        0.97f, 1.035f,
-        infiniteRepeatable(tween(if (active) 1500 else 2600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        0.94f, 1.055f,
+        infiniteRepeatable(tween(if (active) 1750 else 2900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "mercury-breath"
     )
+    val haloPulse by transition.animateFloat(
+        0.72f, 1f,
+        infiniteRepeatable(tween(if (active) 2100 else 3400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "mercury-halo"
+    )
+
     Canvas(Modifier.size(diameter)) {
         val c = Offset(size.width / 2f, size.height / 2f)
         val base = size.minDimension * 0.285f * pulse
-        val glow = base * 2.15f
+        val glow = base * 2.45f
+        val haloAlpha = haloPulse * if (active) 0.92f else 0.62f
+
+        // A soft atmospheric glow surrounding the liquid-metal silhouette.
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0x559AA6B5), Color(0x223F4854), Color.Transparent),
+                listOf(
+                    Color(0x669AA8BA).copy(alpha = haloAlpha),
+                    Color(0x335D6B7D).copy(alpha = haloAlpha),
+                    Color(0x183D4858).copy(alpha = haloAlpha * 0.7f),
+                    Color.Transparent
+                ),
                 c, glow
             ), glow, c
         )
+        drawCircle(
+            Color(0x559EADBF).copy(alpha = haloAlpha),
+            radius = base * 1.48f,
+            center = c,
+            style = Stroke(width = 7.dp.toPx())
+        )
+
         val blob = Path()
-        val steps = 100
+        val steps = 144
         for (i in 0..steps) {
             val a = (i.toFloat() / steps) * 6.28318f
-            val wave = 1f + 0.105f * kotlin.math.sin(3f * a + phase) +
-                0.052f * kotlin.math.sin(5f * a - phase * 1.31f) +
-                0.025f * kotlin.math.cos(2f * a + phase * 0.72f)
+            val wave = 1f +
+                0.125f * kotlin.math.sin(3f * a + phase) +
+                0.067f * kotlin.math.sin(5f * a - secondaryPhase * 1.31f) +
+                0.044f * kotlin.math.cos(2f * a + phase * 0.72f) +
+                0.026f * kotlin.math.sin(7f * a + secondaryPhase * 0.83f)
             val r = base * wave
-            val x = c.x + kotlin.math.cos(a) * r * 1.04f
-            val y = c.y + kotlin.math.sin(a) * r * 0.94f
+            val x = c.x + kotlin.math.cos(a) * r * (1.02f + 0.035f * kotlin.math.sin(phase))
+            val y = c.y + kotlin.math.sin(a) * r * (0.91f + 0.045f * kotlin.math.cos(secondaryPhase))
             if (i == 0) blob.moveTo(x, y) else blob.lineTo(x, y)
         }
         blob.close()
+
+        // Bright liquid rim, with a moving silver highlight.
+        drawPath(
+            blob,
+            Brush.linearGradient(
+                listOf(
+                    Color(0x00FFFFFF),
+                    Color(0xDDEAF2FC).copy(alpha = haloAlpha),
+                    Color(0x5594A4B8),
+                    Color(0x00FFFFFF)
+                ),
+                start = Offset(c.x - base * 1.25f, c.y - base),
+                end = Offset(c.x + base * 1.2f, c.y + base)
+            ),
+            style = Stroke(width = 5.5.dp.toPx())
+        )
         drawPath(
             blob,
             Brush.linearGradient(
                 colors = listOf(
-                    Color(0xFFF8FAFC), Color(0xFFBFC6CF), Color(0xFF59616B),
-                    Color(0xFFE8ECF0), Color(0xFF737C87), Color(0xFF252B33)
+                    Color(0xFFF8FAFC), Color(0xFFBFC8D3), Color(0xFF505B69),
+                    Color(0xFFE9EEF4), Color(0xFF788493), Color(0xFF252B33)
                 ),
                 start = Offset(c.x - base, c.y - base),
                 end = Offset(c.x + base, c.y + base)
@@ -1239,24 +1283,30 @@ private fun ThinkingOrb(
         drawPath(
             blob,
             Brush.radialGradient(
-                listOf(Color.White.copy(alpha = 0.88f), Color(0x44FFFFFF), Color.Transparent),
+                listOf(Color.White.copy(alpha = 0.9f), Color(0x55FFFFFF), Color.Transparent),
                 Offset(c.x - base * 0.34f, c.y - base * 0.48f), base * 1.18f
             )
         )
+
+        // Reflections slide over the surface as the shape continuously changes.
         drawArc(
-            Color.White.copy(alpha = 0.78f), 205f + phase * 22f, 72f, false,
-            androidx.compose.ui.geometry.Offset(c.x - base * 0.72f, c.y - base * 0.68f),
+            Color.White.copy(alpha = 0.86f * haloAlpha),
+            195f + phase * 22f, 76f, false,
+            Offset(c.x - base * 0.72f, c.y - base * 0.68f),
             androidx.compose.ui.geometry.Size(base * 1.35f, base * 0.82f),
-            style = Stroke(width = 2.1.dp.toPx())
+            style = Stroke(width = 2.4.dp.toPx())
         )
         drawArc(
-            Color(0xFF303943).copy(alpha = 0.72f), 28f - phase * 18f, 105f, false,
-            androidx.compose.ui.geometry.Offset(c.x - base * 0.48f, c.y - base * 0.12f),
+            Color(0xFF303943).copy(alpha = 0.82f), 28f - secondaryPhase * 18f, 105f, false,
+            Offset(c.x - base * 0.48f, c.y - base * 0.12f),
             androidx.compose.ui.geometry.Size(base * 1.55f, base * 1.10f),
-            style = Stroke(width = 1.4.dp.toPx())
+            style = Stroke(width = 1.6.dp.toPx())
         )
-        drawCircle(Color(0x66FFFFFF), base * 0.11f,
-            Offset(c.x - base * 0.38f, c.y - base * 0.53f))
+        drawCircle(
+            Color.White.copy(alpha = 0.72f * haloAlpha),
+            base * 0.105f,
+            Offset(c.x - base * 0.38f, c.y - base * 0.53f)
+        )
     }
 }
 
