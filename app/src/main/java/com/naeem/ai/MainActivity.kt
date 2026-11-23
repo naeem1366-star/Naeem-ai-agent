@@ -1129,7 +1129,7 @@ fun NaeemApp(store: SecureConfigStore) {
 
 @Composable
 private fun ThinkingOrb(
-    size: androidx.compose.ui.unit.Dp = 118.dp,
+    diameter: androidx.compose.ui.unit.Dp = 118.dp,
     active: Boolean = true
 ) {
     val transition = rememberInfiniteTransition(label = "naeem-orb")
@@ -1144,8 +1144,8 @@ private fun ThinkingOrb(
         infiniteRepeatable(tween(if (active) 1150 else 2300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "orb-pulse"
     )
-    Canvas(Modifier.size(size)) {
-        val center = Offset(size.width / 2f, size.height / 2f)
+    Canvas(Modifier.size(diameter)) {
+        val center = Offset(this.size.width / 2f, this.size.height / 2f)
         val radius = size.minDimension * 0.285f * pulse
         val glowRadius = radius * if (active) 2.2f else 1.8f
         drawCircle(
