@@ -25,8 +25,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-private data class SportLog(val id:String,val title:String,val category:String,val date:Long,val minutes:Int,val distance:Double,val sets:Int,val reps:Int,val weight:Double,val notes:String)
-private class SportStore(context:Context){
+data class SportLog(val id:String,val title:String,val category:String,val date:Long,val minutes:Int,val distance:Double,val sets:Int,val reps:Int,val weight:Double,val notes:String)
+class SportStore(context:Context){
  private val prefs=context.getSharedPreferences("naeem_sports_v1",Context.MODE_PRIVATE)
  fun load():List<SportLog> = runCatching{val a=JSONArray(prefs.getString("logs","[]"));(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{o->SportLog(o.optString("id"),o.optString("title"),o.optString("category"),o.optLong("date"),o.optInt("minutes"),o.optDouble("distance"),o.optInt("sets"),o.optInt("reps"),o.optDouble("weight"),o.optString("notes"))}}}.getOrDefault(emptyList())
  fun save(logs:List<SportLog>){val a=JSONArray();logs.take(500).forEach{a.put(JSONObject().put("id",it.id).put("title",it.title).put("category",it.category).put("date",it.date).put("minutes",it.minutes).put("distance",it.distance).put("sets",it.sets).put("reps",it.reps).put("weight",it.weight).put("notes",it.notes))};prefs.edit().putString("logs",a.toString()).apply()}
