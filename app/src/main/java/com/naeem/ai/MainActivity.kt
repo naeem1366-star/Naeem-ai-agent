@@ -7,7 +7,7 @@ import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.os.Bundle
 import android.media.MediaPlayer
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -82,7 +82,7 @@ private fun isImageGenerationRequest(text: String): Boolean {
 
 data class ChatMessage(val text: String, val fromUser: Boolean, val image: androidx.compose.ui.graphics.ImageBitmap? = null)
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val unlocked = mutableStateOf(false)
     private var promptShowing = false
     private var requireAuthentication = true
