@@ -81,7 +81,7 @@ fun FeatureHub(
             Column(Modifier.weight(1f)){
                 Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("برای دیدن قابلیت‌ها، افقی ورق بزن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall)
+                Text("هر فضا را با انتخاب آیکون خودش باز کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
         }
@@ -106,70 +106,36 @@ fun FeatureHub(
         if(filtered.isEmpty()){
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
         } else {
-            LazyRow(
-                state=carouselState,
-                modifier=Modifier.fillMaxWidth().weight(1f),
-                contentPadding=PaddingValues(horizontal=24.dp, vertical=28.dp),
-                horizontalArrangement=Arrangement.spacedBy(16.dp),
-                verticalAlignment=Alignment.CenterVertically
-            ){
-                itemsIndexed(filtered,key={_,entry->entry.title}){index,entry->
-                    val info=carouselState.layoutInfo
-                    val item=info.visibleItemsInfo.firstOrNull{it.index==index}
-                    val viewportCenter=(info.viewportStartOffset+info.viewportEndOffset)/2f
-                    val itemCenter=item?.let{it.offset+it.size/2f}?:viewportCenter
-                    val distance=((itemCenter-viewportCenter)/(info.viewportEndOffset-info.viewportStartOffset).coerceAtLeast(1)).coerceIn(-1f,1f)
-                    Card(
-                        onClick=entry.action,
-                        modifier=Modifier.width(286.dp).height(330.dp).graphicsLayer{
-                            rotationY=distance*19f
-                            scaleX=1f-kotlin.math.abs(distance)*.12f
-                            scaleY=1f-kotlin.math.abs(distance)*.12f
-                            alpha=1f-kotlin.math.abs(distance)*.22f
-                            cameraDistance=22f*density
-                            shadowElevation=(18f-kotlin.math.abs(distance)*7f).dp.toPx()
-                        },
-                        colors=CardDefaults.cardColors(containerColor=Color(0xFF1C1B19)),
-                        shape=RoundedCornerShape(30.dp),
-                        elevation=CardDefaults.cardElevation(defaultElevation=10.dp)
-                    ){
-                        Box(Modifier.fillMaxSize().background(
-                            ComposeBrush.linearGradient(listOf(Color(0xFF493B29),Color(0xFF27231D),Color(0xFF17181B)))
-                        ).padding(22.dp)){
-                            Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.SpaceBetween){
-                                Row(verticalAlignment=Alignment.CenterVertically){
-                                    Text("SPACE  ${(index+1).toString().padStart(2,'0')}",color=gold.copy(alpha=.75f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
-                                    Spacer(Modifier.weight(1f))
-                                    Icon(Icons.Default.ArrowOutward,null,tint=gold.copy(alpha=.85f))
-                                }
-                                Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
-                                    Box(
-                                        Modifier.size(82.dp).background(
-                                            ComposeBrush.radialGradient(listOf(Color(0xFFE9D3A7).copy(alpha=.30f),Color(0xFF7A6240).copy(alpha=.10f),Color.Transparent)),
-                                            CircleShape
-                                        ),
-                                        contentAlignment=Alignment.Center
-                                    ){
-                                        Icon(entry.icon,null,tint=champagne,modifier=Modifier.size(42.dp))
-                                    }
-                                    Text(entry.title,color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                                    Text(entry.subtitle,color=champagne,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-                                    Text(entry.detail,color=Color(0xFFB8B1A6),style=MaterialTheme.typography.bodyMedium)
-                                }
-                                Row(verticalAlignment=Alignment.CenterVertically){
-                                    Text("ورود به فضا",color=gold,fontWeight=FontWeight.SemiBold)
-                                    Spacer(Modifier.width(8.dp))
-                                    Icon(Icons.Default.ArrowBack,null,tint=gold,modifier=Modifier.size(18.dp))
-                                }
-                            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp)
+            ) {
+                items(filtered.size) { index ->
+                    val entry = filtered[index]
+                    Column(
+                        Modifier.fillMaxWidth().clickable(onClick = entry.action),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            Modifier.size(88.dp)
+                                .background(Color(0xFF030405), RoundedCornerShape(20.dp))
+                                .then(Modifier),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(entry.icon, null, tint = Color(0xFFD4D9E0), modifier = Modifier.size(39.dp))
                         }
+                        Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)
                     }
                 }
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
                 Icon(Icons.Default.Swipe,null,tint=gold.copy(alpha=.7f),modifier=Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("کارت‌ها را به چپ و راست بکش",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
+                Text("برای ورود، آیکون هر بخش را لمس کن",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -196,17 +162,17 @@ private class HStore(c:Context){
  fun remove(at:Long){val a=org.json.JSONArray();logs().filterNot{it.at==at}.forEach{a.put(org.json.JSONObject().put("n",it.name).put("c",it.kcal).put("t",it.type).put("a",it.at))};p.edit().putString("logs",a.toString()).apply()}
 }
 
-private val HBg=Color(0xFF101815)
-private val HPanel=Color(0xFF1B2923)
-private val HMint=Color(0xFF8CE0B5)
-private val HMuted=Color(0xFFA0B5AA)
+private val HBg=Color(0xFF0A0C10)
+private val HPanel=Color(0xFF1B1F25)
+private val HMint=Color(0xFFD4D9E0)
+private val HMuted=Color(0xFF9AA3AE)
 @Composable private fun HCard(content:@Composable ColumnScope.()->Unit){
  Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
   Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
  }
 }
 @Composable private fun HInput(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier){
- OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(15.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=HMint,unfocusedBorderColor=Color(0xFF496456),focusedContainerColor=Color(0xFF17231D),unfocusedContainerColor=Color(0xFF17231D),focusedLabelColor=HMint,cursorColor=HMint))
+ OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(15.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=HMint,unfocusedBorderColor=Color(0xFF454D58),focusedContainerColor=Color(0xFF171B21),unfocusedContainerColor=Color(0xFF171B21),focusedLabelColor=HMint,cursorColor=HMint))
 }
 @Composable private fun HMetric(title:String,value:String,sub:String,modifier:Modifier){
  val icon=when(title){"BMI"->Icons.Default.Favorite;"کالری پایه"->Icons.Default.LocalFireDepartment;"هدف کالری"->Icons.Default.Flag;else->Icons.Default.Restaurant}
@@ -237,16 +203,16 @@ private val HMuted=Color(0xFFA0B5AA)
  val nf=remember{NumberFormat.getNumberInstance(Locale.US)}
  Column(Modifier.fillMaxSize().background(HBg).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){
-   Box(Modifier.size(48.dp).background(Color(0xFF244B3B),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
+   Box(Modifier.size(48.dp).background(Color(0xFF242A32),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.Eco,null,tint=HMint,modifier=Modifier.size(29.dp))}
    Spacer(Modifier.width(11.dp))
    Column(Modifier.weight(1f)){Text("سلامت و تغذیه",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("داشبورد بدن و انرژی",color=HMuted,style=MaterialTheme.typography.bodySmall)}
    IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=HMint)}
   }
   Card(colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()){
-   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF244D3D),Color(0xFF1D3430),Color(0xFF202D2D)))).padding(17.dp)){
+   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF252B34),Color(0xFF1B2027),Color(0xFF20252D)))).padding(17.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){
      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
-      Text("HEALTH SPACE",color=Color(0xFFA9EAC7),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+      Text("HEALTH SPACE",color=Color(0xFFC9D0D9),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
       Text("قدم‌به‌قدم، سالم‌تر",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
       Text("تغذیه، تحرک و حال خوبت را یک‌جا دنبال کن.",color=Color(0xFFC2D8CD),style=MaterialTheme.typography.bodySmall)
      }
@@ -327,16 +293,16 @@ private val HMuted=Color(0xFFA0B5AA)
  LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
  fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
  Column(Modifier.fillMaxSize().background(Color(0xFF0B1020))){
-  Row(Modifier.fillMaxWidth().background(Color(0xFF121A30)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFF91A8FF),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("بازی رو شروع کن؛ امتیازها با ما",color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
+  Row(Modifier.fillMaxWidth().background(Color(0xFF121A30)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFF91A8FF),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("بازی رو شروع کن؛ امتیازها با ما",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
-    Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFF9EAEFF),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=Color(0xFF2C3D66),shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
+   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
+    Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=Color(0xFF2C3D66),shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
     Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){listOf("ترکیبی","سینما","سخت").forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Color(0xFF596FEA),selectedLabelColor=Color.White,containerColor=Color(0xFF202A43),labelColor=Color.White))}}
-    Box(Modifier.fillMaxWidth().background(Color(0xFF0D1428),RoundedCornerShape(22.dp)).padding(vertical=25.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Text("کلمهٔ مخصوص اجرا",color=Color(0xFF9EAEFF));Text(if(showWord)word else "برای نمایش کلمه بزن",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black);Text(String.format(Locale.US,"%02d:%02d",seconds/60,seconds%60),color=if(seconds<=10)Color(0xFFFF817D) else Color(0xFF8DE0C1),style=MaterialTheme.typography.displayMedium,fontWeight=FontWeight.Black);Text(if(seconds==0)"زمان تمام شد!" else "زمان باقی‌مانده",color=Color(0xFFADB8D0),style=MaterialTheme.typography.labelSmall)}}
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={if(!showWord){word=decks[category].orEmpty().random();showWord=true};running=!running},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7188FF)),shape=RoundedCornerShape(14.dp)){Icon(if(running)Icons.Default.Pause else Icons.Default.PlayArrow,null);Text(if(running)"مکث" else "شروع زمان‌سنج")};OutlinedButton(onClick={next()},modifier=Modifier.weight(1f),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.SkipNext,null);Text("کلمه بعدی")}}
-    Button(onClick={if(team==1)score1++ else score2++;next()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8DE0C1),contentColor=Color(0xFF102019)),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CheckCircle,null);Text("حدس درست بود! +۱")}
+    Box(Modifier.fillMaxWidth().background(Color(0xFF0D1428),RoundedCornerShape(22.dp)).padding(vertical=25.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Text("کلمهٔ مخصوص اجرا",color=Color(0xFFD4D9E0));Text(if(showWord)word else "برای نمایش کلمه بزن",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black);Text(String.format(Locale.US,"%02d:%02d",seconds/60,seconds%60),color=if(seconds<=10)Color(0xFFFF817D) else Color(0xFFD4D9E0),style=MaterialTheme.typography.displayMedium,fontWeight=FontWeight.Black);Text(if(seconds==0)"زمان تمام شد!" else "زمان باقی‌مانده",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall)}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={if(!showWord){word=decks[category].orEmpty().random();showWord=true};running=!running},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFBFC6D0)),shape=RoundedCornerShape(14.dp)){Icon(if(running)Icons.Default.Pause else Icons.Default.PlayArrow,null);Text(if(running)"مکث" else "شروع زمان‌سنج")};OutlinedButton(onClick={next()},modifier=Modifier.weight(1f),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.SkipNext,null);Text("کلمه بعدی")}}
+    Button(onClick={if(team==1)score1++ else score2++;next()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFD4D9E0),contentColor=Color(0xFF102019)),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CheckCircle,null);Text("حدس درست بود! +۱")}
    }}}
-   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF344A82) else Color(0xFF222E49)),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFF9EAEFF),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFF8DE0C1),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=Color(0xFFADB8D0),style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
+   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF344A82) else Color(0xFF222E49)),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFFD4D9E0),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
    item { QuickMathGame() }
    item { ColorMemoryGame() }
   }
@@ -349,14 +315,14 @@ private val HMuted=Color(0xFFA0B5AA)
  var answer by remember{mutableStateOf("")}
  var points by remember{mutableIntStateOf(0)}
  var message by remember{mutableStateOf("جواب درست بده و رکوردت را بالا ببر!")}
- Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){
+ Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(22.dp)){
   Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-   Text("چالش محاسبه سریع",color=Color(0xFF9EAEFF),fontWeight=FontWeight.Bold)
+   Text("چالش محاسبه سریع",color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold)
    Text(a.toString()+" × "+b.toString()+" = ؟",color=Color.White,style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Black)
-   Text("امتیاز: "+points,color=Color(0xFF8DE0C1),fontWeight=FontWeight.Bold)
+   Text("امتیاز: "+points,color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold)
    OutlinedTextField(answer,{answer=it.filter(Char::isDigit)},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("پاسخ")})
-   Button(onClick={if(answer.toIntOrNull()==a*b){points++;message="درست بود! عالیه."}else message="جواب درست "+(a*b)+" بود.";a=(3..12).random();b=(3..12).random();answer=""},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7188FF))){Text("بررسی و سؤال بعدی")}
-   Text(message,color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)
+   Button(onClick={if(answer.toIntOrNull()==a*b){points++;message="درست بود! عالیه."}else message="جواب درست "+(a*b)+" بود.";a=(3..12).random();b=(3..12).random();answer=""},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFBFC6D0))){Text("بررسی و سؤال بعدی")}
+   Text(message,color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)
   }
  }
 }
@@ -367,14 +333,14 @@ private val HMuted=Color(0xFFA0B5AA)
  var chosen by remember{mutableStateOf(listOf<Int>())}
  var level by remember{mutableIntStateOf(1)}
  var message by remember{mutableStateOf("الگو را ببین و همان ترتیب را تکرار کن.")}
- Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){
+ Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(22.dp)){
   Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   Text("حافظه رنگ‌ها",color=Color(0xFF9EAEFF),fontWeight=FontWeight.Bold)
+   Text("حافظه رنگ‌ها",color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold)
    Text("مرحله "+level,color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-   Text(message,color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)
+   Text(message,color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)
    if(sequence.isNotEmpty()) Text("الگو: "+sequence.joinToString(" ← "){names[it]},color=Color.White,fontWeight=FontWeight.SemiBold)
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){colors.forEachIndexed{index,c->Box(Modifier.weight(1f).height(58.dp).background(c,RoundedCornerShape(14.dp)).clickable{if(sequence.isNotEmpty()){val next=chosen+index;chosen=next;if(next.size==sequence.size){if(next==sequence){level++;sequence=sequence+(0..3).random();message="درست بود! مرحله بعدی آماده است."}else{level=1;sequence=emptyList();message="ترتیب اشتباه بود؛ دوباره شروع کن."};chosen=emptyList()}}},contentAlignment=Alignment.Center){Text(names[index],color=Color.Black,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.labelSmall)}}}
-   Button(onClick={sequence=List((level+1).coerceAtMost(8)){(0..3).random()};chosen=emptyList();message="حالا رنگ‌ها را به همان ترتیب لمس کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7188FF))){Text("ساخت الگوی مرحله بعد")}
+   Button(onClick={sequence=List((level+1).coerceAtMost(8)){(0..3).random()};chosen=emptyList();message="حالا رنگ‌ها را به همان ترتیب لمس کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFBFC6D0))){Text("ساخت الگوی مرحله بعد")}
   }
  }
 }
