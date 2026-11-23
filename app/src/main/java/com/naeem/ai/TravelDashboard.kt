@@ -38,12 +38,12 @@ import java.text.NumberFormat
 import java.util.Locale
 import java.util.UUID
 
-private data class TripExpense(val id:String, val title:String, val amount:Long, val payer:String)
-private data class LocalTrip(
+data class TripExpense(val id:String, val title:String, val amount:Long, val payer:String)
+data class LocalTrip(
     val id:String, val title:String, val destination:String, val dates:String,
     val members:List<String>, val expenses:List<TripExpense>
 )
-private class TravelStore(context:Context) {
+class TravelStore(context:Context) {
     private val prefs=context.getSharedPreferences("naeem_travel_local",Context.MODE_PRIVATE)
     fun load():List<LocalTrip> = runCatching {
         val a=JSONArray(prefs.getString("trips","[]"))
