@@ -18,6 +18,39 @@ class ChatClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    suspend fun fetchModels(baseUrl: String, apiKey: String): List<String> = withContext(Dispatchers.IO) {
+        val cleanKey = apiKey.trim().removePrefix("Bearer ").removePrefix("bearer ").trim()
+        require(cleanKey.isNotBlank()) { "کلید API در تنظیمات وارد نشده است." }
+        require(cleanKey.all { it.code in 0x21..0x7E }) { "کلید API باید فقط شامل نویسه‌های انگلیسی معتبر باشد." }
+        var root = baseUrl.trim().trimEnd('/')
+        require(root.startsWith("https://", ignoreCase = true)) { "نشانی سرویس باید با https:// شروع شود." }
+        if (root.endsWith("/models", ignoreCase = true)) root = root.removeSuffix("/models")
+        val request = Request.Builder()
+            .url("$root/models")
+            .header("Authorization", "Bearer $cleanKey")
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        http.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                val detail = runCatching {
+                    val json = JSONObject(raw)
+                    val err = json.opt("error")
+                    if (err is JSONObject) err.optString("message").ifBlank { err.toString() }
+                    else json.optString("message").ifBlank { raw.take(500) }
+                }.getOrDefault(raw.take(500))
+                throw IllegalStateException("آزمایش اتصال ناموفق بود (HTTP ${response.code}): $detail")
+            }
+            val data = JSONObject(raw).optJSONArray("data") ?: throw IllegalStateException("سرور پاسخ داد اما فهرست مدل‌ها در قالب استاندارد نبود.")
+            val models = (0 until data.length()).mapNotNull { i ->
+                data.optJSONObject(i)?.optString("id")?.takeIf { it.isNotBlank() }
+            }.distinct().sorted()
+            if (models.isEmpty()) throw IllegalStateException("اتصال برقرار شد اما مدلی از سرویس دریافت نشد.")
+            models
+        }
+    }
+
     suspend fun send(baseUrl: String, model: String, apiKey: String, prompt: String, imageBase64: String? = null): String =
         withContext(Dispatchers.IO) {
             val cleanKey = apiKey.trim().let { value ->
