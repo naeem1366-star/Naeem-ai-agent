@@ -101,8 +101,9 @@ fun NaeemApp(store: SecureConfigStore) {
     var busy by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<ChatMessage>() }
+    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(conversationStore.load().map { ChatMessage(it.text, it.fromUser) }) } }
     val dataStore = remember { AssistantDataStore(context) }
+    val conversationStore = remember { ConversationStore(context) }
     val deepSearchClient = remember { DeepSearchClient() }
     var memories by remember { mutableStateOf(dataStore.memories()) }
     var albumImages by remember { mutableStateOf(dataStore.images()) }
@@ -322,6 +323,7 @@ fun NaeemApp(store: SecureConfigStore) {
     }
 
     LaunchedEffect(messages.size) {
+        conversationStore.save(messages)
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
