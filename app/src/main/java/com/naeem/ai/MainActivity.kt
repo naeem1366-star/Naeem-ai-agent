@@ -58,6 +58,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material3.Typography
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -73,6 +76,34 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CompletableDeferred
 import com.naeem.ai.core.assistant.*
 import java.io.File
+
+private val NaeemPersianFont = FontFamily(
+    Font(R.font.vazirmatn_regular, FontWeight.Normal),
+    Font(R.font.vazirmatn_medium, FontWeight.Medium),
+    Font(R.font.vazirmatn_semibold, FontWeight.SemiBold),
+    Font(R.font.vazirmatn_bold, FontWeight.Bold)
+)
+
+private fun naeemTypography(): Typography {
+    val base = Typography()
+    return Typography(
+        displayLarge = base.displayLarge.copy(fontFamily = NaeemPersianFont),
+        displayMedium = base.displayMedium.copy(fontFamily = NaeemPersianFont),
+        displaySmall = base.displaySmall.copy(fontFamily = NaeemPersianFont),
+        headlineLarge = base.headlineLarge.copy(fontFamily = NaeemPersianFont),
+        headlineMedium = base.headlineMedium.copy(fontFamily = NaeemPersianFont),
+        headlineSmall = base.headlineSmall.copy(fontFamily = NaeemPersianFont),
+        titleLarge = base.titleLarge.copy(fontFamily = NaeemPersianFont),
+        titleMedium = base.titleMedium.copy(fontFamily = NaeemPersianFont),
+        titleSmall = base.titleSmall.copy(fontFamily = NaeemPersianFont),
+        bodyLarge = base.bodyLarge.copy(fontFamily = NaeemPersianFont),
+        bodyMedium = base.bodyMedium.copy(fontFamily = NaeemPersianFont),
+        bodySmall = base.bodySmall.copy(fontFamily = NaeemPersianFont),
+        labelLarge = base.labelLarge.copy(fontFamily = NaeemPersianFont),
+        labelMedium = base.labelMedium.copy(fontFamily = NaeemPersianFont),
+        labelSmall = base.labelSmall.copy(fontFamily = NaeemPersianFont)
+    )
+}
 
 private fun isImageGenerationRequest(text: String): Boolean {
     val normalized = text.lowercase().replace('ي', 'ی').replace('ك', 'ک')
@@ -620,6 +651,7 @@ fun NaeemApp(store: SecureConfigStore) {
     }
 
     MaterialTheme(
+        typography = naeemTypography(),
         colorScheme = darkColorScheme(
             primary = Gold, onPrimary = Ink, background = Ink, onBackground = Color(0xFFE7ECF2),
             surface = Panel, onSurface = Color(0xFFE7ECF2), surfaceVariant = Color(0xFF292C33),
