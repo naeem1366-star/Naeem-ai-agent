@@ -54,84 +54,121 @@ fun FeatureHub(
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit
 ){
     var query by remember { mutableStateOf("") }
-    val listState= rememberLazyListState()
-    data class Entry(val title:String,val subtitle:String,val detail:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val color:Color,val action:()->Unit,val keywords:String)
+    val carouselState = rememberLazyListState()
+    data class Entry(val title:String,val subtitle:String,val detail:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val action:()->Unit,val keywords:String)
     val entries=listOf(
-        Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","ساخت سفر، افزودن همراهان و ثبت مخارج",Icons.Default.Luggage,Color(0xFF73D2D0),onTravel,"سفر مسافرت مقصد همسفر هزینه"),
-        Entry("باشگاه ورزش","تمرین و آمادگی جسمانی","قدرت، عضله‌سازی، هوازی، برنامه و رکوردهای شخصی",Icons.Default.FitnessCenter,Color(0xFFB9A4FF),onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
-        Entry("نبض بازار","قیمت دارایی‌ها","طلا، نقره، ارز، بیت‌کوین و بازارهای جهانی",Icons.Default.TrendingUp,Color(0xFF76D6C5),onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
-        Entry("دفتر مالی","مدیریت پول","ثبت درآمد و هزینه و گزارش مالی",Icons.Default.AccountBalanceWallet,Color(0xFFFFC477),onFinance,"مالی پول هزینه درآمد"),
-        Entry("روایت ماه","گزارش ماهانه","خلاصهٔ مالی، ورزش، سفر و حافظه با امکان اشتراک",Icons.Default.AutoAwesome,Color(0xFF9BE5C4),onWrapped,"wrapped گزارش ماهانه جمع‌بندی عملکرد"),
-        Entry("سلامت و تغذیه","بدن و انرژی","تغذیه، کالری و فعالیت روزانه",Icons.Default.Favorite,Color(0xFF8CE0B5),onHealth,"سلامت تغذیه کالری غذا"),
-        Entry("حافظه هوشمند","یادداشت‌های من","نگهداری نکته‌ها و اطلاعات مهم",Icons.Default.Bookmark,Color(0xFFB9A4FF),onMemory,"حافظه یادداشت"),
-        Entry("آلبوم تصاویر","آرشیو آثار","تصاویر ساخته‌شده با هوش مصنوعی",Icons.Default.Collections,Color(0xFF8CCCF1),onAlbum,"آلبوم تصویر عکس"),
-        Entry("بازی‌ها","چالش و سرگرمی","بازی‌های کوتاه و گروهی",Icons.Default.SportsEsports,Color(0xFFB5A2FF),onGames,"بازی سرگرمی"),
-        Entry("سینما","فیلم و پوستر","کشف فیلم و پیشنهاد تماشا",Icons.Default.Movie,Color(0xFFFFB987),onDiscover,"فیلم سینما"),
-        Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و شنیدن پیش‌نمایش آهنگ",Icons.Default.MusicNote,Color(0xFF83CFF0),onMusic,"موسیقی آهنگ"),
-        Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال هوش مصنوعی",Icons.Default.Settings,Color(0xFFD1D5DD),onSettings,"تنظیمات اتصال")
+        Entry("سفر و هم‌سفرها","برنامه‌ریزی سفر","سفرها، همراهان و مخارج",Icons.Default.Luggage,onTravel,"سفر مسافرت مقصد همسفر هزینه"),
+        Entry("باشگاه ورزش","تمرین و آمادگی","تمرین، برنامه و رکوردها",Icons.Default.FitnessCenter,onSport,"ورزش تمرین قدرتی باشگاه فیتنس دویدن"),
+        Entry("نبض بازار","قیمت دارایی‌ها","طلا، ارز و بازارهای جهانی",Icons.Default.TrendingUp,onMarkets,"بازار قیمت دلار طلا نقره بیت کوین رمزارز بورس ارز"),
+        Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
+        Entry("روایت ماه","گزارش ماهانه","خلاصه عملکرد و اتفاق‌های ماه",Icons.Default.AutoAwesome,onWrapped,"گزارش ماهانه جمع‌بندی عملکرد"),
+        Entry("سلامت و تغذیه","بدن و انرژی","تغذیه، کالری و فعالیت روزانه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
+        Entry("حافظه هوشمند","یادداشت‌های من","نکته‌ها و اطلاعات مهم",Icons.Default.Bookmark,onMemory,"حافظه یادداشت"),
+        Entry("آلبوم تصاویر","آرشیو آثار","تصاویر ساخته‌شده",Icons.Default.Collections,onAlbum,"آلبوم تصویر عکس"),
+        Entry("بازی‌ها","چالش و سرگرمی","بازی‌های کوتاه و گروهی",Icons.Default.SportsEsports,onGames,"بازی سرگرمی"),
+        Entry("سینما","فیلم و پوستر","کشف فیلم و پیشنهاد تماشا",Icons.Default.Movie,onDiscover,"فیلم سینما"),
+        Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
+        Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت",Icons.Default.Settings,onSettings,"تنظیمات اتصال")
     )
     val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
-    Column(Modifier.fillMaxSize().background(Color(0xFF0C1118)).padding(horizontal=18.dp, vertical=12.dp)){
+    val gold=Color(0xFFD1B078)
+    val champagne=Color(0xFFE8D2A8)
+    val hubBg=Color(0xFF101114)
+    Column(Modifier.fillMaxSize().background(hubBg).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text("NAEEM AI  /  SPACES",color=Color(0xFF8CE0B5),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
-                Text("جهان ابزارهای تو",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("برای ورود، روی هر فضا بزن.",color=Color(0xFFA9B8B2),style=MaterialTheme.typography.bodySmall)
+                Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                Text("برای دیدن قابلیت‌ها، افقی ورق بزن.",color=Color(0xFFAAA6A0),style=MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color(0xFF8CE0B5))}
+            IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
         }
-        Spacer(Modifier.height(12.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF172B2A)),shape=RoundedCornerShape(24.dp)){
-            Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF28594C),Color(0xFF1B3440),Color(0xFF25243A)))).padding(17.dp)){
-                Row(verticalAlignment=Alignment.CenterVertically){
-                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
-                        Text("SCROLL TO EXPLORE",color=Color(0xFFB5F0D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
-                        Text("هر قابلیت، یک فضای مستقل",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-                        Text("با اسکرول، فضاها در عمق صحنه حرکت می‌کنند.",color=Color(0xFFD0DED8),style=MaterialTheme.typography.bodySmall)
-                    }
-                    Box(Modifier.size(62.dp).background(ComposeBrush.radialGradient(listOf(Color(0xFF9CE8C0),Color(0xFF376C58),Color.Transparent)),RoundedCornerShape(22.dp)),contentAlignment=Alignment.Center){
-                        Icon(Icons.Default.ViewInAr,null,tint=Color(0xFFD5FFE5),modifier=Modifier.size(34.dp))
-                    }
-                }
-            }
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(
+            query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,
+            shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},
+            leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
+            colors=OutlinedTextFieldDefaults.colors(
+                focusedBorderColor=gold,unfocusedBorderColor=Color(0xFF45413A),
+                focusedContainerColor=Color(0xFF191A1E),unfocusedContainerColor=Color(0xFF191A1E),
+                cursorColor=gold
+            )
+        )
+        Spacer(Modifier.height(18.dp))
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            Text(if(query.isBlank()) "گالری قابلیت‌ها" else "نتایج جست‌وجو",color=champagne,fontWeight=FontWeight.SemiBold)
+            Spacer(Modifier.weight(1f))
+            Text(if(query.isBlank()) "←  کشیدن برای مرور  →" else "${filtered.size} مورد",color=Color(0xFF8E8A83),style=MaterialTheme.typography.labelSmall)
         }
-        Spacer(Modifier.height(11.dp))
-        OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},leadingIcon={Icon(Icons.Default.Search,null,tint=Color(0xFF8CE0B5))},colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Color(0xFF8CE0B5),unfocusedBorderColor=Color(0xFF394640),focusedContainerColor=Color(0xFF151F24),unfocusedContainerColor=Color(0xFF151F24)))
-        Spacer(Modifier.height(8.dp))
-        LazyColumn(state=listState,modifier=Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(13.dp),contentPadding=PaddingValues(top=8.dp,bottom=28.dp)){
-            itemsIndexed(filtered,key={_,entry->entry.title}){index,entry->
-                val relative=index-listState.firstVisibleItemIndex-listState.firstVisibleItemScrollOffset/520f
-                Card(
-                    onClick=entry.action,
-                    modifier=Modifier.fillMaxWidth().height(150.dp).graphicsLayer{
-                        val depth=relative.coerceIn(-1.4f,1.4f)
-                        rotationX=depth * -6.5f
-                        scaleX=1f-kotlin.math.abs(depth)*0.045f
-                        scaleY=1f-kotlin.math.abs(depth)*0.045f
-                        alpha=(1f-kotlin.math.abs(depth)*0.16f).coerceIn(0.72f,1f)
-                        cameraDistance=24f*density
-                    },
-                    colors=CardDefaults.cardColors(containerColor=Color(0xFF19232B)),
-                    shape=RoundedCornerShape(23.dp),
-                    elevation=CardDefaults.cardElevation(defaultElevation=8.dp)
-                ){
-                    Box(Modifier.fillMaxSize().background(ComposeBrush.linearGradient(listOf(entry.color.copy(alpha=.25f),Color(0xFF19232B),Color(0xFF111820)))).padding(17.dp)){
-                        Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxSize()){
-                            Box(Modifier.size(58.dp).background(entry.color.copy(alpha=.17f),RoundedCornerShape(19.dp)),contentAlignment=Alignment.Center){
-                                Icon(entry.icon,null,tint=entry.color,modifier=Modifier.size(31.dp))
+        Spacer(Modifier.height(10.dp))
+        if(filtered.isEmpty()){
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAA6A0))}
+        } else {
+            LazyRow(
+                state=carouselState,
+                modifier=Modifier.fillMaxWidth().weight(1f),
+                contentPadding=PaddingValues(horizontal=24.dp, vertical=28.dp),
+                horizontalArrangement=Arrangement.spacedBy(16.dp),
+                verticalAlignment=Alignment.CenterVertically
+            ){
+                itemsIndexed(filtered,key={_,entry->entry.title}){index,entry->
+                    val info=carouselState.layoutInfo
+                    val item=info.visibleItemsInfo.firstOrNull{it.index==index}
+                    val viewportCenter=(info.viewportStartOffset+info.viewportEndOffset)/2f
+                    val itemCenter=item?.let{it.offset+it.size/2f}?:viewportCenter
+                    val distance=((itemCenter-viewportCenter)/(info.viewportEndOffset-info.viewportStartOffset).coerceAtLeast(1)).coerceIn(-1f,1f)
+                    Card(
+                        onClick=entry.action,
+                        modifier=Modifier.width(286.dp).height(330.dp).graphicsLayer{
+                            rotationY=distance*19f
+                            scaleX=1f-kotlin.math.abs(distance)*.12f
+                            scaleY=1f-kotlin.math.abs(distance)*.12f
+                            alpha=1f-kotlin.math.abs(distance)*.22f
+                            cameraDistance=22f*density
+                            shadowElevation=(18f-kotlin.math.abs(distance)*7f).dp.toPx()
+                        },
+                        colors=CardDefaults.cardColors(containerColor=Color(0xFF1C1B19)),
+                        shape=RoundedCornerShape(30.dp),
+                        elevation=CardDefaults.cardElevation(defaultElevation=10.dp)
+                    ){
+                        Box(Modifier.fillMaxSize().background(
+                            ComposeBrush.linearGradient(listOf(Color(0xFF493B29),Color(0xFF27231D),Color(0xFF17181B)))
+                        ).padding(22.dp)){
+                            Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.SpaceBetween){
+                                Row(verticalAlignment=Alignment.CenterVertically){
+                                    Text("SPACE  ${(index+1).toString().padStart(2,'0')}",color=gold.copy(alpha=.75f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                                    Spacer(Modifier.weight(1f))
+                                    Icon(Icons.Default.ArrowOutward,null,tint=gold.copy(alpha=.85f))
+                                }
+                                Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+                                    Box(
+                                        Modifier.size(82.dp).background(
+                                            ComposeBrush.radialGradient(listOf(Color(0xFFE9D3A7).copy(alpha=.30f),Color(0xFF7A6240).copy(alpha=.10f),Color.Transparent)),
+                                            CircleShape
+                                        ),
+                                        contentAlignment=Alignment.Center
+                                    ){
+                                        Icon(entry.icon,null,tint=champagne,modifier=Modifier.size(42.dp))
+                                    }
+                                    Text(entry.title,color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                                    Text(entry.subtitle,color=champagne,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+                                    Text(entry.detail,color=Color(0xFFB8B1A6),style=MaterialTheme.typography.bodyMedium)
+                                }
+                                Row(verticalAlignment=Alignment.CenterVertically){
+                                    Text("ورود به فضا",color=gold,fontWeight=FontWeight.SemiBold)
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Default.ArrowBack,null,tint=gold,modifier=Modifier.size(18.dp))
+                                }
                             }
-                            Spacer(Modifier.width(15.dp))
-                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
-                                Text(entry.title,color=Color.White,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
-                                Text(entry.subtitle,color=entry.color,style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.SemiBold)
-                                Text(entry.detail,color=Color(0xFFB0BCB8),style=MaterialTheme.typography.bodySmall)
-                            }
-                            Icon(Icons.Default.ArrowOutward,null,tint=entry.color,modifier=Modifier.size(21.dp))
                         }
                     }
                 }
             }
-            if(filtered.isEmpty()) item { Text("قابلیتی با این نام پیدا نشد.",color=FM,modifier=Modifier.padding(16.dp)) }
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
+                Icon(Icons.Default.Swipe,null,tint=gold.copy(alpha=.7f),modifier=Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("کارت‌ها را به چپ و راست بکش",color=Color(0xFF8E8A83),style=MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
