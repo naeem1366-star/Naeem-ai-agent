@@ -146,12 +146,11 @@ class MainActivity : FragmentActivity() {
             .setAllowedAuthenticators(authenticators)
             .build()
         val store = SecureConfigStore(this)
-        introCompleted.value = getSharedPreferences("naeem_app_intro", MODE_PRIVATE).getBoolean("completed", false)
+        introCompleted.value = false
         setContent {
             if (unlocked.value) {
                 if (introCompleted.value) NaeemApp(store)
                 else AppIntegrationIntro(onEnter = {
-                    getSharedPreferences("naeem_app_intro", MODE_PRIVATE).edit().putBoolean("completed", true).apply()
                     introCompleted.value = true
                 })
             }
@@ -217,48 +216,44 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
 
 @Composable
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
-    val silver = Color(0xFFD7DDE5)
-    val muted = Color(0xFF9AA4B0)
+    val silver = Color(0xFFE0E5EC)
+    val muted = Color(0xFFB0BAC6)
     Surface(Modifier.fillMaxSize(), color = Color(0xFF080A0D)) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 26.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(17.dp)
+            verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
-            ThinkingOrb(diameter = 142.dp, active = true)
-            Text("همه‌چیز به هم متصل است", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Naeem AI فقط یک صفحه چت نیست؛ دستیار مرکزی بخش‌های مختلف برنامه است.", color = muted, style = MaterialTheme.typography.bodyMedium)
-            IntroFeatureRow("گفتگو و حافظه", "متن گفتگوها در تاریخچه چت می‌ماند. نکته‌هایی که برای یادآوری انتخاب می‌کنی، در بخش حافظه ذخیره می‌شوند.")
-            IntroFeatureRow("مالی", "وقتی از خرید، درآمد یا هزینه‌ای حرف بزنی، دستیار می‌تواند اطلاعاتش را تشخیص دهد و برای ثبت در دفتر مالی آماده کند.")
-            IntroFeatureRow("ورزش", "تمرین، مدت، مسافت و جزئیات ورزشیِ گفته‌شده در چت می‌توانند به ثبت تمرین در بخش ورزش تبدیل شوند.")
-            IntroFeatureRow("سفر", "هزینه‌ها و اطلاعات سفر را می‌توان از گفتگو به بخش سفر منتقل کرد تا کنار بقیه مخارج و جزئیات سفر باشند.")
-            IntroFeatureRow("بخش‌های دیگر", "هر قابلیت داده‌های مربوط به خودش را در همان بخش نگه می‌دارد؛ قرار نیست همه حرف‌ها بی‌ربط وارد همه قسمت‌ها شوند.")
-            Surface(color = Color(0xFF171C22), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("حریم خصوصی و کنترل ثبت اطلاعات", color = silver, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(10.dp))
+            ThinkingOrb(diameter = 168.dp, active = true)
+            Text("فراتر از یک دستیار گفت‌وگومحور", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Surface(
+                color = Color(0xFF171C22),
+                shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF343D48)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
                     Text(
-                        "دستیار پیام متنی یا متنِ تبدیل‌شده از صدایت را در گفتگو پردازش می‌کند. اما ثبت اطلاعات در بخش‌های مالی، ورزش، سفر یا حافظه خودکار و بی‌اجازه نیست: قبل از هر تغییر، جزئیات ثبت را می‌بینی و باید تأیید کنی. اگر منظورت مبهم باشد، اول از تو سؤال می‌شود. فایل صوتی خام به‌عنوان یادداشت در این بخش‌ها ذخیره نمی‌شود.",
-                        color = muted, style = MaterialTheme.typography.bodySmall
+                        "Naeem AI قرار نیست فقط به سؤال‌ها جواب بدهد؛ قرار است منظور تو را بفهمد و آن را به یک کار واقعی تبدیل کند. می‌توانی طبیعی حرف بزنی؛ از خرید و هزینه‌ها، تمرین امروز، برنامه سفر یا چیزی که می‌خواهی به خاطر بسپاری. دستیار از متن گفتگو، موضوع و اطلاعات مرتبط را استخراج می‌کند، تشخیص می‌دهد هر موضوع به کدام بخش تعلق دارد و پیشنهاد می‌دهد قدم بعدی چه باشد. اگر جزئیات کافی نباشد، به‌جای حدس زدن سؤال می‌پرسد؛ اگر قرار باشد چیزی ثبت یا تغییر کند، اول نتیجه را شفاف به تو نشان می‌دهد و فقط با تأیید تو اقدام می‌کند. گفتگو، حافظه و ابزارهای تخصصی در کنار هم کار می‌کنند، اما اطلاعات هر بخش در جای خودش می‌ماند و کنترل نهایی همیشه دست توست. تفاوت Naeem AI در همین پیوند است: هوش مصنوعی‌ای که فقط حرف نمی‌زند؛ می‌فهمد، هماهنگ می‌کند و با اجازه تو عمل می‌کند.",
+                        color = muted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.32
                     )
                 }
             }
-            Button(onClick = onEnter, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)), shape = RoundedCornerShape(16.dp)) {
-                Text("متوجه شدم؛ ورود به برنامه", fontWeight = FontWeight.Bold)
-            }
-            Text("این معرفی فقط بار اول نمایش داده می‌شود.", color = Color(0xFF727C88), style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.height(10.dp))
-        }
-    }
-}
-
-@Composable
-private fun IntroFeatureRow(title: String, description: String) {
-    Row(Modifier.fillMaxWidth().background(Color(0xFF14181E), RoundedCornerShape(16.dp)).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        Box(Modifier.size(7.dp).background(Color(0xFFD7DDE5), CircleShape))
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, color = Color(0xFFE0E5EB), fontWeight = FontWeight.SemiBold)
-            Text(description, color = Color(0xFF9AA4B0), style = MaterialTheme.typography.bodySmall)
+            Text(
+                "یک هسته هوشمند؛ چندین فضای مستقل؛ یک تجربه پیوسته.",
+                color = Color(0xFF8F9AA7),
+                style = MaterialTheme.typography.labelMedium
+            )
+            Button(
+                onClick = onEnter,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)),
+                shape = RoundedCornerShape(17.dp)
+            ) { Text("ورود به فضای من", fontWeight = FontWeight.Bold) }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -1305,11 +1300,11 @@ private fun ThinkingOrb(
 
     Canvas(Modifier.size(diameter)) {
         val c = Offset(size.width / 2f, size.height / 2f)
-        val base = size.minDimension * 0.285f * pulse
-        val glow = base * 2.45f
+        val base = size.minDimension * 0.345f * pulse
+        val glow = base * 1.95f
         val haloAlpha = haloPulse * if (active) 0.92f else 0.62f
 
-        // A soft atmospheric glow surrounding the liquid-metal silhouette.
+        // Diffuse ambient light only: no circular outline or halo ring.
         drawCircle(
             Brush.radialGradient(
                 listOf(
@@ -1321,20 +1316,13 @@ private fun ThinkingOrb(
                 c, glow
             ), glow, c
         )
-        drawCircle(
-            Color(0x559EADBF).copy(alpha = haloAlpha),
-            radius = base * 1.48f,
-            center = c,
-            style = Stroke(width = 7.dp.toPx())
-        )
-
-        val blob = Path()
+        // A soft cast shadow gives the liquid-metal form depth against the dark surface.\n        drawOval(\n            color = Color(0xFF020305).copy(alpha = 0.78f),\n            topLeft = Offset(c.x - base * 0.92f, c.y + base * 0.52f),\n            size = androidx.compose.ui.geometry.Size(base * 1.84f, base * 0.48f)\n        )\n\n        val blob = Path()
         val steps = 144
         for (i in 0..steps) {
             val a = (i.toFloat() / steps) * 6.28318f
             val wave = 1f +
-                0.125f * kotlin.math.sin(3f * a + phase) +
-                0.067f * kotlin.math.sin(5f * a - secondaryPhase * 1.31f) +
+                0.145f * kotlin.math.sin(3f * a + phase) +
+                0.078f * kotlin.math.sin(5f * a - secondaryPhase * 1.31f) +
                 0.044f * kotlin.math.cos(2f * a + phase * 0.72f) +
                 0.026f * kotlin.math.sin(7f * a + secondaryPhase * 0.83f)
             val r = base * wave
