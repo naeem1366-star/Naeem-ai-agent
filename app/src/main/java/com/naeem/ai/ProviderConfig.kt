@@ -6,7 +6,7 @@ data class ProviderConfig(
     val model: String
 ) {
     companion object {
-        const val DEFAULT_BASE_URL = "https://api.gapgpt.app/v1"
+        const val DEFAULT_BASE_URL = "https://api.gapgpt.ir/v1"
         const val DEFAULT_MODEL = "gpt-4o-mini"
 
         // GapGPT is the default provider for this app. Model IDs must match
