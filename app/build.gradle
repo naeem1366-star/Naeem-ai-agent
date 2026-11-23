@@ -44,3 +44,29 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.23.2'
     debugImplementation 'androidx.compose.ui:ui-tooling'
 }
+
+
+// Download the official open-source Vazirmatn font files at build time.
+// The APK bundles the fonts locally, so the app does not need internet to render Persian text.
+def vazirmatnFontFiles = [
+    "Vazirmatn-Regular.ttf",
+    "Vazirmatn-Medium.ttf",
+    "Vazirmatn-SemiBold.ttf",
+    "Vazirmatn-Bold.ttf"
+]
+tasks.register("downloadVazirmatnFonts") {
+    outputs.files(vazirmatnFontFiles.collect { file("$projectDir/src/main/res/font/" + it.toLowerCase().replace("-", "_")) })
+    doLast {
+        def fontDir = file("$projectDir/src/main/res/font")
+        fontDir.mkdirs()
+        vazirmatnFontFiles.each { fontName ->
+            def targetName = fontName.toLowerCase().replace("-", "_")
+            def target = new File(fontDir, targetName)
+            if (!target.exists() || target.length() < 1000L) {
+                def url = new URL("https://raw.githubusercontent.com/rastikerdar/vazirmatn/master/fonts/ttf/" + fontName)
+                url.withInputStream { input -> target.withOutputStream { output -> output << input } }
+            }
+        }
+    }
+}
+tasks.named("preBuild").configure { dependsOn("downloadVazirmatnFonts") }
