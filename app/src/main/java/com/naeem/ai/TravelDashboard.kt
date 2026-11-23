@@ -61,6 +61,7 @@ private class TravelStore(context:Context) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TravelDashboard(onClose:()->Unit) {
     val context= LocalContext.current
