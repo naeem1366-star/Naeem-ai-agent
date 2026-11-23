@@ -623,7 +623,7 @@ fun NaeemApp(store: SecureConfigStore) {
         colorScheme = darkColorScheme(
             primary = Gold, onPrimary = Ink, background = Ink, onBackground = Color(0xFFF2F0EA),
             surface = Panel, onSurface = Color(0xFFF2F0EA), surfaceVariant = Color(0xFF292C33),
-            onSurfaceVariant = Color(0xFFE0DED8), secondary = Color(0xFFB7A17C)
+            onSurfaceVariant = Color(0xFFE0DED8), secondary = Color(0xFFBFC6D0)
         )
     ) {
         Scaffold(
@@ -696,11 +696,11 @@ fun NaeemApp(store: SecureConfigStore) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = { imagePicker.launch("image/*") }, enabled = !busy) { Text("＋ عکس", color = Gold) }
                             TextButton(onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }, enabled = !busy) {
-                                Text(if (imageMode) "✦ ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFFFD58A) else Gold)
+                                Text(if (imageMode) "✦ ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFD4D9E0) else Gold)
                             }
                             TextButton(onClick = { searchMode = !searchMode }, enabled = !busy) {
-                                Icon(Icons.Default.Search, contentDescription = null, tint = if (searchMode) Color(0xFFFFD58A) else Gold)
-                                Text(if (searchMode) "جست‌وجوی عمیق روشن" else "جست‌وجوی عمیق", color = if (searchMode) Color(0xFFFFD58A) else Gold)
+                                Icon(Icons.Default.Search, contentDescription = null, tint = if (searchMode) Color(0xFFD4D9E0) else Gold)
+                                Text(if (searchMode) "جست‌وجوی عمیق روشن" else "جست‌وجوی عمیق", color = if (searchMode) Color(0xFFD4D9E0) else Gold)
                             }
                         }
                         Row(
@@ -758,7 +758,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         ThinkingOrb(diameter = 142.dp, active = false)
                         Spacer(Modifier.height(15.dp))
                         Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFB7BEC8), style = MaterialTheme.typography.bodyMedium)
+                        Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(22.dp))
                         OutlinedButton(
                             onClick = { showHub = true },
@@ -784,7 +784,7 @@ fun NaeemApp(store: SecureConfigStore) {
                     ) {
                         Column(
                             Modifier.fillMaxWidth()
-                                .background(Brush.verticalGradient(listOf(Color(0xFF30271D), Color(0xFF1A1A1C))))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF30363E), Color(0xFF1A1A1C))))
                                 .padding(horizontal = 18.dp, vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -814,7 +814,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 pendingAssistantAction?.let { action ->
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF343126)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF30363E)),
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1190,7 +1190,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         ) {
                             Text(if (testingProvider) "در حال آزمایش اتصال…" else "آزمایش اتصال و دریافت مدل‌ها")
                         }
-                        if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFF9BD6B0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
+                        if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                         if (availableModels.isNotEmpty()) {
                             Text("برای انتخاب مدل، روی یکی از شناسه‌ها بزن:", color = Muted, style = MaterialTheme.typography.labelSmall)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1227,7 +1227,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 modifier = Modifier.weight(1f)
                             ) { Text("بازیابی", color = Gold) }
                         }
-                        if (backupStatus.isNotBlank()) Text(backupStatus, color = if (backupStatus.contains("موفق")) Color(0xFF9BD6B0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
+                        if (backupStatus.isNotBlank()) Text(backupStatus, color = if (backupStatus.contains("موفق")) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 confirmButton = {
