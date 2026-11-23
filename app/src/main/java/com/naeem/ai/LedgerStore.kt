@@ -1,6 +1,8 @@
 package com.naeem.ai
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -8,7 +10,12 @@ data class LedgerEntry(val id: Long, val amountToman: Long, val category: String
 data class ParsedTransaction(val amountToman: Long, val category: String, val note: String, val isIncome: Boolean)
 
 class LedgerStore(context: Context) {
-    private val prefs = context.getSharedPreferences("naeem_ai_ledger", Context.MODE_PRIVATE)
+    private val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    private val prefs = EncryptedSharedPreferences.create(
+        context, "naeem_ai_ledger_secure", masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     fun entries(): List<LedgerEntry> {
         val raw = prefs.getString("entries_json", "[]") ?: "[]"
