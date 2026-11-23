@@ -1,5 +1,9 @@
 package com.naeem.ai
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
@@ -170,72 +174,35 @@ private class HStore(c:Context){
 @Composable private fun FMetric(title:String,value:String,sub:String,modifier:Modifier){Card(modifier,colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(title,color=FM,style=MaterialTheme.typography.labelSmall);Text(value,color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(sub,color=FM,style=MaterialTheme.typography.labelSmall)}}}
 
 @Composable fun GamesHub(onClose:()->Unit){
- var pantomimeSeconds by remember{mutableIntStateOf(60)}
- var pantomimeRunning by remember{mutableStateOf(false)}
- var pantomimeTeam by remember{mutableIntStateOf(1)}
- LaunchedEffect(pantomimeRunning,pantomimeSeconds){
-  if(pantomimeRunning && pantomimeSeconds>0){
-   kotlinx.coroutines.delay(1000)
-   pantomimeSeconds=(pantomimeSeconds-1).coerceAtLeast(0)
-   if(pantomimeSeconds<=1) pantomimeRunning=false
-  }
- }
- var team1 by remember{mutableStateOf("تیم طلایی")};var team2 by remember{mutableStateOf("تیم مشکی")};var score1 by remember{mutableIntStateOf(0)};var score2 by remember{mutableIntStateOf(0)};var category by remember{mutableStateOf("ترکیبی")};var word by remember{mutableStateOf("برای شروع کلمهٔ بعدی را بزن")};var round by remember{mutableIntStateOf(0)}
- val decks=remember{mapOf("ترکیبی" to listOf("چتر","فضانورد","آشپز","ترافیک","شطرنج","کوهستان","دندان‌پزشک","هواپیما","کارآگاه","کتابخانه","آتش‌نشان","ماهیگیری","ربات","سینما","دوچرخه","آبشار","جادوگر","بستنی"),"سخت" to listOf("پارادوکس","ناخودآگاه","جاذبه","معماری","دیپلماسی","فرسایش","کهکشان","نوستالژی","الگوریتم"),"سینما" to listOf("کارگردان","اسکار","دوربین","فیلمنامه","اکران","جلوه‌های ویژه","سکانس","بازیگر"))}
- Column(Modifier.fillMaxSize().background(FB).padding(16.dp)){
-  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("باشگاه بازی",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("بازی‌های دورهمی و چالش ذهن",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
-  LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=25.dp)){
-   item{FCard{
-    Text("پانتومیم تیمی",color=FG,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleLarge)
-    Text("یک نفر اجرا می‌کند، تیمش حدس می‌زند؛ زمان و امتیاز را برنامه مدیریت می‌کند.",color=FM,style=MaterialTheme.typography.bodySmall)
-    Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
-     FilterChip(selected=pantomimeTeam==1,onClick={pantomimeTeam=1},label={Text(team1.ifBlank{"تیم اول"})})
-     FilterChip(selected=pantomimeTeam==2,onClick={pantomimeTeam=2},label={Text(team2.ifBlank{"تیم دوم"})})
-    }
-    Box(Modifier.fillMaxWidth().background(Color(0xFF302B22),RoundedCornerShape(18.dp)).padding(22.dp),contentAlignment=Alignment.Center){
-     Column(horizontalAlignment=Alignment.CenterHorizontally){
-      Text("کلمه برای اجرا",color=FM,style=MaterialTheme.typography.labelMedium)
-      Text(word,color=FG,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
-      Text("زمان باقی‌مانده",color=FM,style=MaterialTheme.typography.labelSmall)
-      Text(String.format(Locale.US,"%02d:%02d",pantomimeSeconds/60,pantomimeSeconds%60),color=if(pantomimeSeconds<=10)Color(0xFFFF8B80) else Color.White,style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Bold)
-     }
-    }
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-     Button(onClick={pantomimeRunning=!pantomimeRunning},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text(if(pantomimeRunning)"مکث" else "شروع زمان‌سنج")}
-     OutlinedButton(onClick={pantomimeSeconds=60;pantomimeRunning=false}){Text("۶۰ ثانیه")}
-    }
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-     OutlinedButton(onClick={word=decks[category].orEmpty().random();pantomimeSeconds=60;pantomimeRunning=false},modifier=Modifier.weight(1f)){Text("کلمه بعدی")}
-     Button(onClick={if(pantomimeTeam==1)score1++ else score2++;word=decks[category].orEmpty().random();pantomimeSeconds=60;pantomimeRunning=false},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF9BD6B0),contentColor=FB)){Text("حدس درست +۱")}
-    }
-    Text("امتیاز  "+team1+": "+score1+"     "+team2+": "+score2,color=FG,fontWeight=FontWeight.Bold)
-    Text("برای رد کردن کلمه، «کلمه بعدی» را بزن. با پایان زمان، نوبت تیم بعدی را انتخاب کن.",color=FM,style=MaterialTheme.typography.labelSmall)
-   }}
-   item{FCard{
-    Text("حدس کلمه؛ بازی تیمی",color=FG,fontWeight=FontWeight.Bold)
-    Row{listOf("ترکیبی","سخت","سینما").forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it)})}}
-    Box(Modifier.fillMaxWidth().background(Color(0xFF302B22),RoundedCornerShape(15.dp)).padding(22.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text("کلمهٔ دور",color=FM);Text(word,color=FG,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("دور "+round,color=FM)}}
-    Button(onClick={word=decks[category].orEmpty().random();round++},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("کلمهٔ بعدی")}
-    Text("کلمه را با توضیح یا پانتومیم منتقل کن؛ گفتن خود کلمه و هم‌خانواده‌اش ممنوع!",color=FM,style=MaterialTheme.typography.bodySmall)
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Column(Modifier.weight(1f)){FInput("نام تیم اول",team1,{team1=it});Text(score1.toString()+" امتیاز",color=FG);OutlinedButton(onClick={score1++},modifier=Modifier.fillMaxWidth()){Text("+ امتیاز")}};Column(Modifier.weight(1f)){FInput("نام تیم دوم",team2,{team2=it});Text(score2.toString()+" امتیاز",color=FG);OutlinedButton(onClick={score2++},modifier=Modifier.fillMaxWidth()){Text("+ امتیاز")}}}
-    OutlinedButton(onClick={score1=0;score2=0;round=0;word="برای شروع کلمهٔ بعدی را بزن"},modifier=Modifier.fillMaxWidth()){Text("شروع دوباره")}
-   }}
-   item{FCard{
-    var a by remember{mutableIntStateOf(7)};var b by remember{mutableIntStateOf(8)};var answer by remember{mutableStateOf("")};var result by remember{mutableStateOf("")};var points by remember{mutableIntStateOf(0)}
-    Text("چالش محاسبهٔ سریع",color=FG,fontWeight=FontWeight.Bold);Text(a.toString()+" × "+b.toString()+" = ؟",color=Color.White,style=MaterialTheme.typography.headlineLarge);FInput("پاسخ",answer,{answer=it.filter(Char::isDigit)},Modifier.fillMaxWidth())
-    Button(onClick={if(answer.toIntOrNull()==a*b){points++;result="درست بود! امتیاز "+points}else result="پاسخ درست "+(a*b)+" بود";a=(2..12).random();b=(2..12).random();answer=""},colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("بررسی و سؤال بعدی")};Text(result,color=FM)
-   }}
-   item{FCard{
-    var seq by remember{mutableStateOf(listOf<Int>())};var chosen by remember{mutableStateOf("")};var info by remember{mutableStateOf("الگوی رنگی را ببین و ترتیبش را تکرار کن.")};val names=listOf("قرمز","آبی","سبز","زرد");val colors=listOf(Color(0xFFE66B62),Color(0xFF6C9FE6),Color(0xFF65B98A),Color(0xFFE3BD61))
-    Text("حافظهٔ رنگ‌ها",color=FG,fontWeight=FontWeight.Bold)
-    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){colors.forEachIndexed{i,c->Box(Modifier.weight(1f).height(48.dp).background(c,RoundedCornerShape(10.dp)).clickable{chosen+=i.toString();if(seq.isNotEmpty()&&chosen.length==seq.size){val ok=chosen==seq.joinToString("");info=if(ok)"آفرین! مرحلهٔ بعد را بساز." else "اشتباه شد؛ دوباره الگو را ببین.";if(ok)seq=seq+ (0..3).random();chosen=""}},contentAlignment=Alignment.Center){Text(names[i],color=Color.Black,fontWeight=FontWeight.Bold)}}}
-    Button(onClick={seq=listOf((0..3).random(),(0..3).random());chosen="";info="الگو: "+seq.joinToString("، "){names[it]}},colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("نمایش الگو")}
-    Text(info,color=FM,style=MaterialTheme.typography.bodySmall)
-   }}
+ var seconds by remember{mutableIntStateOf(60)}
+ var running by remember{mutableStateOf(false)}
+ var team by remember{mutableIntStateOf(1)}
+ var team1 by remember{mutableStateOf("تیم آفتاب")}
+ var team2 by remember{mutableStateOf("تیم ماه")}
+ var score1 by remember{mutableIntStateOf(0)}
+ var score2 by remember{mutableIntStateOf(0)}
+ var category by remember{mutableStateOf("ترکیبی")}
+ var word by remember{mutableStateOf("برای شروع، کلمه را دریافت کن")}
+ var round by remember{mutableIntStateOf(1)}
+ var showWord by remember{mutableStateOf(false)}
+ val decks=remember{mapOf("ترکیبی" to listOf("فضانورد","چتر نجات","آشپز","ترافیک","کارآگاه","کتابخانه","آتش‌نشان","ماهیگیری","ربات","سینما","دوچرخه","آبشار","جادوگر","بستنی","قطار","عکاس","دندان‌پزشک","کوه‌نوردی","بادبادک","خواب‌آلود"),"سینما" to listOf("کارگردان","فرش قرمز","اسکار","دوربین","فیلمنامه","اکران","جلوه‌های ویژه","بازیگر","سکانس"),"سخت" to listOf("پارادوکس","ناخودآگاه","جاذبه","معماری","دیپلماسی","فرسایش","کهکشان","نوستالژی","الگوریتم","توربین"))}
+ LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
+ fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
+ Column(Modifier.fillMaxSize().background(Color(0xFF0B1020))){
+  Row(Modifier.fillMaxWidth().background(Color(0xFF121A30)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFF91A8FF),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("بازی رو شروع کن؛ امتیازها با ما",color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
+  LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
+    Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFF9EAEFF),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=Color(0xFF2C3D66),shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
+    Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){listOf("ترکیبی","سینما","سخت").forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Color(0xFF596FEA),selectedLabelColor=Color.White,containerColor=Color(0xFF202A43),labelColor=Color.White))}}
+    Box(Modifier.fillMaxWidth().background(Color(0xFF0D1428),RoundedCornerShape(22.dp)).padding(vertical=25.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Text("کلمهٔ مخصوص اجرا",color=Color(0xFF9EAEFF));Text(if(showWord)word else "برای نمایش کلمه بزن",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black);Text(String.format(Locale.US,"%02d:%02d",seconds/60,seconds%60),color=if(seconds<=10)Color(0xFFFF817D) else Color(0xFF8DE0C1),style=MaterialTheme.typography.displayMedium,fontWeight=FontWeight.Black);Text(if(seconds==0)"زمان تمام شد!" else "زمان باقی‌مانده",color=Color(0xFFADB8D0),style=MaterialTheme.typography.labelSmall)}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={if(!showWord){word=decks[category].orEmpty().random();showWord=true};running=!running},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7188FF)),shape=RoundedCornerShape(14.dp)){Icon(if(running)Icons.Default.Pause else Icons.Default.PlayArrow,null);Text(if(running)"مکث" else "شروع زمان‌سنج")};OutlinedButton(onClick={next()},modifier=Modifier.weight(1f),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.SkipNext,null);Text("کلمه بعدی")}}
+    Button(onClick={if(team==1)score1++ else score2++;next()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF8DE0C1),contentColor=Color(0xFF102019)),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CheckCircle,null);Text("حدس درست بود! +۱")}
+   }}}
+   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF344A82) else Color(0xFF222E49)),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFF9EAEFF),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFF8DE0C1),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=Color(0xFFADB8D0),style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}
+   item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF182541)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp)){Text("بازی‌های بیشتر",color=Color.White,fontWeight=FontWeight.Bold);Text("چالش محاسبه و حافظه رنگی در نسخه بعدی به‌صورت بازی‌های مستقل و مرحله‌ای اضافه می‌شوند.",color=Color(0xFFADB8D0),style=MaterialTheme.typography.bodySmall)}}}
   }
  }
 }
-
 private data class Film(val title:String,val year:Int,val genre:String,val duration:Int,val summary:String,val reason:String)
 private val films=listOf(
  Film("Perfect Days",2023,"درام",124,"مردی در توکیو زیبایی‌های کوچک زندگی روزمره را کشف می‌کند.","مینیمال، آرام و انسانی."),
@@ -257,6 +224,14 @@ private class TrackSearch{
   http.newCall(Request.Builder().url(url).build()).execute().use{r->if(!r.isSuccessful)throw IllegalStateException("جست‌وجوی موسیقی ناموفق بود");val a=JSONObject(r.body?.string().orEmpty()).optJSONArray("results")?:org.json.JSONArray();(0 until a.length()).mapNotNull{i->val o=a.optJSONObject(i)?:return@mapNotNull null;val p=o.optString("previewUrl");if(p.isBlank()||p=="null")null else Track(o.optString("trackName"),o.optString("artistName"),o.optString("collectionName"),p)}}
  }
 }
+@Composable private fun FilmPoster(title:String){
+ var bitmap by remember(title){mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)}
+ LaunchedEffect(title){try{
+  val url=withContext(Dispatchers.IO){val q=URLEncoder.encode(title,"UTF-8");val req=Request.Builder().url("https://itunes.apple.com/search?term="+q+"&entity=movie&limit=1").build();OkHttpClient().newCall(req).execute().use{res->JSONObject(res.body?.string().orEmpty()).optJSONArray("results")?.optJSONObject(0)?.optString("artworkUrl100")?.replace("100x100","600x900").orEmpty()}}
+  if(url.isNotBlank()){val bytes=withContext(Dispatchers.IO){OkHttpClient().newCall(Request.Builder().url(url).build()).execute().use{it.body?.bytes()}};if(bytes!=null)bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.size)?.asImageBitmap()}
+ }catch(_:Exception){}}
+ Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF30364A),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){if(bitmap!=null)Image(bitmap!!,contentDescription=title,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Movie,null,tint=Color(0xFFD7B77D),modifier=Modifier.size(32.dp));Text("POSTER",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}}
+}
 @Composable fun DiscoverDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
  val ctx=LocalContext.current;var tab by remember{mutableStateOf("فیلم امروز")};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
@@ -268,7 +243,7 @@ private class TrackSearch{
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=24.dp)){
     item{FCard{Text("انتخاب امروز",color=FG,fontWeight=FontWeight.Bold);Text(today.title,color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text(today.year.toString()+" • "+today.genre+" • "+today.duration+" دقیقه",color=FG);Text(today.summary,color=Color.White);Text("چرا پیشنهادش می‌کنم؟",color=FG,fontWeight=FontWeight.SemiBold);Text(today.reason,color=FM);Button(onClick={onAskAi("درباره فیلم "+today.title+" معرفی کامل بدون اسپویل و تحلیل سبک کارگردانی بنویس.")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("تحلیل بیشتر با Naeem AI")}}}
     item{Text("بر اساس حال‌وهوا",color=FG,fontWeight=FontWeight.Bold);Row{listOf("همه","آرام","پرکشش","علمی‌تخیلی","درام").forEach{FilterChip(selected=mood==it,onClick={mood=it},label={Text(it,style=MaterialTheme.typography.labelSmall)})}}}
-    items(films.filter{mood=="همه"||it.genre.contains(mood)||(mood=="آرام"&&it.duration>=90)||(mood=="پرکشش"&&it.genre.contains("ماجراجویی"))}){f->FCard{Text(f.title,color=Color.White,fontWeight=FontWeight.Bold);Text(f.year.toString()+" • "+f.genre,color=FG);Text(f.summary,color=FM,style=MaterialTheme.typography.bodySmall);TextButton(onClick={onAskAi("معرفی و نقد بدون اسپویل فیلم "+f.title+" را بنویس.")}){Text("معرفی و نقد بیشتر",color=FG)}}}
+    items(films.filter{mood=="همه"||it.genre.contains(mood)||(mood=="آرام"&&it.duration>=90)||(mood=="پرکشش"&&it.genre.contains("ماجراجویی"))}){f->FCard{Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top){FilmPoster(f.title);Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){Text(f.title,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Text(f.year.toString()+" • "+f.genre+" • "+f.duration+" دقیقه",color=FG,style=MaterialTheme.typography.labelSmall);Text(f.summary,color=FM,style=MaterialTheme.typography.bodySmall);TextButton(onClick={onAskAi("معرفی و نقد بدون اسپویل فیلم "+f.title+" را بنویس.")}){Text("نقد و معرفی بیشتر",color=FG)}}}}}
    }
   }else if(tab=="جست‌وجوی فیلم"){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
