@@ -116,6 +116,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showHealth by remember { mutableStateOf(false) }
     var showGames by remember { mutableStateOf(false) }
     var showDiscover by remember { mutableStateOf(false) }
+    var showMusic by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
     var showAlbum by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
@@ -526,6 +527,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         onHealth = { showHub = false; showHealth = true },
                         onGames = { showHub = false; showGames = true },
                         onDiscover = { showHub = false; showDiscover = true },
+                        onMusic = { showHub = false; showMusic = true },
                         onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
                         onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
                         onSettings = { showHub = false; showSettings = true }
@@ -552,6 +554,13 @@ fun NaeemApp(store: SecureConfigStore) {
             Dialog(onDismissRequest = { showDiscover = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     DiscoverDashboard(onClose = { showDiscover = false }, onAskAi = { question -> showDiscover = false; prompt = question })
+                }
+            }
+        }
+        if (showMusic) {
+            Dialog(onDismissRequest = { showMusic = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question })
                 }
             }
         }
