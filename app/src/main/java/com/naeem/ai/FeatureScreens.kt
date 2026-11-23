@@ -440,3 +440,5 @@ private class TrackSearch{
 }
 
 @Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ DiscoverDashboard(onClose,onAskAi,"موسیقی",true) }
+
+// Horizontal gold carousel layout for the Naeem AI feature spaces.
