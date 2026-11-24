@@ -446,6 +446,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showMedication by remember { mutableStateOf(false) }
     var showPlanner by remember { mutableStateOf(false) }
     var showThinkRoom by remember { mutableStateOf(false) }
+    var showFutureGateway by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
@@ -1035,7 +1036,8 @@ fun NaeemApp(store: SecureConfigStore) {
                         onNews = { showHub = false; showNews = true },
                         onMedication = { showHub = false; showMedication = true },
                         onPlanner = { showHub = false; showPlanner = true },
-                        onThinkRoom = { showHub = false; showThinkRoom = true }
+                        onThinkRoom = { showHub = false; showThinkRoom = true },
+                        onFuture = { showHub = false; showFutureGateway = true }
                     ) }
                 }
                 }
@@ -1067,6 +1069,18 @@ fun NaeemApp(store: SecureConfigStore) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ThinkRoomScreen(
                         onClose = { showThinkRoom = false },
+                        baseUrl = baseUrl,
+                        model = model,
+                        apiKey = apiKey
+                    )
+                }
+            }
+        }
+        if (showFutureGateway) {
+            Dialog(onDismissRequest = { showFutureGateway = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    FutureGatewayScreen(
+                        onClose = { showFutureGateway = false },
                         baseUrl = baseUrl,
                         model = model,
                         apiKey = apiKey
