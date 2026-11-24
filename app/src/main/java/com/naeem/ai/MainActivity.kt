@@ -1560,15 +1560,15 @@ private fun ThinkingOrb(
         )
 
         // Interwoven light filaments: several moving orbital curves inside the sphere.
-        for (strand in 0..5) {
+        for (strand in 0..2) {
             val path = Path()
-            val rotation = phase * (if (strand % 2 == 0) 1f else -0.72f) + strand * 0.92f
+            val rotation = phase * (if (strand % 2 == 0) 0.72f else -0.48f) + strand * 1.55f
             for (i in 0..180) {
                 val t = i / 180f * (Math.PI * 2.0).toFloat()
-                val x = center.x + kotlin.math.sin(t * (1.15f + strand * 0.035f) + rotation) *
-                    radius * (0.78f - strand * 0.035f)
+                val x = center.x + kotlin.math.sin(t * (1.08f + strand * 0.045f) + rotation) *
+                    radius * (0.70f - strand * 0.045f)
                 val y = center.y + kotlin.math.sin(t * 2.0f + rotation * 0.63f) *
-                    kotlin.math.cos(t * 0.52f + rotation) * radius * 0.78f
+                    kotlin.math.cos(t * 0.48f + rotation) * radius * 0.70f
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             val tint = when (strand % 5) {
@@ -1578,8 +1578,9 @@ private fun ThinkingOrb(
                 3 -> mint
                 else -> gold
             }
-            drawPath(path, tint.copy(alpha = 0.72f), style = Stroke(width = 1.45.dp.toPx()))
-            drawPath(path, Color.White.copy(alpha = 0.22f), style = Stroke(width = 0.55.dp.toPx()))
+            drawPath(path, tint.copy(alpha = 0.24f), style = Stroke(width = 6.5.dp.toPx()))
+            drawPath(path, tint.copy(alpha = 0.82f), style = Stroke(width = 1.7.dp.toPx()))
+            drawPath(path, Color.White.copy(alpha = 0.48f), style = Stroke(width = 0.65.dp.toPx()))
         }
 
         // Glass rim and shifting specular highlights.
