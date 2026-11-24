@@ -65,6 +65,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +77,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +87,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CompletableDeferred
 import com.naeem.ai.core.assistant.*
 import java.io.File
@@ -1750,9 +1754,31 @@ private val guidedTourItems = listOf(
 
 @Composable
 private fun FloatingTutorialButton(onClick: () -> Unit) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-        Surface(onClick = onClick, modifier = Modifier.padding(end = 14.dp, bottom = 92.dp), shape = CircleShape, color = Color(0xFF202A3A), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CB9F4).copy(alpha = 0.8f)), shadowElevation = 10.dp) {
-            Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        Surface(
+            onClick = onClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 104.dp, end = 12.dp)
+                .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
+                .pointerInput(Unit) {
+                    detectDragGestures { change, amount ->
+                        change.consume()
+                        dragOffset = Offset(dragOffset.x + amount.x, dragOffset.y + amount.y)
+                    }
+                },
+            shape = RoundedCornerShape(18.dp),
+            color = Color(0xEE202A3A),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CB9F4).copy(alpha = 0.85f)),
+            shadowElevation = 12.dp
+        ) {
+            Row(
+                Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Icon(Icons.Default.DragIndicator, contentDescription = "برای جابه‌جایی بکش", tint = Color(0xFF9CB9F4), modifier = Modifier.size(17.dp))
                 Icon(Icons.Default.HelpOutline, contentDescription = null, tint = Color(0xFFDCE3ED), modifier = Modifier.size(18.dp))
                 Text("راهنما", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.labelMedium)
             }
