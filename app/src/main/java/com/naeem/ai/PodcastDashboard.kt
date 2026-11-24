@@ -42,7 +42,9 @@ private val freePodcastFeeds = listOf(
     PodcastFeed("6 Minute English","یادگیری زبان","انگلیسی","https://podcasts.files.bbci.co.uk/p02pc9tn.rss","BBC"),
     PodcastFeed("The Inquiry","تحلیل و مستند","انگلیسی","https://podcasts.files.bbci.co.uk/p029399x.rss","BBC"),
     PodcastFeed("The Infinite Monkey Cage","علم و فناوری","انگلیسی","https://podcasts.files.bbci.co.uk/b00snr0w.rss","BBC"),
-    PodcastFeed("NASA JPL Podcasts","فضا و علم","انگلیسی","https://www.jpl.nasa.gov/feeds/podcasts/","NASA JPL")
+    PodcastFeed("NASA JPL Podcasts","فضا و علم","انگلیسی","https://www.jpl.nasa.gov/feeds/podcasts/","NASA JPL"),
+    PodcastFeed("رادیو راه","روان‌شناسی و رشد فردی","فارسی","https://feed.podbean.com/RadioRaah/feed.xml","Radio Raah"),
+    PodcastFeed("راه گوش","موسیقی و فرهنگ","فارسی","https://feeds.acast.com/public/shows/627aaa14f8074c0012c28528","Acast")
 )
 
 private class PodcastFeedReader {
