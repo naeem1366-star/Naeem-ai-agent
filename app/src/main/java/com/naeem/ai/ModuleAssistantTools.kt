@@ -127,7 +127,7 @@ object PersianAssistantIntentResolver {
 
         val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
         if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز").any { text.contains(it) }) {
-            val strength = listOf("وزنه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
+            val strength = listOf("وزنه", "باشگاه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
             val minutes = Regex("""(\d+)\s*(دقیقه|min|minutes)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
             val distance = Regex("""(\d+(?:\.\d+)?)\s*(کیلومتر|km)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
             val title = when {
