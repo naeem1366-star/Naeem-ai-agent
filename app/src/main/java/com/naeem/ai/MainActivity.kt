@@ -529,6 +529,7 @@ fun NaeemApp(
     var error by remember { mutableStateOf("") }
     var providerTestStatus by remember { mutableStateOf("") }
     var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var selectedModelType by remember { mutableStateOf("chat") }
     var testingProvider by remember { mutableStateOf(false) }
     val conversationStore = remember { ConversationStore(context) }
     var activeConversationId by remember { mutableStateOf(conversationStore.activeId()) }
@@ -1689,13 +1690,22 @@ fun NaeemApp(
                         OutlinedTextField(model, { model = it }, singleLine = true)
                         Text("شناسه مدل ساخت تصویر")
                         OutlinedTextField(imageModel, { imageModel = it }, singleLine = true)
+                        Text("نوع مدل برای دریافت فهرست")
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("chat" to "چت", "image" to "تصویر", "audio_tts" to "متن به صدا", "audio_stt" to "صدا به متن", "video" to "ویدیو", "music" to "موسیقی", "embedding" to "حافظه").forEach { (type, label) ->
+                                FilterChip(selected = selectedModelType == type, onClick = { selectedModelType = type; availableModels = emptyList(); providerTestStatus = "" }, label = { Text(label) })
+                            }
+                        }
                         Button(
                             onClick = {
                                 testingProvider = true
                                 providerTestStatus = ""
                                 scope.launch {
                                     try {
-                                        availableModels = client.fetchModels(baseUrl, apiKey)
+                                        availableModels = client.fetchModels(baseUrl, apiKey, selectedModelType)
                                         providerTestStatus = "اتصال موفق؛ " + availableModels.size + " شناسه مدل دریافت شد."
                                     } catch (e: Exception) {
                                         providerTestStatus = e.message ?: "آزمایش اتصال ناموفق بود."
@@ -1711,10 +1721,10 @@ fun NaeemApp(
                         }
                         if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                         if (availableModels.isNotEmpty()) {
-                            Text("برای انتخاب مدل، روی یکی از شناسه‌ها بزن:", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text("مدل‌های دسته انتخاب‌شده؛ برای چت یا تصویر روی شناسه بزن:", color = Muted, style = MaterialTheme.typography.labelSmall)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                availableModels.take(12).forEach { modelId ->
-                                    TextButton(onClick = { model = modelId }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+                                availableModels.take(30).forEach { modelId ->
+                                    TextButton(onClick = { if (selectedModelType == "chat") model = modelId else if (selectedModelType == "image") imageModel = modelId }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                                         Text(modelId, color = if (model == modelId) Gold else Color.White, style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
