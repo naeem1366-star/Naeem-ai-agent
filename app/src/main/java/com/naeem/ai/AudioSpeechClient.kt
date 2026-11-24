@@ -61,7 +61,7 @@ class AudioSpeechClient {
         return result.ifEmpty { listOf(text.take(maxChars)) }
     }
 
-    suspend fun synthesize(baseUrl: String, apiKey: String, text: String): ByteArray =
+    suspend fun synthesize(baseUrl: String, apiKey: String, text: String, model: String = "gpt-4o-mini-tts"): ByteArray =
         withContext(Dispatchers.IO) {
             val cleanKey = apiKey.trim().let { value ->
                 if (value.startsWith("Bearer ", ignoreCase = true)) value.substringAfter(' ').trim()
@@ -82,7 +82,7 @@ class AudioSpeechClient {
             }
             val endpoint = "$root/audio/speech"
             val payload = JSONObject()
-                .put("model", "gpt-4o-mini-tts")
+                .put("model", model.trim().ifBlank { "gpt-4o-mini-tts" })
                 .put("voice", "nova")
                 .put("input", text.take(4096))
                 .put("instructions", "Speak Persian (Farsi) in a warm, natural, conversational voice. Use clear pronunciation, gentle sentence-level pauses, varied intonation, and a comfortable moderate pace. Do not sound robotic or rush through the text.")
@@ -109,7 +109,7 @@ class AudioSpeechClient {
                     val hint = when (response.code) {
                         401 -> "\nکلید API را در تنظیمات برنامه بررسی کن."
                         403 -> "\nدسترسی یا اعتبار حساب سرویس را بررسی کن."
-                        404 -> "\nممکن است مدل gpt-4o-mini-tts در سرویس فعال نباشد."
+                        404 -> "\nممکن است مدل انتخاب‌شده برای متن‌به‌گفتار در سرویس فعال نباشد."
                         429 -> "\nمحدودیت درخواست یا اعتبار API را بررسی کن."
                         else -> ""
                     }
