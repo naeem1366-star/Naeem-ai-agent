@@ -25,8 +25,45 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jsoup.Jsoup
+import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import org.json.JSONObject
+
+
+private data class GoogleFinding(val title: String, val snippet: String, val url: String)
+
+private object GoogleResearchClient {
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .build()
+
+    suspend fun search(topic: String): List<GoogleFinding> = withContext(Dispatchers.IO) {
+        val url = "https://www.google.com/search?q=" + Uri.encode(topic) + "&num=8&hl=fa"
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
+            .header("Accept-Language", "fa-IR,fa;q=0.9,en;q=0.7")
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IllegalStateException("گوگل پاسخ مناسب نداد: HTTP " + response.code)
+            val doc = Jsoup.parse(response.body?.string().orEmpty())
+            doc.select("a:has(h3)").mapNotNull { link ->
+                val heading = link.selectFirst("h3") ?: return@mapNotNull null
+                val href = link.attr("href").takeIf { it.startsWith("http") } ?: return@mapNotNull null
+                if (href.contains("google.com/search")) return@mapNotNull null
+                val snippet = link.parent()?.parent()?.text()?.takeIf { it.length > heading.text().length } ?: ""
+                GoogleFinding(heading.text(), snippet.take(700), href)
+            }.distinctBy { it.url }.take(8)
+        }
+    }
+}
 
 private val ThinkBg = Color(0xFF0B0D11)
 private val ThinkCard = Color(0xFF171A20)
@@ -256,7 +293,7 @@ fun ThinkRoomScreen(
             }
             else -> {
                 Text("میز تحلیل چندجانبه", color = ThinkText, fontWeight = FontWeight.SemiBold)
-                Text("موضوعت را مطرح کن؛ اتاق فکر آن را از دیدگاه‌های مختلف بررسی می‌کند. جست‌وجوی وب در این مرحله هنوز به موتور تحلیل متصل نیست.", color = ThinkMuted, style = MaterialTheme.typography.bodySmall)
+                Text("موضوعت را مطرح کن؛ اتاق فکر از چند زاویه بررسی می‌کند و برای شواهد و اطلاعات تازه، گوگل را جست‌وجو می‌کند.", color = ThinkMuted, style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("چه موضوعی را بررسی کنیم؟") }, minLines = 2, maxLines = 4)
                 Spacer(Modifier.height(10.dp))
@@ -274,9 +311,11 @@ fun ThinkRoomScreen(
                         busy = true; error = ""; answer = ""; searchQuery = ""
                         scope.launch {
                             try {
-                                val promptText = "تو میز تحلیل چندجانبه اتاق فکر هستی. فقط فارسی پاسخ بده. موضوع را در پنج بخش بررسی کن: ۱) تحلیل استراتژیک و امکان‌پذیری ۲) نگاه خلاقانه و راه‌حل‌ها ۳) نقد سخت‌گیرانه، ریسک‌ها و نقاط کور ۴) شواهد و اطلاعات به‌روز موردنیاز برای راستی‌آزمایی ۵) جمع‌بندی بی‌طرفانه و قدم بعدی. فرضیات را از واقعیت جدا کن. اگر جست‌وجوی زنده وب انجام نداده‌ای، هرگز ادعا نکن که منبعی را بررسی کرده‌ای؛ موارد نیازمند بررسی وب را مشخص کن. موضوع: " + topic
+                                val findings = GoogleResearchClient.search(topic)
+                                val sources = findings.joinToString("\n\n") { "- ${it.title}\n${it.snippet}\nمنبع: ${it.url}" }
+                                val promptText = "تو میز تحلیل چندجانبه اتاق فکر هستی. فقط فارسی پاسخ بده. موضوع را از پنج دیدگاه بررسی کن: ۱) استراتژیست: هدف، بازار، منابع و امکان‌پذیری ۲) طراح: راه‌حل‌های خلاقانه و فرصت‌ها ۳) منتقد: فرض‌های نادرست، ریسک‌ها و نقاط کور ۴) پژوهشگر: ارزیابی شواهد و کیفیت منابع وب ۵) جمع‌بندی بی‌طرفانه و پیشنهاد قدم بعدی. اطلاعات زیر از جست‌وجوی گوگل به دست آمده‌اند؛ آن‌ها را شواهد اولیه بدان، نه حقیقت قطعی. ادعاها را با منبع مربوط مشخص کن و اگر منابع اختلاف دارند، اختلاف را توضیح بده. اگر نتیجه‌ای موجود نیست، صادقانه بگو.\nموضوع: " + topic + "\n\nنتایج جست‌وجوی گوگل:\n" + sources
                                 answer = ChatClient().send(baseUrl, model, apiKey, promptText)
-                            } catch (e: Exception) { error = e.message ?: "تحلیل انجام نشد." }
+                            } catch (e: Exception) { error = e.message ?: "تحلیل انجام نشد. اگر گوگل کپچا نشان داد، اتصال یا دسترسی شبکه را بررسی کن." }
                             finally { busy = false }
                         }
                     }
