@@ -112,7 +112,7 @@ private fun ModuleScreenBackdrop(
         Image(
             painter = painterResource(R.drawable.bg_mountain),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.15f },
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.30f },
             contentScale = ContentScale.Crop,
             colorFilter = monochrome
         )
@@ -120,7 +120,7 @@ private fun ModuleScreenBackdrop(
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    listOf(Color(0xD9090B0E), Color(0xA6090B0E), Color(0xEB090B0E))
+                    listOf(Color(0x99090B0E), Color(0x66101825), Color(0xAA101B2A))
                 )
             )
         )
@@ -1024,10 +1024,10 @@ fun NaeemApp(store: SecureConfigStore) {
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0.0f to Color(0xFF050608),
-                                0.58f to Color(0xFF050608),
-                                0.82f to Color(0xFF08152F),
-                                1.0f to Color(0xFF142D70)
+                                0.0f to Color(0xFF101B2C),
+                                0.42f to Color(0xFF122A48),
+                                0.78f to Color(0xFF1B3760),
+                                1.0f to Color(0xFF263F73)
                             )
                         )
                     )
@@ -1781,7 +1781,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
-                        Text("\${step + 1} از \${guidedTourItems.size}", color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
+                        Text("${step + 1} از ${guidedTourItems.size}", color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
                     }
                     LinearProgressIndicator(progress = { (step + 1).toFloat() / guidedTourItems.size }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Color(0xFF9CB9F4), trackColor = Color(0xFF303847))
                     Text(item.target, color = Color(0xFFBFD2FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
