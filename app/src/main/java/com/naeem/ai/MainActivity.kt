@@ -8,6 +8,11 @@ import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.os.Bundle
 import android.media.MediaPlayer
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
 import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -61,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -131,7 +137,7 @@ private fun ModuleScreenBackdrop(
                 )
             )
         )
-        content()
+        Box(Modifier.fillMaxSize().safeDrawingPadding()) { content() }
     }
 }
 
@@ -1035,15 +1041,23 @@ fun NaeemApp(store: SecureConfigStore) {
             Column(
                 Modifier.fillMaxSize()
                     .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color(0xFF101B2C),
-                                0.42f to Color(0xFF122A48),
-                                0.78f to Color(0xFF1B3760),
-                                1.0f to Color(0xFF263F73)
-                            )
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color(0xFF101827),
+                            0.48f to Color(0xFF101C30),
+                            1.0f to Color(0xFF111D32)
                         )
                     )
+                )
+                    .drawBehind {
+                        drawRect(
+                            Brush.radialGradient(
+                                colors = listOf(Color(0x554D86C8), Color(0x223B679F), Color.Transparent),
+                                center = Offset(size.width * 0.5f, size.height * 1.06f),
+                                radius = size.height * 0.92f
+                            )
+                        )
+                    }
                     .padding(padding)
                     .padding(horizontal = 16.dp)
             ) {
@@ -1056,7 +1070,7 @@ fun NaeemApp(store: SecureConfigStore) {
                     ) {
                         Text("نعیم ای‌آی", color = Gold.copy(alpha = 0.78f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
-                        ThinkingOrb(diameter = 142.dp, active = false)
+                        ThinkingOrb(diameter = 142.dp, active = false, onClick = { playThinkingOrbSound(context) })
                         Spacer(Modifier.height(15.dp))
                         Text("سلام " + userName.ifBlank { "دوست من" }, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodyMedium)
@@ -1633,7 +1647,8 @@ fun NaeemApp(store: SecureConfigStore) {
 @Composable
 private fun ThinkingOrb(
     diameter: androidx.compose.ui.unit.Dp = 118.dp,
-    active: Boolean = true
+    active: Boolean = true,
+    onClick: (() -> Unit)? = null
 ) {
     val motion = rememberInfiniteTransition(label = "energy-orb")
     val phase by motion.animateFloat(
@@ -1652,7 +1667,8 @@ private fun ThinkingOrb(
     val mint = Color(0xFF9AD6B0)
     val gold = Color(0xFFD8BD83)
 
-    Canvas(Modifier.size(diameter)) {
+    val orbModifier = Modifier.size(diameter).then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+    Canvas(orbModifier) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension * 0.335f * pulse
         val glowRadius = radius * 1.85f
@@ -1741,6 +1757,53 @@ private fun ThinkingOrb(
     }
 }
 
+
+private fun playThinkingOrbSound(context: Context) {
+    runCatching {
+        val sampleRate = 44100
+        val durationSeconds = 0.52
+        val count = (sampleRate * durationSeconds).toInt()
+        val pcm = ShortArray(count) { index ->
+            val t = index.toDouble() / count
+            val envelope = kotlin.math.sin(Math.PI * t).let { it * it }
+            val glide = 310.0 + 360.0 * t
+            val fundamental = kotlin.math.sin(2.0 * Math.PI * glide * t * durationSeconds)
+            val overtone = kotlin.math.sin(2.0 * Math.PI * (glide * 1.51) * t * durationSeconds) * 0.28
+            val shimmer = kotlin.math.sin(2.0 * Math.PI * 940.0 * t * durationSeconds) * 0.08
+            ((fundamental + overtone + shimmer) * envelope * 4200.0).toInt()
+                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+        }
+        val track = AudioTrack.Builder()
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setSampleRate(sampleRate)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(pcm.size * 2)
+            .setTransferMode(AudioTrack.MODE_STATIC)
+            .build()
+        track.setVolume(0.42f)
+        val written = track.write(pcm, 0, pcm.size)
+        if (written > 0) {
+            track.play()
+            Handler(Looper.getMainLooper()).postDelayed({
+                runCatching {
+                    if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
+                    track.release()
+                }
+            }, 750L)
+        } else track.release()
+    }
+}
+
 private fun assistantActionPreview(action: AssistantAction): String {
     val p = action.parameters
     val amount = p["amount"]?.toLongOrNull()?.let { java.text.NumberFormat.getNumberInstance(java.util.Locale("fa", "IR")).format(it) + " تومان" }
@@ -1812,8 +1875,8 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
                     drawRoundRect(Color(0xFFBFD2FF), Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), style = Stroke(2.dp.toPx()))
                 }
             }
-            Card(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 18.dp, vertical = 26.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF171C25)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
-                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF171C25)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
                         Text(listOf("مرحله یک از چهار", "مرحله دو از چهار", "مرحله سه از چهار", "مرحله چهار از چهار")[step.coerceIn(0, 3)], color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
