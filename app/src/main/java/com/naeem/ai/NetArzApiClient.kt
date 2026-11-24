@@ -22,6 +22,15 @@ data class NetArzVideoJob(
     val error: String?
 )
 
+data class NetArzMusicResult(
+    val bytes: ByteArray,
+    val format: String,
+    val text: String,
+    val model: String,
+    val seconds: Double?,
+    val requestId: String
+)
+
 data class NetArzAccount(
     val status: String,
     val balanceUsd: String,
@@ -157,17 +166,42 @@ class NetArzApiClient(
             ?: json.optString("error").takeIf { it.isNotBlank() && it != "null" }
     )
 
-    suspend fun generateMusic(model: String, prompt: String): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun musicModels(): List<String> = fetchModels("music")
+
+    suspend fun generateMusic(
+        model: String,
+        prompt: String,
+        seconds: Double? = null,
+        temperature: Double? = null,
+        seed: Long? = null
+    ): NetArzMusicResult = withContext(Dispatchers.IO) {
         require(prompt.isNotBlank()) { "توضیح موسیقی را بنویس." }
-        val payload = JSONObject().put("model", model).put("prompt", prompt)
+        require(prompt.length <= 4000) { "توضیح موسیقی نباید بیشتر از ۴۰۰۰ نویسه باشد." }
+        val payload = JSONObject().put("model", model).put("prompt", prompt.trim())
+        if (seconds != null) payload.put("seconds", seconds)
+        if (temperature != null) payload.put("temperature", temperature)
+        if (seed != null) payload.put("seed", seed)
         val req = request("/audio/music").header("Content-Type", "application/json")
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
         http.newCall(req).execute().use { response ->
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) throw IllegalStateException(errorMessage(response.code, body))
-            val encoded = JSONObject(body).optJSONArray("data")?.optJSONObject(0)?.optString("b64_json")
-                ?.takeIf { it.isNotBlank() } ?: throw IllegalStateException("پاسخ موسیقی فایل Base64 نداشت.")
-            Base64.decode(encoded, Base64.DEFAULT)
+            val json = JSONObject(body)
+            val clip = json.optJSONArray("data")?.optJSONObject(0)
+                ?: throw IllegalStateException("پاسخ سرویس فایل موسیقی نداشت.")
+            val encoded = clip.optString("b64_json").takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("فایل موسیقی در پاسخ API خالی بود.")
+            val format = clip.optString("format", "mp3").lowercase().filter { it.isLetterOrDigit() }.ifBlank { "mp3" }
+            val bytes = Base64.decode(encoded, Base64.DEFAULT)
+            require(bytes.isNotEmpty()) { "فایل موسیقی دریافتی خالی است." }
+            NetArzMusicResult(
+                bytes = bytes,
+                format = format,
+                text = json.optString("text", ""),
+                model = json.optString("model", model),
+                seconds = clip.optDouble("seconds").takeIf { clip.has("seconds") && it > 0.0 },
+                requestId = json.optString("id", "")
+            )
         }
     }
 
