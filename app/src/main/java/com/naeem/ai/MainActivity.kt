@@ -1,5 +1,6 @@
 package com.naeem.ai
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -388,7 +389,7 @@ private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose
 fun NaeemApp(store: SecureConfigStore) {
     val context = LocalContext.current
     val onboardingPrefs = remember { context.getSharedPreferences("naeem_onboarding", Context.MODE_PRIVATE) }
-    var tutorialStep by remember { mutableIntStateOf(if (onboardingPrefs.getBoolean("guided_tour_completed", false)) -1 else 0) }
+    var tutorialStep by remember { mutableStateOf(if (onboardingPrefs.getBoolean("guided_tour_completed", false)) -1 else 0) }
     var showSettings by remember { mutableStateOf(false) }
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
