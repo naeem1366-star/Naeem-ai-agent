@@ -21,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Image as ImageIcon
 import androidx.compose.material.icons.filled.MovieCreation
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.UploadFile
@@ -37,9 +37,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 private const val PIXVERSE_URL = "https://app.pixverse.ai/"
 private const val VIDEO_WEEKLY_LIMIT = 3
@@ -73,7 +70,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     var quality by remember { mutableStateOf("720p") }
     var attempts by remember { mutableStateOf(readVideoAttempts(context)) }
 
-    val remainingAttempts = (VIDEO_WEEKLY_LIMIT - readVideoAttempts(context).size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
+    val recentAttempts = attempts.filter { it > System.currentTimeMillis() - VIDEO_WEEK_MS }\n    val remainingAttempts = (VIDEO_WEEKLY_LIMIT - recentAttempts.size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -181,7 +178,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                     Text("$remainingAttempts از $VIDEO_WEEKLY_LIMIT تلاش باقی‌مانده", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
                 }
                 LinearProgressIndicator(
-                    progress = { remainingAttempts.toFloat() / VIDEO_WEEKLY_LIMIT },
+                    progress = remainingAttempts.toFloat() / VIDEO_WEEKLY_LIMIT,
                     modifier = Modifier.fillMaxWidth(),
                     color = Color(0xFF8BC6A0),
                     trackColor = Color(0xFF34463C)
@@ -193,7 +190,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         Text("۱. عکس مرجع", color = Color.White, fontWeight = FontWeight.Bold)
         if (imageUri == null) {
             OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Image, contentDescription = null)
+                Icon(Icons.Default.ImageIcon, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("انتخاب عکس از گوشی")
             }
