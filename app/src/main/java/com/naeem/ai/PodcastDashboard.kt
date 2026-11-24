@@ -230,7 +230,7 @@ fun PodcastDashboard(onClose:()->Unit){
             Column(Modifier.weight(1f)){
                 Text("SUPRA AUDIO / PODCASTS",color=muted,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("پادکست",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("فیدهای عمومی رایگان • پخش مستقیم در برنامه",color=muted,style=MaterialTheme.typography.bodySmall)
+                Text("فیدهای عمومی رایگان • پخش مستقیم داخل Supra AI",color=muted,style=MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick={stopPlayer();onClose()}){Icon(Icons.Default.Close,null,tint=accent)}
         }
