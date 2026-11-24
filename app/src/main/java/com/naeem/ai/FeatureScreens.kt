@@ -750,6 +750,15 @@ private fun FeatureMapTree(
     onClose: () -> Unit,
     modules: List<Triple<String, String, String>>
 ) {
+    val context = LocalContext.current
+    val appVersionInfo = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+    }
+    val installedVersionName = appVersionInfo?.versionName ?: "نامشخص"
+    val installedVersionCode = appVersionInfo?.let {
+        if (android.os.Build.VERSION.SDK_INT >= 28) it.longVersionCode.toInt() else it.versionCode
+    } ?: 0
+
     val silver = Color(0xFFD4D9E0)
     val muted = Color(0xFF9AA3AE)
     val panel = Color(0xFF171B20)
@@ -802,12 +811,12 @@ private fun FeatureMapTree(
             Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("نسخه نصب‌شده", color = muted, style = MaterialTheme.typography.labelSmall)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(BuildConfig.VERSION_NAME, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(installedVersionName, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.weight(1f))
-                    Text("کد نسخه " + BuildConfig.VERSION_CODE, color = silver, style = MaterialTheme.typography.labelMedium)
+                    Text("کد نسخه " + installedVersionCode, color = silver, style = MaterialTheme.typography.labelMedium)
                 }
                 Text(
-                    "نسخه قبلی: کد " + (BuildConfig.VERSION_CODE - 1).coerceAtLeast(0) + "  ·  نسخه بعدی: پس از انتشار ارتقای بعدی به‌روزرسانی می‌شود",
+                    "نسخه قبلی: کد " + (installedVersionCode - 1).coerceAtLeast(0) + "  ·  نسخه بعدی: پس از انتشار ارتقای بعدی به‌روزرسانی می‌شود",
                     color = muted,
                     style = MaterialTheme.typography.labelSmall
                 )
