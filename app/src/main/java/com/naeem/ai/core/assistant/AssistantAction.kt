@@ -5,7 +5,7 @@ package com.naeem.ai.core.assistant
  * The model may propose an action, but it never executes it directly.
  * All writes pass through AssistantActionRouter and user confirmation.
  */
-enum class AssistantModule { FINANCE, SPORTS, TRAVEL, MEMORY }
+enum class AssistantModule { FINANCE, SPORTS, TRAVEL, MEMORY, JOURNAL }
 
 enum class ActionAccess { READ, WRITE }
 
