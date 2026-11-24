@@ -955,18 +955,18 @@ fun NaeemApp(
         )
     ) {
         if (showVideoDevelopment) {
-            AlertDialog(
+            Dialog(
                 onDismissRequest = { showVideoDevelopment = false },
-                containerColor = Panel,
-                icon = { Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = Gold) },
-                title = { Text("ساخت ویدیو", color = Gold, fontWeight = FontWeight.Bold) },
-                text = { Text("این قابلیت در حال توسعه است و در نسخه‌های آینده به Supra AI اضافه می‌شود.", color = Color(0xFFD0D5DC)) },
-                confirmButton = {
-                    TextButton(onClick = { showVideoDevelopment = false }) {
-                        Text("متوجه شدم", color = Gold)
-                    }
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = Ink
+                ) {
+                    VideoCreatorDashboard(onClose = { showVideoDevelopment = false })
                 }
-            )
+            }
         }
         Scaffold(
             containerColor = Color.Transparent,
@@ -1037,20 +1037,40 @@ fun NaeemApp(
                             }
                         }
                         Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = { imagePicker.launch("image/*") }, enabled = !busy) { Text("＋ عکس", color = Gold) }
-                            TextButton(onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }, enabled = !busy) {
-                                Text(if (imageMode) "✦ ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFD4D9E0) else Gold)
+                            TextButton(
+                                onClick = { imagePicker.launch("image/*") },
+                                enabled = !busy,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+                            ) {
+                                Text("＋ عکس", color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
-                            TextButton(onClick = { searchMode = !searchMode }, enabled = !busy) {
-                                Icon(Icons.Default.Search, contentDescription = null, tint = if (searchMode) Color(0xFFD4D9E0) else Gold)
-                                Text(if (searchMode) "جست‌وجوی عمیق روشن" else "جست‌وجوی عمیق", color = if (searchMode) Color(0xFFD4D9E0) else Gold)
+                            TextButton(
+                                onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } },
+                                enabled = !busy,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+                            ) {
+                                Text(if (imageMode) "✦ تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFD4D9E0) else Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
-                            TextButton(onClick = { showVideoDevelopment = true }) {
-                                Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = Gold)
-                                Text("ساخت ویدیو", color = Gold)
+                            TextButton(
+                                onClick = { searchMode = !searchMode },
+                                enabled = !busy,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+                            ) {
+                                Text(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
+                            }
+                            TextButton(
+                                onClick = { showVideoDevelopment = true },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+                            ) {
+                                Text("▶ ویدیو", color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
                         }
                         Row(
