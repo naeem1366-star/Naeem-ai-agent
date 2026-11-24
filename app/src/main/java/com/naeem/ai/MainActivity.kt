@@ -196,13 +196,27 @@ class MainActivity : FragmentActivity() {
             .setAllowedAuthenticators(authenticators)
             .build()
         val store = SecureConfigStore(this)
+        val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
+        val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
         introCompleted.value = false
         setContent {
             if (unlocked.value) {
-                if (introCompleted.value) NaeemApp(store)
-                else AppIntegrationIntro(onEnter = {
-                    introCompleted.value = true
-                })
+                if (!introCompleted.value) {
+                    AppIntegrationIntro(onEnter = { introCompleted.value = true })
+                } else if (!profileCompleted.value) {
+                    UserProfileSetup(onSave = { name, interests, about, style ->
+                        profilePrefs.edit()
+                            .putString("user_name", name)
+                            .putString("user_interests", interests)
+                            .putString("user_about", about)
+                            .putString("response_style", style)
+                            .putBoolean("profile_completed", true)
+                            .apply()
+                        profileCompleted.value = true
+                    })
+                } else {
+                    NaeemApp(store)
+                }
             }
             else AppLockScreen(
                 onUnlock = { authenticate() },
@@ -240,6 +254,44 @@ class MainActivity : FragmentActivity() {
         promptShowing = true
         try { biometricPrompt.authenticate(promptInfo) }
         catch (_: Exception) { promptShowing = false }
+    }
+}
+
+@Composable
+private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var interests by remember { mutableStateOf("") }
+    var about by remember { mutableStateOf("") }
+    var style by remember { mutableStateOf("صمیمی و طبیعی") }
+    val silver = Color(0xFFE0E5EC)
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF08152F), Color(0xFF142D70)))
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            ThinkingOrb(diameter = 132.dp, active = true)
+            Text("اول با هم آشنا بشیم", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت.", color = Color(0xFFB0BAC6), style = MaterialTheme.typography.bodyMedium)
+            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("دوست داری چی صدات کنم؟") }, placeholder = { Text("مثلاً نعیم") })
+            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text("به چه چیزهایی علاقه داری؟ (اختیاری)") }, placeholder = { Text("مثلاً طراحی، تکنولوژی، سفر…") }, minLines = 2)
+            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)") }, placeholder = { Text("شغل، هدف‌ها یا موضوعات موردعلاقه…") }, minLines = 2)
+            Text("لحن گفت‌وگو", color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم").forEach { option ->
+                    FilterChip(selected = style == option, onClick = { style = option }, label = { Text(option, style = MaterialTheme.typography.labelSmall) })
+                }
+            }
+            Button(onClick = { if (name.isNotBlank()) onSave(name.trim(), interests.trim(), about.trim(), style) }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)), shape = RoundedCornerShape(17.dp)) {
+                Text("ذخیره و ورود به برنامه", fontWeight = FontWeight.Bold)
+            }
+            Text("این اطلاعات فقط روی همین گوشی ذخیره می‌شوند و هر زمان می‌توانی تغییرشان بدهی.", color = Color(0xFF8995A5), style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 
@@ -392,6 +444,11 @@ private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose
 @Composable
 fun NaeemApp(store: SecureConfigStore) {
     val context = LocalContext.current
+    val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
+    val userName = remember { profilePrefs.getString("user_name", "").orEmpty() }
+    val userInterests = remember { profilePrefs.getString("user_interests", "").orEmpty() }
+    val userAbout = remember { profilePrefs.getString("user_about", "").orEmpty() }
+    val responseStyle = remember { profilePrefs.getString("response_style", "صمیمی و طبیعی").orEmpty() }
     val onboardingPrefs = remember { context.getSharedPreferences("naeem_onboarding", Context.MODE_PRIVATE) }
     var tutorialStep by remember { mutableStateOf(if (onboardingPrefs.getBoolean("guided_tour_completed", false)) -1 else 0) }
     var micTargetBounds by remember { mutableStateOf(Rect.Zero) }
@@ -734,14 +791,21 @@ fun NaeemApp(store: SecureConfigStore) {
                         return@launch
                     }
                     val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
+                    val profileContext = buildString {
+                        if (userName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $userName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
+                        if (userInterests.isNotBlank()) append("\nعلایق کاربر: $userInterests.")
+                        if (userAbout.isNotBlank()) append("\nدرباره کاربر: $userAbout.")
+                        append("\nلحن ترجیحی پاسخ: $responseStyle.")
+                    }
+                    val userContext = profileContext + memoryContext
                     val answer = if (searchMode) {
                         val findings = deepSearchClient.search(finalQuestion, 8)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
-                        val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$memoryContext"
+                        val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$userContext"
                         val report = client.send(baseUrl, model, apiKey, researchPrompt)
                         report + "\n\nمنابع بررسی‌شده:\n" + findings.mapIndexed { index, item -> "[${index + 1}] ${item.title} — ${item.url}" }.joinToString("\n")
                     } else {
-                        val memoryAwarePrompt = finalQuestion + memoryContext
+                        val memoryAwarePrompt = "زمینه کاربر:\n$userContext\n\nدرخواست کاربر:\n$finalQuestion"
                         if (finalQuestion.contains("به خاطر بسپار") || finalQuestion.contains("یادت باشه")) {
                             val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
                             if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
@@ -919,7 +983,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         Spacer(Modifier.height(8.dp))
                         ThinkingOrb(diameter = 142.dp, active = false)
                         Spacer(Modifier.height(15.dp))
-                        Text("سلام نعیم", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Text("سلام " + userName.ifBlank { "دوست من" }, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(22.dp))
                         OutlinedButton(
