@@ -51,6 +51,8 @@ class DailyJournalStore(context: Context) {
         val captured = mutableListOf<DailyJournalEntry>()
         parts.forEach { part ->
             val lower = part.lowercase(Locale.ROOT)
+            val isNarrative = listOf("رفتم", "کردم", "خوردم", "خریدم", "خوابیدم", "داشتم", "بودم", "پرداخت کردم", "انجام دادم", "تمرین کردم").any { lower.contains(it) }
+            if (!isNarrative) return@forEach
             val category = when {
                 listOf("باشگاه", "تمرین", "ورزش", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "کوهنوردی", "شنا").any { lower.contains(it) } -> "ورزش"
                 listOf("خوردم", "صبحانه", "ناهار", "شام", "میان‌وعده", "غذا", "قهوه").any { lower.contains(it) } -> "تغذیه"
