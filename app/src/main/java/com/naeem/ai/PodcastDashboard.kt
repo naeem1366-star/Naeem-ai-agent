@@ -237,7 +237,7 @@ fun PodcastDashboard(onClose:()->Unit){
             FilterChip(selected=savedOnly,onClick={savedOnly=true},label={Text("بعداً گوش می‌دهم")})
             Spacer(Modifier.weight(1f))
             IconButton(onClick={addFeedDialog=true}){Icon(Icons.Default.AddLink,"افزودن RSS",tint=accent)}
-            IconButton(onClick={ { loadFeed(selectedFeed) } }){Icon(Icons.Default.Refresh,"بروزرسانی",tint=accent)}
+            IconButton(onClick={loadFeed(selectedFeed)}){Icon(Icons.Default.Refresh,"بروزرسانی",tint=accent)}
         }
         if(!savedOnly){
             Text("موضوع‌ها",color=muted,style=MaterialTheme.typography.labelMedium)
