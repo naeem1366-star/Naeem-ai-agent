@@ -262,41 +262,54 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
     val silver = Color(0xFFE0E5EC)
     val muted = Color(0xFFB0BAC6)
-    Surface(Modifier.fillMaxSize(), color = Color(0xFF080A0D)) {
+    Box(Modifier.fillMaxSize().background(
+        Brush.verticalGradient(listOf(Color(0xFF080B13), Color(0xFF111323), Color(0xFF080A0D)))
+    )) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 26.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(22.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Spacer(Modifier.height(10.dp))
-            ThinkingOrb(diameter = 168.dp, active = true)
-            Text("فراتر از یک دستیار گفت‌وگومحور", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            ThinkingOrb(diameter = 246.dp, active = true)
+            Text("بیشتر از یک دستیار؛ یک همراه هوشمند", color = silver,
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "می‌فهمد، به خاطر می‌سپارد و با اجازه تو عمل می‌کند.",
+                color = Color(0xFFC2A8E8), style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium
+            )
             Surface(
-                color = Color(0xFF171C22),
-                shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF343D48)),
+                color = Color(0xCC171C27), shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x554F607A)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                Column(Modifier.padding(19.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "Naeem AI قرار نیست فقط به سؤال‌ها جواب بدهد؛ قرار است منظور تو را بفهمد و آن را به یک کار واقعی تبدیل کند. می‌توانی طبیعی حرف بزنی؛ از خرید و هزینه‌ها، تمرین امروز، برنامه سفر یا چیزی که می‌خواهی به خاطر بسپاری. دستیار از متن گفتگو، موضوع و اطلاعات مرتبط را استخراج می‌کند، تشخیص می‌دهد هر موضوع به کدام بخش تعلق دارد و پیشنهاد می‌دهد قدم بعدی چه باشد. اگر جزئیات کافی نباشد، به‌جای حدس زدن سؤال می‌پرسد؛ اگر قرار باشد چیزی ثبت یا تغییر کند، اول نتیجه را شفاف به تو نشان می‌دهد و فقط با تأیید تو اقدام می‌کند. گفتگو، حافظه و ابزارهای تخصصی در کنار هم کار می‌کنند، اما اطلاعات هر بخش در جای خودش می‌ماند و کنترل نهایی همیشه دست توست. تفاوت Naeem AI در همین پیوند است: هوش مصنوعی‌ای که فقط حرف نمی‌زند؛ می‌فهمد، هماهنگ می‌کند و با اجازه تو عمل می‌کند.",
-                        color = muted,
-                        style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.32
+                        "Naeem AI گفتگو، حافظه و ابزارهای تخصصی را به هم وصل می‌کند؛ از مدیریت مالی و سلامت تا ورزش، سفر، بازار و خلاقیت. حرفت را می‌فهمد، موضوع را به فضای درست می‌فرستد و پیش از ثبت یا تغییر اطلاعات، تأییدت را می‌گیرد.",
+                        color = muted, style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf(
+                            "مالی" to Color(0xFFD8BD83), "سلامت" to Color(0xFF9AD6B0),
+                            "ورزش" to Color(0xFF91BFE8), "سفر" to Color(0xFFA8C99A)
+                        ).forEach { (label, tint) ->
+                            Surface(color = tint.copy(alpha = 0.13f), shape = RoundedCornerShape(50)) {
+                                Text(label, color = tint, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
                 }
             }
-            Text(
-                "یک هسته هوشمند؛ چندین فضای مستقل؛ یک تجربه پیوسته.",
-                color = Color(0xFF8F9AA7),
-                style = MaterialTheme.typography.labelMedium
-            )
+            Text("یک گفتگو؛ چندین فضای هماهنگ؛ کنترل همیشه دست توست.",
+                color = Color(0xFF9BA7B5), style = MaterialTheme.typography.labelMedium)
             Button(
-                onClick = onEnter,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                onClick = onEnter, modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)),
-                shape = RoundedCornerShape(17.dp)
-            ) { Text("ورود به فضای من", fontWeight = FontWeight.Bold) }
+                shape = RoundedCornerShape(18.dp)
+            ) { Text("شروع تجربه Naeem AI", fontWeight = FontWeight.Bold) }
             Spacer(Modifier.height(8.dp))
         }
     }
@@ -1337,155 +1350,107 @@ private fun ThinkingOrb(
     diameter: androidx.compose.ui.unit.Dp = 118.dp,
     active: Boolean = true
 ) {
-    val transition = rememberInfiniteTransition(label = "liquid-mercury")
-    val phase by transition.animateFloat(
-        0f, 6.28318f,
-        infiniteRepeatable(tween(if (active) 4200 else 7000, easing = LinearEasing)),
-        label = "mercury-flow"
+    val motion = rememberInfiniteTransition(label = "energy-orb")
+    val phase by motion.animateFloat(
+        0f, (Math.PI * 2.0).toFloat(),
+        infiniteRepeatable(tween(if (active) 5200 else 9000, easing = LinearEasing)),
+        label = "orb-flow"
     )
-    val secondaryPhase by transition.animateFloat(
-        0f, 6.28318f,
-        infiniteRepeatable(tween(if (active) 6900 else 9800, easing = LinearEasing)),
-        label = "mercury-secondary-flow"
+    val pulse by motion.animateFloat(
+        0.97f, 1.035f,
+        infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "orb-breath"
     )
-    val pulse by transition.animateFloat(
-        0.965f, 1.035f,
-        infiniteRepeatable(tween(if (active) 2100 else 3300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "mercury-breath"
-    )
-    val wavePhase by transition.animateFloat(
-        0f, 6.28318f,
-        infiniteRepeatable(tween(if (active) 5200 else 8200, easing = LinearEasing)),
-        label = "mercury-waves"
-    )
+    val blue = Color(0xFF91BFE8)
+    val violet = Color(0xFFC2A8E8)
+    val rose = Color(0xFFD9A6B8)
+    val mint = Color(0xFF9AD6B0)
+    val gold = Color(0xFFD8BD83)
 
     Canvas(Modifier.size(diameter)) {
-        val c = Offset(size.width / 2f, size.height / 2f)
-        val base = size.minDimension * 0.355f * pulse
-        val glow = base * 1.95f
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.335f * pulse
+        val glowRadius = radius * 1.85f
 
-        // Soft ambient light; deliberately no enclosing halo ring.
         drawCircle(
-            Brush.radialGradient(
-                listOf(Color(0x5596A1AE), Color(0x225B6674), Color.Transparent),
-                c, glow
-            ), glow, c
+            Brush.radialGradient(listOf(blue.copy(alpha = 0.30f), violet.copy(alpha = 0.12f), Color.Transparent),
+                center, glowRadius), glowRadius, center
         )
 
-        // Two flowing energy ribbons pass behind the mercury sphere.
-        val waveWidth = size.width * 0.49f
-        val waveStart = c.x - waveWidth / 2f
-        val waveEnd = c.x + waveWidth / 2f
-        fun ribbonPath(offset: Float, amplitude: Float, speed: Float): Path {
+        // Moving luminous waves extending from behind the glass sphere.
+        for (ribbon in 0..1) {
+            val p = Path()
+            val width = size.width * 0.98f
+            val startX = center.x - width / 2f
+            for (i in 0..100) {
+                val t = i / 100f
+                val x = startX + width * t
+                val envelope = kotlin.math.sin((t * Math.PI).toFloat()).let { it * it }
+                val y = center.y + kotlin.math.sin(t * 10.5f + phase * (if (ribbon == 0) 1f else -0.82f)) *
+                    radius * (if (ribbon == 0) 0.44f else 0.30f) * envelope
+                if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
+            }
+            val colors = if (ribbon == 0)
+                listOf(Color.Transparent, rose.copy(alpha = 0.9f), violet, blue, Color.Transparent)
+            else listOf(Color.Transparent, mint.copy(alpha = 0.8f), blue, violet, Color.Transparent)
+            drawPath(p, Brush.horizontalGradient(colors, startX, startX + width),
+                style = Stroke(width = 4.5.dp.toPx()))
+            drawPath(p, Color.White.copy(alpha = 0.32f),
+                style = Stroke(width = 1.dp.toPx()))
+        }
+
+        // Transparent glass body with layered cool light, matching the app's section palette.
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0xFF6E9CCB), Color(0xFF273C68), Color(0xFF151B36), Color(0xFF090D19)),
+                Offset(center.x - radius * 0.28f, center.y - radius * 0.38f), radius * 1.55f
+            ), radius, center
+        )
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0x667EDBEE), Color(0x2287A6E8), Color.Transparent),
+                Offset(center.x - radius * 0.25f, center.y - radius * 0.30f), radius * 1.25f
+            ), radius * 0.98f, center
+        )
+
+        // Interwoven light filaments: several moving orbital curves inside the sphere.
+        for (strand in 0..5) {
             val path = Path()
-            val count = 90
-            for (i in 0..count) {
-                val x = waveStart + (waveEnd - waveStart) * i / count
-                val t = i.toFloat() / count
-                val envelope = kotlin.math.sin(t * Math.PI).toFloat().let { it * it }
-                val y = c.y + offset +
-                    kotlin.math.sin(t * 8.2f + wavePhase * speed) * amplitude * envelope +
-                    kotlin.math.sin(t * 15f - wavePhase * speed * 0.7f) * amplitude * 0.18f * envelope
+            val rotation = phase * (if (strand % 2 == 0) 1f else -0.72f) + strand * 0.92f
+            for (i in 0..180) {
+                val t = i / 180f * (Math.PI * 2.0).toFloat()
+                val x = center.x + kotlin.math.sin(t * (1.15f + strand * 0.035f) + rotation) *
+                    radius * (0.78f - strand * 0.035f)
+                val y = center.y + kotlin.math.sin(t * 2.0f + rotation * 0.63f) *
+                    kotlin.math.cos(t * 0.52f + rotation) * radius * 0.78f
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
-            return path
+            val tint = when (strand % 5) {
+                0 -> blue
+                1 -> violet
+                2 -> rose
+                3 -> mint
+                else -> gold
+            }
+            drawPath(path, tint.copy(alpha = 0.72f), style = Stroke(width = 1.45.dp.toPx()))
+            drawPath(path, Color.White.copy(alpha = 0.22f), style = Stroke(width = 0.55.dp.toPx()))
         }
-        val orangeRibbon = ribbonPath(base * 0.02f, base * 0.42f, 1f)
-        val greenRibbon = ribbonPath(-base * 0.06f, base * 0.31f, -0.78f)
-        drawPath(
-            orangeRibbon,
-            Brush.horizontalGradient(listOf(Color.Transparent, Color(0x00FF9A45), Color(0xFFFF9B45), Color(0xFFFFC17A), Color.Transparent), waveStart, waveEnd),
-            style = Stroke(width = 5.2.dp.toPx())
-        )
-        drawPath(
-            orangeRibbon,
-            Color(0x99FF9A45),
-            style = Stroke(width = 1.5.dp.toPx())
-        )
-        drawPath(
-            greenRibbon,
-            Brush.horizontalGradient(listOf(Color.Transparent, Color(0x0036CFA0), Color(0xFF39D6A0), Color(0xFF8AF0C9), Color.Transparent), waveStart, waveEnd),
-            style = Stroke(width = 4.8.dp.toPx())
-        )
-        drawPath(
-            greenRibbon,
-            Color(0x8836CFA0),
-            style = Stroke(width = 1.4.dp.toPx())
-        )
 
-        // Floating shadow adds separation from the dark background.
-        drawOval(
-            color = Color(0xFF020305).copy(alpha = 0.72f),
-            topLeft = Offset(c.x - base * 0.92f, c.y + base * 0.58f),
-            size = androidx.compose.ui.geometry.Size(base * 1.84f, base * 0.42f)
-        )
-
-        // Organic, continuously changing liquid-metal silhouette.
-        val blob = Path()
-        val steps = 160
-        for (i in 0..steps) {
-            val a = (i.toFloat() / steps) * 6.28318f
-            val wave = 1f +
-                0.105f * kotlin.math.sin(3f * a + phase) +
-                0.052f * kotlin.math.sin(5f * a - secondaryPhase * 1.31f) +
-                0.032f * kotlin.math.cos(2f * a + phase * 0.72f) +
-                0.018f * kotlin.math.sin(7f * a + secondaryPhase * 0.83f)
-            val r = base * wave
-            val x = c.x + kotlin.math.cos(a) * r * (1.02f + 0.025f * kotlin.math.sin(phase))
-            val y = c.y + kotlin.math.sin(a) * r * (0.94f + 0.03f * kotlin.math.cos(secondaryPhase))
-            if (i == 0) blob.moveTo(x, y) else blob.lineTo(x, y)
-        }
-        blob.close()
-
-        // Deep graphite-to-silver body, not a flat white sphere.
-        drawPath(
-            blob,
-            Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF353B43), Color(0xFFBFC6CF), Color(0xFF69727D),
-                    Color(0xFFE3E7EC), Color(0xFF555E69), Color(0xFF20252C)
-                ),
-                start = Offset(c.x - base, c.y - base),
-                end = Offset(c.x + base, c.y + base)
-            )
-        )
-
-        // Curved reflections create a rounded, three-dimensional liquid surface.
-        drawPath(
-            blob,
-            Brush.radialGradient(
-                colors = listOf(Color(0xFFE9EDF2), Color(0x99D8DEE6), Color(0x337C8794), Color.Transparent),
-                center = Offset(c.x - base * 0.34f, c.y - base * 0.48f),
-                radius = base * 1.2f
-            )
-        )
-        drawArc(
-            Brush.linearGradient(listOf(Color(0xFFF9FBFD), Color(0x668C98A7), Color(0x00FFFFFF)), Offset(c.x - base, c.y - base), Offset(c.x + base, c.y + base)),
-            198f + phase * 18f, 74f, false,
-            Offset(c.x - base * 0.73f, c.y - base * 0.72f),
-            androidx.compose.ui.geometry.Size(base * 1.42f, base * 0.92f),
-            style = Stroke(width = 4.2.dp.toPx())
-        )
-        drawArc(
-            Color(0xFF252C35).copy(alpha = 0.72f),
-            20f - secondaryPhase * 16f, 112f, false,
-            Offset(c.x - base * 0.50f, c.y - base * 0.10f),
-            androidx.compose.ui.geometry.Size(base * 1.55f, base * 1.08f),
-            style = Stroke(width = 2.1.dp.toPx())
-        )
-        drawPath(
-            blob,
-            Brush.linearGradient(
-                listOf(Color.Transparent, Color(0xDDECF2F8), Color(0x668B98A8), Color.Transparent),
-                Offset(c.x - base * 1.2f, c.y - base),
-                Offset(c.x + base * 1.2f, c.y + base)
-            ),
-            style = Stroke(width = 3.4.dp.toPx())
-        )
+        // Glass rim and shifting specular highlights.
         drawCircle(
-            Color.White.copy(alpha = 0.78f),
-            base * 0.075f,
-            Offset(c.x - base * 0.37f, c.y - base * 0.52f)
+            Brush.sweepGradient(listOf(blue, violet, rose, mint, blue), center),
+            radius, center, style = Stroke(width = 3.dp.toPx())
+        )
+        drawCircle(Color.White.copy(alpha = 0.72f), radius * 0.035f,
+            Offset(center.x - radius * 0.42f, center.y - radius * 0.53f))
+        drawCircle(Color.White.copy(alpha = 0.34f), radius * 0.018f,
+            Offset(center.x + radius * 0.50f, center.y + radius * 0.16f))
+        drawArc(
+            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.75f), blue.copy(alpha = 0.12f), violet.copy(alpha = 0.55f))),
+            198f + phase * 22f, 88f, false,
+            Offset(center.x - radius * 0.88f, center.y - radius * 0.88f),
+            androidx.compose.ui.geometry.Size(radius * 1.76f, radius * 1.76f),
+            style = Stroke(width = 2.4.dp.toPx())
         )
     }
 }
