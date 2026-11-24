@@ -66,7 +66,7 @@ private fun reminderTime(d:String,t:String):Long?=runCatching{SimpleDateFormat("
  var title by remember{mutableStateOf("")};var note by remember{mutableStateOf("")};var date by remember{mutableStateOf(SimpleDateFormat("yyyy-MM-dd",Locale.US).format(Date(System.currentTimeMillis()+86400000L)))};var time by remember{mutableStateOf("09:00")};var msg by remember{mutableStateOf("")}
  AskNotificationPermission()
  Column(Modifier.fillMaxSize().background(PB.copy(alpha=.96f)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-  RHeader("برنامه‌ریزی هفتگی","ثبت کارهای روزانه و دریافت اعلان سر موعد",onClose)
+  RHeader("نوت‌بوک","ثبت کارها و یادآوری در زمان دلخواه",onClose)
   Card(colors=CardDefaults.cardColors(containerColor=PC),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    RField("عنوان کار",title,{title=it},Modifier.fillMaxWidth());RField("توضیحات",note,{note=it},Modifier.fillMaxWidth())
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){RField("تاریخ YYYY-MM-DD",date,{date=it},Modifier.weight(1.2f));RField("ساعت HH:mm",time,{time=it},Modifier.weight(.8f))}
