@@ -246,7 +246,7 @@ fun PodcastDashboard(onClose:()->Unit){
     LaunchedEffect(Unit){loadFeed(selectedFeed)}
     val sourceEpisodes=if(savedOnly)savedItems else episodes
     val visible=sourceEpisodes.filter{search.isBlank()||it.title.contains(search,true)||it.description.contains(search,true)}
-    Column(Modifier.fillMaxSize().background(bg).navigationBarsPadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(Modifier.fillMaxSize().background(bg).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("SUPRA AUDIO / PODCASTS",color=muted,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
