@@ -184,13 +184,18 @@ fun ProfessionalVideoDashboard(
             Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("مدت", color = muted)
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    listOf(4, 6, 8, 12).forEach { value ->
+                    (if (selectedModel.startsWith("sora")) listOf(4, 8, 12) else if (selectedModel.startsWith("veo")) listOf(4, 6, 8) else listOf(5, 8, 10)).forEach { value ->
                         FilterChip(selected = duration == value, onClick = { duration = value }, enabled = !generating, label = { Text("$value ثانیه") })
                     }
                 }
                 Text("کیفیت و جهت تصویر", color = muted)
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    listOf("720p", "1080p", "4K").forEach { value ->
+                    (when {
+                        selectedModel == "sora-2-pro" -> listOf("720p", "1024p")
+                        selectedModel.startsWith("sora") -> listOf("720p")
+                        selectedModel.startsWith("veo-3.1") -> listOf("720p", "1080p", "4K")
+                        else -> listOf("720p", "1080p")
+                    }).forEach { value ->
                         FilterChip(selected = resolution == value, onClick = { resolution = value }, enabled = !generating, label = { Text(value) })
                     }
                 }
@@ -206,7 +211,9 @@ fun ProfessionalVideoDashboard(
         }
         Button(
             onClick = { confirmGeneration = true },
-            enabled = !generating && apiKey.isNotBlank() && prompt.isNotBlank() && imageBase64 == null || (!generating && apiKey.isNotBlank() && prompt.isNotBlank() && imageBase64 != null),
+            enabled = !generating && apiKey.isNotBlank() && prompt.isNotBlank() &&
+                (baseUrl.contains("netarz.ir", true) || baseUrl.contains("gisoo.pro", true)) &&
+                (imageBase64 == null || selectedModel.startsWith("openrouter/")),
             modifier = Modifier.fillMaxWidth().height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE3ED), contentColor = Color(0xFF111722))
         ) { Text("بررسی نهایی و شروع تولید") }
@@ -237,11 +244,16 @@ fun ProfessionalVideoDashboard(
                     status = "در حال ارسال درخواست به نت‌ارز…"
                     scope.launch {
                         try {
-                            val size = when (ratio) {
-                                "9:16" -> if (resolution == "4K") "2160x3840" else if (resolution == "1080p") "1080x1920" else "720x1280"
-                                else -> if (resolution == "4K") "3840x2160" else if (resolution == "1080p") "1920x1080" else "1280x720"
+                            val size = when {
+                                selectedModel == "sora-2-pro" && resolution == "1024p" ->
+                                    if (ratio == "9:16") "1024x1792" else "1792x1024"
+                                selectedModel.startsWith("veo-3.1") && resolution == "4K" ->
+                                    if (ratio == "9:16") "2160x3840" else "3840x2160"
+                                selectedModel.startsWith("veo-3.1") && resolution == "1080p" ->
+                                    if (ratio == "9:16") "1080x1920" else "1920x1080"
+                                else -> if (ratio == "9:16") "720x1280" else "1280x720"
                             }
-                            val job = api.createVideo(selectedModel, prompt, duration, size, imageBase64)
+                            val job = api.createVideo(selectedModel, prompt, duration, size, if (selectedModel.startsWith("openrouter/")) imageBase64 else null)
                             estimatedCost = job.estimatedUsd
                             status = "درخواست پذیرفته شد؛ هزینه اعلام‌شده: ${job.estimatedUsd.ifBlank { "در پاسخ اولیه اعلام نشد" }} دلار. شناسه: ${job.id}"
                             val bytes = api.waitForVideo(job.id) { update ->
