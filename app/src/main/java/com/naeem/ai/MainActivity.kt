@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -524,6 +525,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showFutureGateway by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
+    var showVideoDevelopment by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
     var speechJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
@@ -845,6 +847,20 @@ fun NaeemApp(store: SecureConfigStore) {
             onSurfaceVariant = Color(0xFFBFC6D0), secondary = Color(0xFFBFC6D0)
         )
     ) {
+        if (showVideoDevelopment) {
+            AlertDialog(
+                onDismissRequest = { showVideoDevelopment = false },
+                containerColor = Panel,
+                icon = { Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = Gold) },
+                title = { Text("ساخت ویدیو", color = Gold, fontWeight = FontWeight.Bold) },
+                text = { Text("این قابلیت در حال توسعه است و در نسخه‌های آینده به Naeem AI اضافه می‌شود.", color = Color(0xFFD0D5DC)) },
+                confirmButton = {
+                    TextButton(onClick = { showVideoDevelopment = false }) {
+                        Text("متوجه شدم", color = Gold)
+                    }
+                }
+            )
+        }
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
@@ -912,7 +928,10 @@ fun NaeemApp(store: SecureConfigStore) {
                                 TextButton(onClick = { selectedImage = null; selectedImageBase64 = null }) { Text("حذف", color = Gold) }
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             TextButton(onClick = { imagePicker.launch("image/*") }, enabled = !busy) { Text("＋ عکس", color = Gold) }
                             TextButton(onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }, enabled = !busy) {
                                 Text(if (imageMode) "✦ ساخت تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFD4D9E0) else Gold)
@@ -920,6 +939,10 @@ fun NaeemApp(store: SecureConfigStore) {
                             TextButton(onClick = { searchMode = !searchMode }, enabled = !busy) {
                                 Icon(Icons.Default.Search, contentDescription = null, tint = if (searchMode) Color(0xFFD4D9E0) else Gold)
                                 Text(if (searchMode) "جست‌وجوی عمیق روشن" else "جست‌وجوی عمیق", color = if (searchMode) Color(0xFFD4D9E0) else Gold)
+                            }
+                            TextButton(onClick = { showVideoDevelopment = true }) {
+                                Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = Gold)
+                                Text("ساخت ویدیو", color = Gold)
                             }
                         }
                         Row(
