@@ -1873,6 +1873,7 @@ private fun assistantActionPreview(action: AssistantAction): String {
     return when (action.module) {
         AssistantModule.FINANCE -> (if (action.operation == "add_income") "ثبت درآمد" else "ثبت هزینه") + ": " + (amount ?: "مبلغ نامشخص") + "، دسته: " + p["category"].orEmpty() + "، شرح: " + p["note"].orEmpty()
         AssistantModule.SPORTS -> "ثبت تمرین «" + p["title"].orEmpty() + "»؛ " + p["minutes"].orEmpty() + " دقیقه، " + p["distance"].orEmpty() + " کیلومتر"
+        AssistantModule.HEALTH -> if (action.operation == "add_food") "ثبت غذا: " + p["food"].orEmpty() + "، " + p["grams"].orEmpty() + " گرم" else "نمایش دفتر سلامت"
         AssistantModule.TRAVEL -> "ثبت هزینهٔ سفر: " + (amount ?: "مبلغ نامشخص") + "، عنوان: " + p["title"].orEmpty() + "، پرداخت‌کننده: " + p["payer"].orEmpty()
         AssistantModule.MEMORY -> "ذخیره در حافظه: «" + p["note"].orEmpty() + "»"
         AssistantModule.JOURNAL -> if (action.operation == "add_entry") "ثبت در روزنگار: " + p["category"].orEmpty() + " — " + p["detail"].orEmpty() else "نمایش روزنگار: " + p["period"].orEmpty()
