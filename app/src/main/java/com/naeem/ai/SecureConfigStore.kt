@@ -18,12 +18,36 @@ class SecureConfigStore(context: Context) {
     )
 
     fun save(baseUrl: String, model: String, apiKey: String) {
+        val normalized = baseUrl.trim().trimEnd('/')
+        val cleanKey = apiKey.trim().removeBearerPrefix()
         prefs.edit()
-            .putString("base_url", baseUrl.trim().trimEnd('/'))
+            .putString("base_url", normalized)
             .putString("model", model.trim())
-            .putString("api_key", apiKey.trim().removeBearerPrefix())
+            .putString("api_key", cleanKey)
+            .putString(keyFor(normalized), cleanKey)
             .apply()
     }
+
+    private fun keyFor(baseUrl: String): String =
+        "api_key_" + baseUrl.trim().trimEnd('/').lowercase().hashCode().toUInt().toString(16)
+
+    fun apiKeyFor(baseUrl: String): String {
+        val saved = prefs.getString(keyFor(baseUrl), null)
+        return saved ?: if (baseUrl.trim().trimEnd('/') == baseUrl()) apiKey() else ""
+    }
+
+    fun rememberApiKey(baseUrl: String, apiKey: String) {
+        val clean = apiKey.trim().removeBearerPrefix()
+        if (clean.isNotBlank()) prefs.edit().putString(keyFor(baseUrl), clean).apply()
+    }
+
+    fun modelFor(type: String): String = prefs.getString("model_$type", "").orEmpty()
+
+    fun saveModelFor(type: String, model: String) {
+        if (type.isNotBlank() && model.isNotBlank()) prefs.edit().putString("model_$type", model.trim()).apply()
+    }
+
+    fun speechModel(): String = modelFor("audio_tts").ifBlank { "gpt-4o-mini-tts" }
 
     fun baseUrl(): String {
         val saved = prefs.getString("base_url", null)?.trim()?.trimEnd('/')
