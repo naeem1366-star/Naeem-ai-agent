@@ -124,11 +124,22 @@ private class PodcastFeedReader {
 private class PodcastPrefs(context:android.content.Context){
     private val prefs=context.getSharedPreferences("supra_podcasts",android.content.Context.MODE_PRIVATE)
     fun saved()=prefs.getStringSet("saved",emptySet())?.toSet()?:emptySet()
-    fun toggle(id:String):Set<String>{
+    fun savedEpisodes():List<PodcastEpisode>{
+        val arr=runCatching{org.json.JSONArray(prefs.getString("saved_episodes","[]"))}.getOrElse{org.json.JSONArray()}
+        return (0 until arr.length()).mapNotNull{runCatching{
+            val o=arr.getJSONObject(it)
+            PodcastEpisode(o.getString("id"),o.getString("title"),o.optString("description"),o.getString("audioUrl"),o.optString("published"),o.optString("duration"),o.optString("showTitle"))
+        }.getOrNull()}
+    }
+    fun toggle(ep:PodcastEpisode):Pair<Set<String>,List<PodcastEpisode>>{
         val next=saved().toMutableSet()
-        if(!next.add(id))next.remove(id)
-        prefs.edit().putStringSet("saved",next).apply()
-        return next
+        val items=savedEpisodes().toMutableList()
+        if(!next.add(ep.id)){next.remove(ep.id);items.removeAll{it.id==ep.id}}
+        else items.removeAll{it.id==ep.id}.also{items.add(0,ep)}
+        val arr=org.json.JSONArray()
+        items.forEach{o->arr.put(org.json.JSONObject().put("id",o.id).put("title",o.title).put("description",o.description).put("audioUrl",o.audioUrl).put("published",o.published).put("duration",o.duration).put("showTitle",o.showTitle))}
+        prefs.edit().putStringSet("saved",next).putString("saved_episodes",arr.toString()).apply()
+        return next to items
     }
     fun customFeeds():List<PodcastFeed>{
         val raw=prefs.getString("custom_feeds","[]").orEmpty()
@@ -160,6 +171,7 @@ fun PodcastDashboard(onClose:()->Unit){
     var loading by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf("")}
     var saved by remember{mutableStateOf(prefs.saved())}
+    var savedItems by remember{mutableStateOf(prefs.savedEpisodes())}
     var savedOnly by remember{mutableStateOf(false)}
     var search by remember{mutableStateOf("")}
     var addFeedDialog by remember{mutableStateOf(false)}
@@ -209,7 +221,8 @@ fun PodcastDashboard(onClose:()->Unit){
         }
     }
     LaunchedEffect(Unit){loadFeed(selectedFeed)}
-    val visible=episodes.filter{(!savedOnly||it.id in saved)&&(search.isBlank()||it.title.contains(search,true)||it.description.contains(search,true))}
+    val sourceEpisodes=if(savedOnly)savedItems else episodes
+    val visible=sourceEpisodes.filter{search.isBlank()||it.title.contains(search,true)||it.description.contains(search,true)}
     Column(Modifier.fillMaxSize().background(bg).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
@@ -250,7 +263,7 @@ fun PodcastDashboard(onClose:()->Unit){
                             Text(ep.showTitle+"  •  "+ep.published+"  •  "+ep.duration,color=muted,style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
                             if(ep.description.isNotBlank())Text(ep.description,color=accent.copy(alpha=.8f),style=MaterialTheme.typography.bodySmall,maxLines=2,overflow=TextOverflow.Ellipsis)
                         }
-                        IconButton(onClick={saved=prefs.toggle(ep.id)}){Icon(if(ep.id in saved)Icons.Default.Bookmark else Icons.Default.BookmarkBorder,null,tint=accent)}
+                        IconButton(onClick={val updated=prefs.toggle(ep);saved=updated.first;savedItems=updated.second}){Icon(if(ep.id in saved)Icons.Default.Bookmark else Icons.Default.BookmarkBorder,null,tint=accent)}
                     }
                 }
             }
