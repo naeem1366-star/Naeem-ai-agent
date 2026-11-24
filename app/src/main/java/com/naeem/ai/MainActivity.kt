@@ -286,7 +286,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             ) {
                 Column(Modifier.padding(19.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "Naeem AI گفتگو، حافظه و ابزارهای تخصصی را به هم وصل می‌کند؛ از مدیریت مالی و سلامت تا ورزش، سفر، بازار و خلاقیت. حرفت را می‌فهمد، موضوع را به فضای درست می‌فرستد و پیش از ثبت یا تغییر اطلاعات، تأییدت را می‌گیرد.",
+                        "Naeem AI همراه هوشمند تو برای فکرکردن، برنامه‌ریزی و انجام کارهاست؛ با حافظه‌ای پیوسته و ابزارهایی برای زندگی، کار و خلاقیت. فقط بگو چه می‌خواهی؛ مسیر را پیدا می‌کند و پیش از اقدام، از تو اجازه می‌گیرد.",
                         color = muted, style = MaterialTheme.typography.bodyMedium,
                         lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
                     )
