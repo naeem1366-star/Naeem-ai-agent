@@ -61,13 +61,6 @@ fun FeatureHub(
     var query by remember { mutableStateOf("") }
     var showFeatureMap by remember { mutableStateOf(false) }
     val carouselState = rememberLazyListState()
-    if (showFeatureMap) {
-        FeatureMapTree(
-            onClose = { showFeatureMap = false },
-            modules = entries.map { Triple(it.title, it.subtitle + " · " + it.detail, it.aiStatus) }
-        )
-        return
-    }
     data class Entry(
         val title:String,val subtitle:String,val detail:String,
         val aiRole:String,val aiStatus:String,
@@ -96,6 +89,13 @@ fun FeatureHub(
         Entry("تحلیل اینستاگرام","رشد و عملکرد پیج","اتصال حساب و تحلیل محتوا","آمار پیج را وارد کن تا مغز هوشمند نرخ تعامل، بازدید و عملکرد محتوا را بررسی و برای رشد پیشنهاد بدهد. تحلیل خودکار حساب پس از اتصال رسمی و دریافت مجوزهای Meta ممکن می‌شود.","تحلیل دستی: آماده؛ اتصال رسمی: نیازمند تنظیم Meta",Icons.Default.Insights,onSocial,"اینستاگرام شبکه اجتماعی تحلیل پیج رشد محتوا") ,
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","از اینجا مدل هوش مصنوعی، نشانی سرویس و کلید API را تنظیم می‌کنی؛ این اتصال، مسیر ارتباط مغز هوشمند با گفتگو و ابزارهای برنامه است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال")
     )
+    if (showFeatureMap) {
+        FeatureMapTree(
+            onClose = { showFeatureMap = false },
+            modules = entries.map { Triple(it.title, it.subtitle + " · " + it.detail, it.aiStatus) }
+        )
+        return
+    }
     val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
     val gold=Color(0xFFD4D9E0)
     val champagne=Color(0xFFE8ECF0)
