@@ -13,7 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Image as ImageIcon
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -171,7 +171,7 @@ fun ProfessionalVideoDashboard(
 
         Text("۳. عکس ورودی (اختیاری)", color = Color.White, fontWeight = FontWeight.Bold)
         OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, enabled = !generating, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Image, null); Spacer(Modifier.width(8.dp)); Text(if (imageUri == null) "انتخاب عکس مرجع" else "تعویض عکس مرجع")
+            Icon(Icons.Default.ImageIcon, null); Spacer(Modifier.width(8.dp)); Text(if (imageUri == null) "انتخاب عکس مرجع" else "تعویض عکس مرجع")
         }
         if (imagePreview != null) {
             Image(bitmap = imagePreview!!, contentDescription = "عکس مرجع ویدیو", modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
