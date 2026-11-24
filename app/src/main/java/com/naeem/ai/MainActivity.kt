@@ -549,7 +549,8 @@ fun NaeemApp(store: SecureConfigStore) {
                     FinanceAssistantTool(ledgerStore),
                     SportsAssistantTool(context.applicationContext),
                     TravelAssistantTool(context.applicationContext),
-                    MemoryAssistantTool(dataStore)
+                    MemoryAssistantTool(dataStore),
+                    JournalAssistantTool(context.applicationContext)
                 )
             )
         )
@@ -1812,6 +1813,7 @@ private fun assistantActionPreview(action: AssistantAction): String {
         AssistantModule.SPORTS -> "ثبت تمرین «" + p["title"].orEmpty() + "»؛ " + p["minutes"].orEmpty() + " دقیقه، " + p["distance"].orEmpty() + " کیلومتر"
         AssistantModule.TRAVEL -> "ثبت هزینهٔ سفر: " + (amount ?: "مبلغ نامشخص") + "، عنوان: " + p["title"].orEmpty() + "، پرداخت‌کننده: " + p["payer"].orEmpty()
         AssistantModule.MEMORY -> "ذخیره در حافظه: «" + p["note"].orEmpty() + "»"
+        AssistantModule.JOURNAL -> if (action.operation == "add_entry") "ثبت در روزنگار: " + p["category"].orEmpty() + " — " + p["detail"].orEmpty() else "نمایش روزنگار: " + p["period"].orEmpty()
     }
 }
 
