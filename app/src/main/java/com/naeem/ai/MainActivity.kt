@@ -767,7 +767,7 @@ fun NaeemApp(store: SecureConfigStore) {
         )
     ) {
         Scaffold(
-            containerColor = Ink,
+            containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
                     title = {
@@ -816,11 +816,11 @@ fun NaeemApp(store: SecureConfigStore) {
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Ink)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             },
             bottomBar = {
-                Surface(color = Ink, tonalElevation = 8.dp) {
+                Surface(color = Color.Transparent, tonalElevation = 0.dp) {
                     Column(
                         Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
                             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -885,7 +885,21 @@ fun NaeemApp(store: SecureConfigStore) {
                 }
             }
         ) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+            Column(
+                Modifier.fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color(0xFF050608),
+                                0.58f to Color(0xFF050608),
+                                0.82f to Color(0xFF08152F),
+                                1.0f to Color(0xFF142D70)
+                            )
+                        )
+                    )
+                    .padding(padding)
+                    .padding(horizontal = 16.dp)
+            ) {
                 if (messages.isEmpty()) {
                     Spacer(Modifier.height(28.dp))
                     Column(
