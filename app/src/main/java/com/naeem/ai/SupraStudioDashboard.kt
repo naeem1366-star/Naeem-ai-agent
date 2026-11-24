@@ -109,8 +109,10 @@ fun SupraStudioDashboard(onClose: () -> Unit) {
         val editedItems = clips.map { clip ->
             EditedMediaItem.Builder(MediaItem.fromUri(clip.uri)).build()
         }
-        val sequence = EditedMediaItemSequence.withAudioAndVideoFrom(editedItems)
-        val composition = Composition.Builder(sequence).build()
+        val sequence = EditedMediaItemSequence.Builder()
+            .addItems(editedItems)
+            .build()
+        val composition = Composition.Builder(listOf(sequence)).build()
         val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
