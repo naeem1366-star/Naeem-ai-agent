@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -193,7 +194,6 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
         }
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically){
             listOf("کشف آهنگ","میز دی‌جی","آلبوم‌ها","ساخت موسیقی").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}
-            Spacer(Modifier.weight(1f))
             IconButton(onClick={settings=true}){Icon(Icons.Default.Tune,"تنظیم منابع",tint=Color(0xFFD4D9E0))}
         }
         if(mixing) Surface(color=Color(0xFF252B35),shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){
@@ -358,7 +358,7 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
         }
     }
 
-    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630)),shape=RoundedCornerShape(16.dp)){
             Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Row(verticalAlignment=Alignment.CenterVertically){
