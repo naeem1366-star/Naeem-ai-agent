@@ -137,7 +137,7 @@ private fun ModuleScreenBackdrop(
                 )
             )
         )
-        Box(Modifier.fillMaxSize().safeDrawingPadding()) { content() }
+        Box(Modifier.fillMaxSize()) { content() }
     }
 }
 
@@ -1278,7 +1278,7 @@ fun NaeemApp(
         if (showHub) {
             Dialog(onDismissRequest = { showHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Box(Modifier.fillMaxSize()) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("hub") { FeatureHub(
                         onClose = { showHub = false },
                         onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
@@ -1310,35 +1310,35 @@ fun NaeemApp(
         }
         if (showJournal) {
             Dialog(onDismissRequest = { showJournal = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("journal") { DailyJournalDashboard(onClose = { showJournal = false }) }
                 }
             }
         }
         if (showNews) {
             Dialog(onDismissRequest = { showNews = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("discover") { NewsDashboard(onClose = { showNews = false }) }
                 }
             }
         }
         if (showMedication) {
             Dialog(onDismissRequest = { showMedication = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("health") { MedicationReminderDashboard(onClose = { showMedication = false }) }
                 }
             }
         }
         if (showPlanner) {
             Dialog(onDismissRequest = { showPlanner = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("wrapped") { WeeklyPlannerDashboard(onClose = { showPlanner = false }) }
                 }
             }
         }
         if (showThinkRoom) {
             Dialog(onDismissRequest = { showThinkRoom = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ThinkRoomScreen(
                         onClose = { showThinkRoom = false },
                         baseUrl = baseUrl,
@@ -1350,7 +1350,7 @@ fun NaeemApp(
         }
         if (showFutureGateway) {
             Dialog(onDismissRequest = { showFutureGateway = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     FutureGatewayScreen(
                         onClose = { showFutureGateway = false },
                         baseUrl = baseUrl,
@@ -1362,70 +1362,70 @@ fun NaeemApp(
         }
         if (showTravel) {
             Dialog(onDismissRequest = { showTravel = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("travel") { TravelDashboard(onClose = { showTravel = false }) }
                 }
             }
         }
         if (showTrail) {
             Dialog(onDismissRequest = { showTrail = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("trail") { TrailNavigationDashboard(onClose = { showTrail = false }) }
                 }
             }
         }
         if (showWrapped) {
             Dialog(onDismissRequest = { showWrapped = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("wrapped") { MonthlyWrappedDashboard(onClose = { showWrapped = false }) }
                 }
             }
         }
         if (showMarkets) {
             Dialog(onDismissRequest = { showMarkets = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("markets") { MarketsDashboard(onClose = { showMarkets = false }) }
                 }
             }
         }
         if (showSports) {
             Dialog(onDismissRequest = { showSports = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("sports") { SportsDashboard(onClose = { showSports = false }) }
                 }
             }
         }
         if (showHealth) {
             Dialog(onDismissRequest = { showHealth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("health") { HealthDashboard(onClose = { showHealth = false }) }
                 }
             }
         }
         if (showGames) {
             Dialog(onDismissRequest = { showGames = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("games") { GamesHub(onClose = { showGames = false }) }
                 }
             }
         }
         if (showDiscover) {
             Dialog(onDismissRequest = { showDiscover = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("discover") { DiscoverDashboard(onClose = { showDiscover = false }, onAskAi = { question -> showDiscover = false; prompt = question }) }
                 }
             }
         }
         if (showPodcast) {
             Dialog(onDismissRequest = { showPodcast = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("music") { PodcastDashboard(onClose = { showPodcast = false }) }
                 }
             }
         }
         if (showVideoCreator) {
             Dialog(onDismissRequest = { showVideoCreator = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     SupraStudioDashboard(
                         onClose = { showVideoCreator = false },
                         onExternalActivityStarted = onExternalActivityStarted,
@@ -1436,14 +1436,14 @@ fun NaeemApp(
         }
         if (showMusic) {
             Dialog(onDismissRequest = { showMusic = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }) }
                 }
             }
         }
         if (showSocialAnalytics) {
             Dialog(onDismissRequest = { showSocialAnalytics = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("social") {
                         SocialAnalyticsDashboard(
                             onClose = { showSocialAnalytics = false },
@@ -1456,7 +1456,7 @@ fun NaeemApp(
 
         if (showFinance) {
             Dialog(onDismissRequest = { showFinance = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("finance") {
                         FinanceDashboard(
                             entries = ledgerEntries,
