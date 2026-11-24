@@ -307,32 +307,39 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 color = Color(0xFF9BA7B5), style = MaterialTheme.typography.labelMedium)
 
             Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
                     "طراحی، ایده‌پردازی و توسعه نرم‌افزار",
-                    color = Color(0xFFD8BD83),
+                    color = Color(0xFF9BA7B5),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Normal
                 )
                 Text(
                     "نعیم دهقانی",
-                    color = silver,
+                    color = Color(0xFFE0E5EC),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium
                 )
+                Spacer(Modifier.height(3.dp))
                 Text(
-                    "Designed, Conceptualized & Developed by",
-                    color = Color(0xFF9BA7B5),
-                    style = MaterialTheme.typography.labelSmall
+                    "DESIGNED, CONCEPTUALIZED & DEVELOPED BY",
+                    color = Color(0xFF7F8996),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                        letterSpacing = 0.7.sp
+                    )
                 )
                 Text(
                     "Naeem Dehghani",
-                    color = silver.copy(alpha = 0.9f),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    color = Color(0xFFB0BAC6),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                        letterSpacing = 0.2.sp
+                    ),
+                    fontWeight = FontWeight.Medium
                 )
             }
 
