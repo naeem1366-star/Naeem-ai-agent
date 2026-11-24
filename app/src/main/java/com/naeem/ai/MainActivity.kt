@@ -264,17 +264,25 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
     val silver = Color(0xFFE0E5EC)
     val muted = Color(0xFFB0BAC6)
     Box(Modifier.fillMaxSize().background(
-        Brush.verticalGradient(listOf(Color(0xFF080B13), Color(0xFF111323), Color(0xFF080A0D)))
+        Brush.verticalGradient(listOf(Color(0xFF202328), Color(0xFF292D33), Color(0xFF171A1E)))
     )) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 28.dp),
+            Modifier.fillMaxSize().navigationBarsPadding().imePadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Spacer(Modifier.height(8.dp))
             ThinkingOrb(diameter = 246.dp, active = true)
-            Text("دستیار هوشمند نعیم؛ بیشتر از یک پاسخ‌گو", color = silver,
-                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "دستیار هوشمند نعیم؛ بیشتر از یک پاسخ‌گو",
+                color = silver,
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+            )
             Text(
                 "می‌فهمد، به خاطر می‌سپارد و با اجازه تو عمل می‌کند.",
                 color = Color(0xFFC2A8E8), style = MaterialTheme.typography.titleSmall,
@@ -287,7 +295,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             ) {
                 Column(Modifier.padding(19.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "دستیار هوشمند نعیم یک همراه دیجیتال یکپارچه است که گفت‌وگو را به ابزارهای کاربردی زندگی و کار وصل می‌کند. تفاوت آن با هوش مصنوعی‌های معمولی این است که فقط پاسخ نمی‌دهد؛ تلاش می‌کند منظور تو را بفهمد، موضوع صحبت را تشخیص دهد و آن را به بخش مرتبط برنامه هدایت کند تا بتوانی اطلاعاتت را ثبت کنی، پیگیری کنی و از ابزارهای مختلف در کنار هم استفاده کنی.\n\nدر بخش باشگاه ورزشی، می‌توانی تمرین‌ها و فعالیت‌های ورزشی‌ات را ثبت کنی و روند پیشرفتت را دنبال کنی. در بخش رژیم و سلامت، وعده‌های غذایی، کالری دریافتی و فعالیت روزانه‌ات را بررسی می‌کنی تا تصویر روشن‌تری از وضعیت تغذیه و تناسب اندامت داشته باشی. در مدیریت مالی، درآمدها، هزینه‌ها و تراکنش‌ها را ثبت و دسته‌بندی می‌کنی و وضعیت دخل‌وخرجت را زیر نظر می‌گیری.\n\nدر نوت‌بوک، کارها، قرارها و برنامه‌های روزهای آینده را وارد می‌کنی تا در زمان تعیین‌شده با اعلان گوشی به تو یادآوری شوند. در بخش شبکه‌های اجتماعی، آمار صفحه و عملکرد محتوا را ثبت می‌کنی، بازدید و تعامل را بررسی می‌کنی و برای ایده‌پردازی و تنظیم برنامه انتشار محتوا کمک می‌گیری.\n\nدر بخش کوهنوردی و مسیریابی، می‌توانی برای ثبت و دنبال‌کردن مسیرهای طبیعت‌گردی و پیمایش از ابزارهای مسیر استفاده کنی؛ قابلیت نقشه و مسیریابی آفلاین نیز برای همراهی در مسیرهای بدون اینترنت در نظر گرفته شده و تکمیل و پشتیبانی آن به آماده‌بودن نقشه‌های آفلاین وابسته است. در بخش فیلم و موسیقی، می‌توانی برای پیدا کردن فیلم متناسب با سلیقه‌ات، شناخت آثار و دریافت پیشنهادهای تماشا یا شنیدن کمک بگیری. بخش‌های سفر، حافظه، اخبار، بازار و خلاقیت هم ابزارهای دیگری برای برنامه‌ریزی، نگهداری اطلاعات و پیگیری موضوعات مورد علاقه‌ات فراهم می‌کنند.\n\nلازم نیست برای هر موضوع جداگانه وارد یک برنامه شوی؛ می‌توانی با دستیار هوشمند نعیم صحبت کنی. حرف‌هایت را می‌شنود، موضوع و منظورت را تشخیص می‌دهد و در قابلیت‌های متصل، می‌تواند درخواستت را به بخش مناسب ببرد و اطلاعات را برای ثبت آماده کند. برای ثبت یا تغییر اطلاعات، تأیید نهایی با توست. برخی امکانات نیز برای عملکرد کامل به اتصال سرویس‌ها، مجوزهای گوشی یا تکمیل قابلیت‌های فنی نیاز دارند.",
+                        "یک همراه دیجیتال برای گفت‌وگو و استفاده از ابزارهای کاربردی زندگی و کار؛ از برنامه‌ریزی و پیگیری کارها تا مدیریت مالی، سلامت و ایده‌پردازی. همه در یک فضای یکپارچه، با کنترل نهایی در دست تو.",
                         color = muted, style = MaterialTheme.typography.bodyMedium,
                         lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
                     )
