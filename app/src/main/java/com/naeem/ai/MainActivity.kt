@@ -1687,10 +1687,10 @@ fun NaeemApp(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("درگاه اتصال")
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("نت‌ارز", color = Gold) }
-                            OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("OpenAI مستقیم", color = Gold) }
-                            OutlinedButton(onClick = { switchApiProvider("https://api.gapgpt.ir/v1"); model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("GapGPT", color = Gold) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text("نت‌ارز", color = Gold) }
+                            OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }
+                            OutlinedButton(onClick = { switchApiProvider("https://api.gapgpt.ir/v1"); model = "gpt-4o-mini" }) { Text("GapGPT", color = Gold) }
                         }
                         Text("نشانی سرویس (Base URL)")
                         OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
