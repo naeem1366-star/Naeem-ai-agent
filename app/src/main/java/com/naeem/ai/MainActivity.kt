@@ -964,7 +964,7 @@ fun NaeemApp(
                     shape = RoundedCornerShape(0.dp),
                     color = Ink
                 ) {
-                    VideoCreatorDashboard(onClose = { showVideoDevelopment = false })
+                    VideoCreatorDashboard(onClose = { showVideoDevelopment = false }, initialPrompt = prompt)
                 }
             }
         }
