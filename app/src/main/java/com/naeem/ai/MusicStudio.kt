@@ -414,7 +414,7 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
         TextButton(onClick={advanced=!advanced}){Icon(Icons.Default.Tune,null);Text(if(advanced)"بستن تنظیمات پیشرفته" else "تنظیمات پیشرفته")}
         if(advanced){
             if(model.startsWith("openrouter/")){
-                Text("تنوع خلاقانه: \${"%.1f".format(java.util.Locale.US,temperature)}",color=Color.White)
+                Text("تنوع خلاقانه: ${"%.1f".format(java.util.Locale.US,temperature)}",color=Color.White)
                 Slider(value=temperature,onValueChange={temperature=it},valueRange=0f..1f)
                 OutlinedTextField(value=seedText,onValueChange={seedText=it.filter{ch->ch.isDigit()||ch=='-'}.take(18)},modifier=Modifier.fillMaxWidth(),label={Text("Seed (اختیاری برای خروجی نزدیک‌تر)")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
             }else Text("پارامترهای تنوع و Seed فقط برای مدل‌های OpenRouter اعمال می‌شوند.",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.bodySmall)
@@ -429,7 +429,7 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
                     if(duration==null||duration !in min..max){status="مدت انتخابی خارج از محدوده مجاز این مدل است.";return@Button}
                 }
                 val prompt=buildString{
-                    append("Create a \${if(vocal=="جلوه صوتی")"sound effect" else "music track"} in $style style. ")
+                    append("Create a ${if(vocal=="جلوه صوتی")"sound effect" else "music track"} in $style style. ")
                     append("Mood: $mood. Instruments and sound design: $instruments. ")
                     if(bpm.isNotBlank())append("Tempo: $bpm BPM. ")
                     if(vocal=="بی‌کلام")append("Instrumental only, no vocals, no lyrics. ")
@@ -453,10 +453,10 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
                     }.onSuccess{result->
                         generated=result
                         config.saveModelFor("music",model)
-                        val file=java.io.File(context.cacheDir,"supra_music_\${System.currentTimeMillis()}.\${result.format}")
+                        val file=java.io.File(context.cacheDir,"supra_music_${System.currentTimeMillis()}.${result.format}")
                         withContext(Dispatchers.IO){file.writeBytes(result.bytes)}
                         tempFile=file
-                        status="ساخت موسیقی کامل شد • \${result.bytes.size/1024} KB • \${result.format.uppercase()}"
+                        status="ساخت موسیقی کامل شد • ${result.bytes.size/1024} KB • ${result.format.uppercase()}"
                         onMessage("فایل موسیقی جدید آماده شد.")
                     }.onFailure{err->status=err.message?:"ساخت موسیقی ناموفق بود."}
                     generating=false
@@ -474,8 +474,8 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
             Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630)),shape=RoundedCornerShape(16.dp)){
                 Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                     Text("خروجی آماده است",color=Color.White,fontWeight=FontWeight.Bold)
-                    Text("مدل: \${result.model} • حجم: \${result.bytes.size/1024} KB"+(result.seconds?.let{" • مدت: \${it.toInt()} ثانیه"}.orEmpty()),color=Color(0xFFBFC7D2),style=MaterialTheme.typography.bodySmall)
-                    if(result.text.isNotBlank())Text("متن/توضیح برگشتی مدل: \${result.text}",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
+                    Text("مدل: ${result.model} • حجم: ${result.bytes.size/1024} KB"+(result.seconds?.let{" • مدت: ${it.toInt()} ثانیه"}.orEmpty()),color=Color(0xFFBFC7D2),style=MaterialTheme.typography.bodySmall)
+                    if(result.text.isNotBlank())Text("متن/توضیح برگشتی مدل: ${result.text}",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         OutlinedButton(onClick={
                             val file=tempFile
@@ -490,10 +490,10 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
                         },modifier=Modifier.weight(1f)){Icon(Icons.Default.PlayArrow,null);Text("پخش")}
                         OutlinedButton(onClick={stopPreview()},modifier=Modifier.weight(1f)){Icon(Icons.Default.Stop,null);Text("توقف")}
                     }
-                    Button(onClick={saveLauncher.launch("Supra-Music-\${System.currentTimeMillis()}.\${result.format}")},modifier=Modifier.fillMaxWidth()){
-                        Icon(Icons.Default.Download,null);Text("ذخیره فایل \${result.format.uppercase()}")
+                    Button(onClick={saveLauncher.launch("Supra-Music-${System.currentTimeMillis()}.${result.format}")},modifier=Modifier.fillMaxWidth()){
+                        Icon(Icons.Default.Download,null);Text("ذخیره فایل ${result.format.uppercase()}")
                     }
-                    if(result.requestId.isNotBlank())Text("شناسه درخواست: \${result.requestId}",color=Color(0xFF8D96A4),style=MaterialTheme.typography.labelSmall)
+                    if(result.requestId.isNotBlank())Text("شناسه درخواست: ${result.requestId}",color=Color(0xFF8D96A4),style=MaterialTheme.typography.labelSmall)
                 }
             }
         }
