@@ -676,11 +676,11 @@ fun NaeemApp(store: SecureConfigStore) {
         val captured = journal.captureNarrative(question)
         if (captured.size >= 2) {
             val categories = captured.map { it.category }.distinct().joinToString("، ")
-            return "روایتت به روزنگار هوشمند اضافه شد. \${captured.size} مورد در این دسته‌ها ثبت شد: $categories.\nبرای ثبت جزئیات تخصصی یا اصلاح هر مورد، می‌توانی وارد فضای مربوط شوی."
+            return "روایتت به روزنگار هوشمند اضافه شد. ${captured.size} مورد در این دسته‌ها ثبت شد: $categories.\nبرای ثبت جزئیات تخصصی یا اصلاح هر مورد، می‌توانی وارد فضای مربوط شوی."
         }
         return when (val resolution = PersianAssistantIntentResolver.resolve(question, TravelStore(context).load())) {
             AssistantIntentResolution.NoMatch -> if (captured.isNotEmpty()) {
-                "این مورد در روزنگار هوشمند، در بخش «\${captured.first().category}» ثبت شد."
+                "این مورد در روزنگار هوشمند، در بخش «${captured.first().category}» ثبت شد."
             } else null
             is AssistantIntentResolution.Clarify -> resolution.question
             is AssistantIntentResolution.Ready -> when (val routed = assistantRouter.route(resolution.action)) {
