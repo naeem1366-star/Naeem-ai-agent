@@ -1678,11 +1678,16 @@ fun NaeemApp(
                 title = { Text("تنظیمات اتصال", color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("درگاه اتصال")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = { baseUrl = "https://netarz.ir/api/ai/v1"; model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("نت‌ارز", color = Gold) }
+                            OutlinedButton(onClick = { baseUrl = "https://api.gapgpt.ir/v1"; model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("GapGPT", color = Gold) }
+                        }
                         Text("نشانی سرویس (Base URL)")
                         OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
                         Text("نام مدل گفتگو")
                         OutlinedTextField(model, { model = it }, singleLine = true)
-                        Text("مدل ساخت تصویر در GapGPT")
+                        Text("شناسه مدل ساخت تصویر")
                         OutlinedTextField(imageModel, { imageModel = it }, singleLine = true)
                         Button(
                             onClick = {
@@ -1691,7 +1696,7 @@ fun NaeemApp(
                                 scope.launch {
                                     try {
                                         availableModels = client.fetchModels(baseUrl, apiKey)
-                                        providerTestStatus = "اتصال موفق؛ " + availableModels.size + " مدل دریافت شد."
+                                        providerTestStatus = "اتصال موفق؛ " + availableModels.size + " شناسه مدل دریافت شد."
                                     } catch (e: Exception) {
                                         providerTestStatus = e.message ?: "آزمایش اتصال ناموفق بود."
                                     } finally {
@@ -1717,7 +1722,7 @@ fun NaeemApp(
                         }
                         Text("کلید API")
                         OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
-                        Text("کلید به‌صورت رمزگذاری‌شده روی همین گوشی ذخیره می‌شود.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                        Text("هشدار امنیتی: رمزگذاری گوشی مفید است، اما طبق توصیه نت‌ارز کلید API نباید در نسخه عمومی اپ قرار بگیرد. برای انتشار امن باید درخواست‌ها از سرور واسط اختصاصی عبور کنند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD28A))
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text("پشتیبان‌گیری و بازیابی", color = Gold, fontWeight = FontWeight.SemiBold)
                         Text("از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
