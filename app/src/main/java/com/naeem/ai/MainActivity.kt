@@ -1696,7 +1696,7 @@ fun NaeemApp(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:", color = Color.White)
-                        Text("آدرس سرور: \${config.baseUrl}", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall)
+                        Text("آدرس سرور: ${config.baseUrl}", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall)
                         Text("کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
                         config.chatModel?.let { Text("مدل چت: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
                         config.imageModel?.let { Text("مدل تصویر: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
