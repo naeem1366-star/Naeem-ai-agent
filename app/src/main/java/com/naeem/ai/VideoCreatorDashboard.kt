@@ -4,8 +4,14 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,65 +19,138 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MovieCreation
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-private data class FreeVideoProvider(
-    val name: String,
-    val detail: String,
-    val freeMode: String,
-    val url: String,
-    val note: String
-)
+private const val PIXVERSE_URL = "https://app.pixverse.ai/"
+private const val VIDEO_WEEKLY_LIMIT = 3
+private const val VIDEO_WEEK_MS = 7L * 24L * 60L * 60L * 1000L
+private const val VIDEO_PREFS = "supra_free_video_quota"
+private const val VIDEO_ATTEMPTS_KEY = "attempt_timestamps"
+
+private fun videoDisplayName(context: Context, uri: Uri): String {
+    return runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+    }.getOrNull()?.takeIf { it.isNotBlank() } ?: "فایل انتخاب‌شده"
+}
+
+private fun readVideoAttempts(context: Context): List<Long> {
+    val raw = context.getSharedPreferences(VIDEO_PREFS, Context.MODE_PRIVATE)
+        .getString(VIDEO_ATTEMPTS_KEY, "") ?: ""
+    val cutoff = System.currentTimeMillis() - VIDEO_WEEK_MS
+    return raw.split(",").mapNotNull { it.toLongOrNull() }.filter { it > cutoff }
+}
 
 @Composable
 fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences(VIDEO_PREFS, Context.MODE_PRIVATE) }
     var prompt by remember { mutableStateOf(initialPrompt) }
-    val providers = listOf(
-        FreeVideoProvider(
-            "Wan2.Video",
-            "گزینه اصلی؛ تبدیل متن یا تصویر به ویدیو با مدل‌های Wan و LTX",
-            "رایگان با صف عمومی؛ بدون ثبت‌نام طبق توضیح سرویس",
-            "https://wan2.video/",
-            "ممکن است صف انتظار و محدودیت استفاده داشته باشد. برای عکس‌های خصوصی یا حساس استفاده نکن."
-        ),
-        FreeVideoProvider(
-            "Raphael AI",
-            "گزینه جایگزین؛ ساخت ویدیوی کوتاه از متن یا تصویر",
-            "مدل رایگان MiniMax H3 Turbo با خروجی پایه ۴ ثانیه و 480p",
-            "https://raphael.app/ai-video-generator",
-            "شرایط رایگان ممکن است تغییر کند؛ پیش از Generate مطمئن شو مدل رایگان انتخاب شده و هزینه‌ای نمایش داده نمی‌شود."
-        )
-    )
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var outputUri by remember { mutableStateOf<Uri?>(null) }
+    var outputName by remember { mutableStateOf("") }
+    var quality by remember { mutableStateOf("720p") }
+    var attempts by remember { mutableStateOf(readVideoAttempts(context)) }
 
-    fun openProvider(provider: FreeVideoProvider) {
-        runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(provider.url)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-        }.onFailure {
-            Toast.makeText(context, "مرورگر در دسترس نیست.", Toast.LENGTH_SHORT).show()
+    val remainingAttempts = (VIDEO_WEEKLY_LIMIT - readVideoAttempts(context).size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            imageUri = uri
+        }
+    }
+    val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            outputUri = uri
+            outputName = videoDisplayName(context, uri)
+        }
+    }
+
+    val imageBitmap by produceState<Bitmap?>(initialValue = null, imageUri) {
+        value = imageUri?.let { uri ->
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        val options = BitmapFactory.Options().apply { inSampleSize = 3 }
+                        BitmapFactory.decodeStream(stream, null, options)
+                    }
+                }.getOrNull()
+            }
+        }
+    }
+
+    fun saveAttemptAndLaunch() {
+        val now = System.currentTimeMillis()
+        val recent = readVideoAttempts(context).toMutableList()
+        if (recent.size >= VIDEO_WEEKLY_LIMIT) {
+            attempts = recent
+            Toast.makeText(context, "سهمیه هفتگی تمام شده؛ بعد از گذشت ۷ روز دوباره آزاد می‌شود.", Toast.LENGTH_LONG).show()
+            return
+        }
+        recent.add(now)
+        prefs.edit().putString(VIDEO_ATTEMPTS_KEY, recent.joinToString(",")).apply()
+        attempts = recent
+
+        if (prompt.isNotBlank()) {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Supra video prompt", prompt.trim()))
+        }
+
+        if (imageUri != null) {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_STREAM, imageUri)
+                putExtra(Intent.EXTRA_TEXT, prompt.trim())
+                clipData = ClipData.newUri(context.contentResolver, "Supra reference image", imageUri!!)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            runCatching {
+                context.startActivity(Intent.createChooser(shareIntent, "ارسال عکس و توضیح به سرویس ویدیو"))
+            }.onFailure {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL))) }
+                    .onFailure { Toast.makeText(context, "بازکردن سرویس ممکن نشد.", Toast.LENGTH_SHORT).show() }
+            }
+        } else {
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL))) }
+                .onFailure { Toast.makeText(context, "مرورگر در دسترس نیست.", Toast.LENGTH_SHORT).show() }
         }
     }
 
     fun copyPrompt() {
         if (prompt.isBlank()) {
-            Toast.makeText(context, "اول توضیح ویدیوت را بنویس.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "اول توضیح حرکت را بنویس.", Toast.LENGTH_SHORT).show()
             return
         }
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Video prompt", prompt.trim()))
-        Toast.makeText(context, "پرامپت کپی شد؛ در سرویس ویدیو جای‌گذاری کن.", Toast.LENGTH_LONG).show()
+        clipboard.setPrimaryClip(ClipData.newPlainText("Supra video prompt", prompt.trim()))
+        Toast.makeText(context, "توضیح ویدیو کپی شد.", Toast.LENGTH_SHORT).show()
     }
 
     Column(
@@ -85,65 +164,67 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
             }
             Column(Modifier.weight(1f)) {
                 Text("استودیو ساخت ویدیو", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                Text("ابزارهای رایگان؛ بدون کلید API", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+                Text("ساخت ویدیو از عکس و متن؛ مسیر رایگان", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.Default.MovieCreation, contentDescription = null, tint = Color(0xFFD4D9E0), modifier = Modifier.size(27.dp))
         }
 
         Surface(
-            color = Color(0xFF18202B),
+            color = Color(0xFF17251F),
             shape = RoundedCornerShape(17.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF344253))
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF365C48))
         ) {
-            Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("چطور کار می‌کند؟", color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Supra AI تو را به صفحه ساخت ویدیو در مرورگر می‌برد. متن یا تصویر را آنجا وارد می‌کنی و فایل MP4 را از همان سرویس می‌گیری. چون سرویس‌ها API رایگان و عمومی ارائه نمی‌کنند، ساخت ویدیو مستقیماً روی سرور Supra AI انجام نمی‌شود.",
-                    color = Color(0xFFB8C3D1), style = MaterialTheme.typography.bodySmall
+            Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("سهمیه این دستگاه", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    Text("$remainingAttempts از $VIDEO_WEEKLY_LIMIT تلاش باقی‌مانده", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
+                }
+                LinearProgressIndicator(
+                    progress = { remainingAttempts.toFloat() / VIDEO_WEEKLY_LIMIT },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF8BC6A0),
+                    trackColor = Color(0xFF34463C)
                 )
+                Text("۳ بار شروع فرایند در هر بازه ۷ روزه. این شمارنده روی همین گوشی ذخیره می‌شود و سهمیه PixVerse را کنترل نمی‌کند.", color = Color(0xFFB8C3D1), style = MaterialTheme.typography.labelSmall)
             }
         }
 
-        Text("سرویس‌های پیشنهادی", color = Color.White, fontWeight = FontWeight.Bold)
-        providers.forEachIndexed { index, provider ->
-            Surface(
-                color = Color(0xFF171C24),
-                shape = RoundedCornerShape(17.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (index == 0) Color(0xFF7189A8) else Color(0xFF343C48))
-            ) {
-                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(provider.name, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.weight(1f))
-                        if (index == 0) Surface(color = Color(0xFF263B32), shape = RoundedCornerShape(20.dp)) {
-                            Text("پیشنهاد اول", color = Color(0xFFB9E5C9), modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
-                        }
+        Text("۱. عکس مرجع", color = Color.White, fontWeight = FontWeight.Bold)
+        if (imageUri == null) {
+            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Image, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("انتخاب عکس از گوشی")
+            }
+        } else {
+            Surface(color = Color(0xFF171C24), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    if (imageBitmap != null) {
+                        Image(
+                            bitmap = imageBitmap!!.asImageBitmap(),
+                            contentDescription = "عکس مرجع",
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 230.dp),
+                            contentScale = ContentScale.Fit
+                        )
                     }
-                    Text(provider.detail, color = Color(0xFFD1D7E0), style = MaterialTheme.typography.bodySmall)
-                    Text(provider.freeMode, color = Color(0xFFB9D9C5), style = MaterialTheme.typography.labelMedium)
-                    Text(provider.note, color = Color(0xFF9DA8B7), style = MaterialTheme.typography.labelSmall)
-                    Button(
-                        onClick = { openProvider(provider) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4D9E0), contentColor = Color(0xFF10151C)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("باز کردن سرویس")
-                        Spacer(Modifier.width(7.dp))
-                        Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Text(videoDisplayName(context, imageUri!!), color = Color.White, style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }, modifier = Modifier.weight(1f)) {
+                            Text("تعویض عکس")
+                        }
+                        TextButton(onClick = { imageUri = null }) { Text("حذف") }
                     }
                 }
             }
         }
 
-        Divider(color = Color(0xFF343C48))
-        Text("دفترچه پرامپت ویدیو", color = Color.White, fontWeight = FontWeight.Bold)
-        Text("ایده و حرکت دوربین را اینجا بنویس؛ بعد کپی کن و در سرویس انتخابی قرار بده.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+        Text("۲. توضیح حرکت و دوربین", color = Color.White, fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = prompt,
             onValueChange = { prompt = it },
             modifier = Modifier.fillMaxWidth().heightIn(min = 130.dp),
-            placeholder = { Text("مثلاً: دوربین آرام به سمت ویلا حرکت کند، درخت‌ها با باد ملایم تکان بخورند و نور عصر روی نما تغییر کند...") },
+            placeholder = { Text("مثلاً: دوربین آرام به سمت سوژه حرکت کند، نور طبیعی تغییر کند و جزئیات اصلی تصویر ثابت بمانند...") },
             minLines = 4,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
@@ -158,10 +239,67 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         OutlinedButton(onClick = { copyPrompt() }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.ContentCopy, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("کپی پرامپت")
+            Text("کپی توضیح حرکت")
         }
+
+        Text("۳. تنظیمات خروجی", color = Color.White, fontWeight = FontWeight.Bold)
+        Surface(color = Color(0xFF171C24), shape = RoundedCornerShape(15.dp)) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("کیفیت پیش‌فرض", color = Color(0xFFB8C3D1), style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = quality == "720p", onClick = { quality = "720p" }, label = { Text("720p") })
+                    FilterChip(selected = quality == "540p", onClick = { quality = "540p" }, label = { Text("540p") })
+                }
+                Text("نسبت تصویر پیشنهادی: 9:16  •  مدت پیشنهادی: ۵ ثانیه", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                Text("توجه: پلن رایگان PixVerse در حال حاضر ممکن است به 540p محدود باشد؛ انتخاب 720p در Supra تضمین نمی‌کند سرویس بیرونی آن را رایگان ارائه کند.", color = Color(0xFFE5C58E), style = MaterialTheme.typography.labelSmall)
+            }
+        }
+
+        Button(
+            onClick = { saveAttemptAndLaunch() },
+            enabled = remainingAttempts > 0 && (imageUri != null || prompt.isNotBlank()),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4D9E0), contentColor = Color(0xFF10151C)),
+            shape = RoundedCornerShape(13.dp)
+        ) {
+            Icon(Icons.Default.OpenInNew, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("شروع ساخت در PixVerse")
+        }
+        Text("اگر گزینه PixVerse در پنجره اشتراک‌گذاری نبود، عکس را در وب‌سایت بارگذاری و متن کپی‌شده را در کادر Prompt جای‌گذاری کن.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.labelSmall)
+
+        Divider(color = Color(0xFF343C48))
+        Text("۴. واردکردن ویدیوی نهایی", color = Color.White, fontWeight = FontWeight.Bold)
+        Text("پس از ساخت و دانلود MP4 از PixVerse، آن را اینجا انتخاب کن تا فایل خروجی در Supra ثبت شود.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = { outputPicker.launch(arrayOf("video/mp4", "video/*")) }, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.UploadFile, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("انتخاب ویدیوی ساخته‌شده (MP4)")
+        }
+        if (outputUri != null) {
+            Surface(color = Color(0xFF17251F), shape = RoundedCornerShape(13.dp)) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF8BC6A0))
+                    Spacer(Modifier.width(8.dp))
+                    Text(outputName, color = Color.White, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            OutlinedButton(
+                onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "video/mp4"
+                        putExtra(Intent.EXTRA_STREAM, outputUri)
+                        clipData = ClipData.newUri(context.contentResolver, outputName, outputUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    runCatching { context.startActivity(Intent.createChooser(send, "اشتراک ویدیوی Supra")) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("اشتراک ویدیوی خروجی") }
+        }
+
         Text(
-            "نکته حریم خصوصی: عکس‌ها و متن‌ها مستقیماً به سرویس انتخابی فرستاده می‌شوند؛ قبل از بارگذاری، سیاست حریم خصوصی همان سرویس را بررسی کن.",
+            "حریم خصوصی: عکس و متن با انتخاب تو به سرویس بیرونی فرستاده می‌شوند. سهمیه سه‌تایی فقط روی همین نصب برنامه ذخیره می‌شود؛ برای سهمیه ضدتقلب و یکسان بین چند گوشی، سرور اختصاصی لازم است.",
             color = Color(0xFF8793A2), style = MaterialTheme.typography.labelSmall
         )
         Spacer(Modifier.height(18.dp))
