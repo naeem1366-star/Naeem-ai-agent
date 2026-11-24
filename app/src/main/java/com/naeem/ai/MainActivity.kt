@@ -734,7 +734,7 @@ fun NaeemApp(store: SecureConfigStore) {
 
     suspend fun routeAssistantIntent(question: String): String? {
         val journal = DailyJournalStore(context)
-        val captured = journal.captureNarrative(question)
+        val captured = if (question.contains("روزنگار") || question.contains("گزارش روزانه")) emptyList() else journal.captureNarrative(question)
         if (captured.size >= 2) {
             val categories = captured.map { it.category }.distinct().joinToString("، ")
             return "روایتت به روزنگار هوشمند اضافه شد. ${captured.size} مورد در این دسته‌ها ثبت شد: $categories.\nبرای ثبت جزئیات تخصصی یا اصلاح هر مورد، می‌توانی وارد فضای مربوط شوی."
