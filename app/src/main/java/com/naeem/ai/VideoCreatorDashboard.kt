@@ -34,9 +34,9 @@ private data class FreeVideoProvider(
 )
 
 @Composable
-fun VideoCreatorDashboard(onClose: () -> Unit) {
+fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     val context = LocalContext.current
-    var prompt by remember { mutableStateOf("") }
+    var prompt by remember { mutableStateOf(initialPrompt) }
     val providers = listOf(
         FreeVideoProvider(
             "Wan2.Video",
