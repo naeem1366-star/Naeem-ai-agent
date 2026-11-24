@@ -47,6 +47,42 @@ object PersianAssistantIntentResolver {
         if (text.contains("حافظه") && listOf("چی", "لیست", "یادداشت").any { text.contains(it) })
             return ready(AssistantModule.MEMORY, "list", ActionAccess.READ)
 
+        // Explicitly cancel an existing trip only after the router asks for confirmation.
+        if (text.contains("سفر") && listOf("نمیخوام", "نمی خواهم", "لغو", "کنسل", "انصراف").any { text.contains(it) }) {
+            if (trips.isEmpty()) return AssistantIntentResolution.Clarify("سفری در فهرستت پیدا نکردم که لغوش کنیم. منظورت کدام سفر است؟")
+            val destinationHint = Regex("""(?:سفر|رفتن)\s+(?:به\s+)?([آ-یء\s‌-]{2,30})""").find(raw)?.groupValues?.get(1)?.trim()
+            val matches = if (destinationHint.isNullOrBlank()) trips else trips.filter {
+                normalize(it.destination).contains(normalize(destinationHint)) ||
+                    normalize(it.title).contains(normalize(destinationHint))
+            }
+            val trip = when {
+                matches.size == 1 -> matches.first()
+                matches.isEmpty() -> return AssistantIntentResolution.Clarify("سفر موردنظرت را پیدا نکردم. مقصد یا عنوان دقیق سفر را بگو.")
+                else -> return AssistantIntentResolution.Clarify("چند سفر ثبت شده؛ بگو کدام سفر را می‌خواهی لغو کنی؟")
+            }
+            return ready(AssistantModule.TRAVEL, "delete_trip", ActionAccess.WRITE, mapOf("trip_id" to trip.id))
+        }
+
+        // Create a trip only when the user clearly expresses an intention to go somewhere.
+        if ((text.contains("میخوام") || text.contains("قصد دارم") || text.contains("برنامه دارم")) &&
+            (text.contains("برم") || text.contains("بروم") || text.contains("سفر کنم"))) {
+            val destination = Regex("""(?:برم|بروم|سفر کنم به|مسافرت کنم به)\s+(?:به\s+)?(.+)$""")
+                .find(text)?.groupValues?.get(1)?.trim()
+                ?.replace(Regex("""(آخر هفته|این هفته|هفته آینده|هفته بعد|فردا|پس فردا|امروز).*?$"""), "")
+                ?.trim(' ', '،', '.', '؟')
+            if (destination.isNullOrBlank()) return AssistantIntentResolution.Clarify("مقصد سفرت کجاست؟ مثلاً بگو «می‌خوام آخر هفته برم شیراز».")
+            val dates = when {
+                text.contains("آخر هفته") -> "آخر هفته"
+                text.contains("هفته آینده") || text.contains("هفته بعد") -> "هفته آینده"
+                text.contains("پس فردا") -> "پس‌فردا"
+                text.contains("فردا") -> "فردا"
+                else -> "تاریخ ثبت نشده"
+            }
+            return ready(AssistantModule.TRAVEL, "create_trip", ActionAccess.WRITE, mapOf(
+                "title" to "سفر به $destination", "destination" to destination, "dates" to dates
+            ))
+        }
+
         if (text.contains("سفر") && listOf("هزینه", "خرج", "پرداخت").any { text.contains(it) }) {
             if (hasAmbiguousToman(text)) return AssistantIntentResolution.Clarify("منظورت مبلغ واقعی به تومان است یا هزار تومان؟ مثلاً «۲۰۰ تومان» یا «۲۰۰ هزار تومان»؟")
             val amount = parseAmount(text) ?: return AssistantIntentResolution.Clarify("مبلغ هزینهٔ سفر را با واحد مشخص بگو؛ مثلاً «۲۵۰ هزار تومان»." )
@@ -238,6 +274,15 @@ class TravelAssistantTool(context: Context) : AssistantTool {
     private val store = TravelStore(context)
     override suspend fun validate(action: AssistantAction): ActionValidation = when (action.operation) {
         "list" -> ActionValidation.Valid
+        "create_trip" -> when {
+            action.parameters["destination"].isNullOrBlank() -> ActionValidation.NeedsClarification("مقصد سفر را مشخص کن.")
+            action.parameters["title"].isNullOrBlank() -> ActionValidation.NeedsClarification("عنوان سفر را مشخص کن.")
+            store.load().any { it.destination.equals(action.parameters["destination"], ignoreCase = true) && it.dates == action.parameters["dates"] } ->
+                ActionValidation.NeedsClarification("سفری با همین مقصد و تاریخ از قبل ثبت شده است.")
+            else -> ActionValidation.Valid
+        }
+        "delete_trip" -> if (store.load().any { it.id == action.parameters["trip_id"] }) ActionValidation.Valid
+            else ActionValidation.NeedsClarification("سفر موردنظر پیدا نشد؛ فهرست سفرها را بررسی کن.")
         "add_expense" -> {
             val trip = store.load().firstOrNull { it.id == action.parameters["trip_id"] }
             when {
@@ -255,6 +300,24 @@ class TravelAssistantTool(context: Context) : AssistantTool {
         val number = NumberFormat.getNumberInstance(Locale("fa", "IR"))
         return when (action.operation) {
             "list" -> AssistantToolResult(true, if (trips.isEmpty()) "هنوز سفری ثبت نشده." else trips.joinToString("\n") { "• " + it.title + " — " + it.destination + "، " + it.expenses.size + " هزینه" })
+            "create_trip" -> {
+                val trip = LocalTrip(
+                    UUID.randomUUID().toString(),
+                    action.parameters.getValue("title"),
+                    action.parameters.getValue("destination"),
+                    action.parameters["dates"].orEmpty().ifBlank { "تاریخ ثبت نشده" },
+                    listOf("من"),
+                    emptyList()
+                )
+                store.save(listOf(trip) + trips)
+                AssistantToolResult(true, "سفر «" + trip.title + "» به مقصد " + trip.destination + " در بخش سفرها ساخته شد.")
+            }
+            "delete_trip" -> {
+                val trip = trips.firstOrNull { it.id == action.parameters["trip_id"] }
+                    ?: return AssistantToolResult(false, "سفر موردنظر دیگر وجود ندارد.")
+                store.save(trips.filterNot { it.id == trip.id })
+                AssistantToolResult(true, "سفر «" + trip.title + "» و هزینه‌های ثبت‌شده‌اش حذف شد.")
+            }
             "add_expense" -> {
                 val trip = trips.first { it.id == action.parameters["trip_id"] }
                 val expense = TripExpense(UUID.randomUUID().toString(), action.parameters.getValue("title"), action.parameters.getValue("amount").toLong(), action.parameters.getValue("payer"))
