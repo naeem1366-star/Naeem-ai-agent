@@ -188,7 +188,7 @@ object PersianAssistantIntentResolver {
     }
 
     private fun parseGrams(text: String): Int? {
-        val numeric = Regex("""(\\d+(?:\\.\\d+)?)\\s*(?:گرم|g)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
+        val numeric = Regex("""(\d+(?:\.\d+)?)\s*(?:گرم|g)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
         if (numeric != null) return numeric.toInt().takeIf { it > 0 }
         if (text.contains("نیم کیلو")) return 500
         val words = mapOf("صد" to 100, "دویست" to 200, "سیصد" to 300, "چهارصد" to 400, "پانصد" to 500, "ششصد" to 600, "هفتصد" to 700, "هشتصد" to 800, "نهصد" to 900, "یک کیلو" to 1000, "یه کیلو" to 1000)
