@@ -277,8 +277,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             Text(
                 "دستیار هوشمند نعیم؛ بیشتر از یک پاسخ‌گو",
                 color = silver,
-                fontSize = 18.sp,
-                lineHeight = 22.sp,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 softWrap = false
