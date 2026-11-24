@@ -48,7 +48,7 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.MEMORY, "list", ActionAccess.READ)
 
         // Explicitly cancel an existing trip only after the router asks for confirmation.
-        if (text.contains("سفر") && listOf("نمیخوام", "نمی خواهم", "لغو", "کنسل", "انصراف").any { text.contains(it) }) {
+        if (text.contains("سفر") && listOf("نمیخوام", "نمی‌خوام", "نمی خواهم", "نمی‌خواهم", "لغو", "کنسل", "انصراف").any { text.contains(it) }) {
             if (trips.isEmpty()) return AssistantIntentResolution.Clarify("سفری در فهرستت پیدا نکردم که لغوش کنیم. منظورت کدام سفر است؟")
             val destinationHint = Regex("""(?:سفر|رفتن)\s+(?:به\s+)?([آ-یء\s‌-]{2,30})""").find(raw)?.groupValues?.get(1)?.trim()
             val matches = if (destinationHint.isNullOrBlank()) trips else trips.filter {
@@ -64,7 +64,7 @@ object PersianAssistantIntentResolver {
         }
 
         // Create a trip only when the user clearly expresses an intention to go somewhere.
-        if ((text.contains("میخوام") || text.contains("قصد دارم") || text.contains("برنامه دارم")) &&
+        if ((text.contains("میخوام") || text.contains("می‌خوام") || text.contains("قصد دارم") || text.contains("برنامه دارم")) &&
             (text.contains("برم") || text.contains("بروم") || text.contains("سفر کنم"))) {
             val destination = Regex("""(?:برم|بروم|سفر کنم به|مسافرت کنم به)\s+(?:به\s+)?(.+)$""")
                 .find(text)?.groupValues?.get(1)?.trim()
