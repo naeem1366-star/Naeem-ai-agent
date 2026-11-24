@@ -260,9 +260,9 @@ fun FeatureHub(
 @Composable private fun FCard(content:@Composable ColumnScope.()->Unit){Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp),content=content)}}
 @Composable private fun FInput(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier){OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=FG,unfocusedBorderColor=Color(0xFF454954)))}
 
-private data class HLog(val name:String,val kcal:Int,val type:String,val at:Long,val protein:Double=0.0,val carbs:Double=0.0,val fat:Double=0.0)
-private data class FoodInfo(val name:String,val kcal:Double,val protein:Double,val carbs:Double,val fat:Double)
-private val foodBank=listOf(
+internal data class HLog(val name:String,val kcal:Int,val type:String,val at:Long,val protein:Double=0.0,val carbs:Double=0.0,val fat:Double=0.0)
+internal data class FoodInfo(val name:String,val kcal:Double,val protein:Double,val carbs:Double,val fat:Double)
+internal val foodBank=listOf(
  FoodInfo("سینه مرغ پخته",165.0,31.0,0.0,3.6),FoodInfo("تخم مرغ",155.0,13.0,1.1,11.0),
  FoodInfo("برنج سفید پخته",130.0,2.7,28.2,0.3),FoodInfo("نان سنگک",259.0,9.0,52.0,1.5),
  FoodInfo("ماست کم‌چرب",63.0,5.3,7.0,1.6),FoodInfo("موز",89.0,1.1,22.8,0.3),
@@ -270,7 +270,7 @@ private val foodBank=listOf(
  FoodInfo("عدس پخته",116.0,9.0,20.1,0.4),FoodInfo("تن ماهی آبکش‌شده",132.0,29.0,0.0,1.0),
  FoodInfo("شیر کم‌چرب",42.0,3.4,5.0,1.0),FoodInfo("سیب‌زمینی آب‌پز",87.0,1.9,20.1,0.1)
 )
-private class HStore(c:Context){
+internal class HStore(c:Context){
  private val p=c.getSharedPreferences("naeem_health_local",Context.MODE_PRIVATE)
  fun get(k:String,d:String="")=p.getString(k,d)?:d
  fun put(k:String,v:String){p.edit().putString(k,v).apply()}
