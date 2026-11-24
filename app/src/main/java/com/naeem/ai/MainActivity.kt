@@ -22,6 +22,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.animation.core.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
@@ -59,6 +62,8 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -265,7 +270,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
     val silver = Color(0xFFE0E5EC)
     val muted = Color(0xFFB0BAC6)
     Box(Modifier.fillMaxSize().background(
-        Brush.verticalGradient(listOf(Color(0xFF202328), Color(0xFF292D33), Color(0xFF171A1E)))
+        Brush.verticalGradient(colorStops = arrayOf(0.0f to Color(0xFF050608), 0.58f to Color(0xFF050608), 0.82f to Color(0xFF08152F), 1.0f to Color(0xFF142D70)))
     )) {
         Column(
             Modifier.fillMaxSize().navigationBarsPadding().imePadding()
@@ -286,8 +291,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             )
             Text(
                 "می‌فهمد، به خاطر می‌سپارد و با اجازه تو عمل می‌کند.",
-                color = Color(0xFFC2A8E8), style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium
+                color = Color(0xFFC2A8E8), fontSize = 12.sp, lineHeight = 15.sp,
+                maxLines = 1, softWrap = false, fontWeight = FontWeight.Medium
             )
             Surface(
                 color = Color(0xCC171C27), shape = RoundedCornerShape(24.dp),
@@ -313,8 +318,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                     }
                 }
             }
-            Text("یک گفتگو؛ چندین فضای هماهنگ؛ کنترل همیشه دست توست.",
-                color = Color(0xFF9BA7B5), style = MaterialTheme.typography.labelMedium)
+            Text("یک گفتگو؛ چندین فضای هماهنگ؛ کنترل همیشه دست توست.", color = Color(0xFF9BA7B5), fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1, softWrap = false)
 
             Column(
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
@@ -390,6 +394,10 @@ fun NaeemApp(store: SecureConfigStore) {
     val context = LocalContext.current
     val onboardingPrefs = remember { context.getSharedPreferences("naeem_onboarding", Context.MODE_PRIVATE) }
     var tutorialStep by remember { mutableStateOf(if (onboardingPrefs.getBoolean("guided_tour_completed", false)) -1 else 0) }
+    var micTargetBounds by remember { mutableStateOf(Rect.Zero) }
+    var inputTargetBounds by remember { mutableStateOf(Rect.Zero) }
+    var sendTargetBounds by remember { mutableStateOf(Rect.Zero) }
+    var menuTargetBounds by remember { mutableStateOf(Rect.Zero) }
     var showSettings by remember { mutableStateOf(false) }
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
@@ -784,7 +792,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = { showHub = true }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
+                        IconButton(onClick = { showHub = true }, modifier = Modifier.onGloballyPositioned { menuTargetBounds = it.boundsInWindow() }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
                     },
                     actions = {
                         var showQuickMenu by remember { mutableStateOf(false) }
@@ -859,13 +867,13 @@ fun NaeemApp(store: SecureConfigStore) {
                                     }
                                 },
                                 enabled = !busy || conversationMode,
-                                modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape)
+                                modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape).onGloballyPositioned { micTargetBounds = it.boundsInWindow() }
                             ) {
                                 Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
                             }
                             OutlinedTextField(
                                 value = prompt, onValueChange = { prompt = it },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).onGloballyPositioned { inputTargetBounds = it.boundsInWindow() },
                                 placeholder = { Text(if (imageMode) "توضیح تصویری که می‌خواهی بسازم…" else if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", color = Muted) },
                                 maxLines = 4, shape = RoundedCornerShape(22.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -876,7 +884,7 @@ fun NaeemApp(store: SecureConfigStore) {
                             IconButton(
                                 onClick = { sendMessage(false) },
                                 enabled = !busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank()),
-                                modifier = Modifier.size(48.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Gold else Panel, CircleShape)
+                                modifier = Modifier.size(48.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Gold else Panel, CircleShape).onGloballyPositioned { sendTargetBounds = it.boundsInWindow() }
                             ) {
                                 Icon(Icons.Default.Send, contentDescription = if (imageMode) "ساخت تصویر" else "ارسال", tint = if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Ink else Muted)
                             }
