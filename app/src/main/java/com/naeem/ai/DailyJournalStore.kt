@@ -46,7 +46,7 @@ class DailyJournalStore(context: Context) {
     fun captureNarrative(raw: String): List<DailyJournalEntry> {
         val normalized = raw.replace('ي', 'ی').replace('ك', 'ک')
             .replace(Regex("[۰-۹]")) { (it.value[0] - '۰').toString() }
-        val parts = normalized.split(Regex("[،؛.\\n]+|\\bبعدش\\b|\\bبعد از آن\\b|\\bسپس\\b|\\bبعد\\b"))
+        val parts = normalized.split(Regex("[،؛.\\n]+|\\bبعدش\\b|\\bبعد از آن\\b|\\bسپس\\b|\\bبعد\\b|\\s+و\\s+(?=(?:شب|عصر|صبح|ظهر))"))
             .map { it.trim().trim(',', '؛', '،', ' ') }.filter { it.length >= 5 }
         val captured = mutableListOf<DailyJournalEntry>()
         parts.forEach { part ->
