@@ -58,7 +58,11 @@ private fun studioDisplayName(context: Context, uri: Uri): String {
 
 @OptIn(UnstableApi::class)
 @Composable
-fun SupraStudioDashboard(onClose: () -> Unit) {
+fun SupraStudioDashboard(
+    onClose: () -> Unit,
+    onExternalActivityStarted: () -> Unit,
+    onExternalActivityReturned: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clips = remember { mutableStateListOf<StudioClip>() }
@@ -85,6 +89,7 @@ fun SupraStudioDashboard(onClose: () -> Unit) {
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
+        onExternalActivityReturned()
         uris.forEach { uri ->
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -159,12 +164,13 @@ fun SupraStudioDashboard(onClose: () -> Unit) {
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("video/mp4")
     ) { destination ->
+        onExternalActivityReturned()
         if (destination != null) beginExport(destination)
     }
 
     Column(
         Modifier.fillMaxSize().background(Color(0xFF090D13))
-            .verticalScroll(rememberScrollState()).padding(16.dp),
+            .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -214,7 +220,7 @@ fun SupraStudioDashboard(onClose: () -> Unit) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
-                onClick = { importLauncher.launch(arrayOf("video/*")) },
+                onClick = { onExternalActivityStarted(); importLauncher.launch(arrayOf("video/*")) },
                 enabled = !exporting,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCAD8F0), contentColor = Color(0xFF101722)),
@@ -225,7 +231,7 @@ fun SupraStudioDashboard(onClose: () -> Unit) {
                 Text("افزودن ویدیو")
             }
             OutlinedButton(
-                onClick = { if (clips.isNotEmpty()) exportLauncher.launch("SupraStudio.mp4") },
+                onClick = { if (clips.isNotEmpty()) { onExternalActivityStarted(); exportLauncher.launch("SupraStudio.mp4") } },
                 enabled = clips.isNotEmpty() && !exporting,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(13.dp)
