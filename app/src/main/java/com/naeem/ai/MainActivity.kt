@@ -566,6 +566,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showDiscover by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
     var showPodcast by remember { mutableStateOf(false) }
+    var showVideoCreator by remember { mutableStateOf(false) }
     var showTravel by remember { mutableStateOf(false) }
     var showSports by remember { mutableStateOf(false) }
     var showTrail by remember { mutableStateOf(false) }
@@ -1277,6 +1278,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         onDiscover = { showHub = false; showDiscover = true },
                         onMusic = { showHub = false; showMusic = true },
                         onPodcast = { showHub = false; showPodcast = true },
+                        onVideo = { showHub = false; showVideoCreator = true },
                         onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
                         onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
                         onSettings = { showHub = false; showSettings = true },
@@ -1409,6 +1411,13 @@ fun NaeemApp(store: SecureConfigStore) {
             Dialog(onDismissRequest = { showPodcast = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("music") { PodcastDashboard(onClose = { showPodcast = false }) }
+                }
+            }
+        }
+        if (showVideoCreator) {
+            Dialog(onDismissRequest = { showVideoCreator = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    VideoCreatorDashboard(onClose = { showVideoCreator = false })
                 }
             }
         }
