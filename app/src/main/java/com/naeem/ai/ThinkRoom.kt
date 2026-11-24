@@ -109,7 +109,7 @@ fun ThinkRoomScreen(
             Icon(Icons.Default.AutoAwesome, null, tint = ThinkMuted)
         }
         Row(Modifier.fillMaxWidth().background(ThinkCard, RoundedCornerShape(14.dp)).padding(4.dp)) {
-            listOf("هم‌فکری", "پروژه‌ها", "جست‌وجوی گوگل").forEachIndexed { index, label ->
+            listOf("میز تحلیل", "پروژه‌ها").forEachIndexed { index, label ->
                 Box(Modifier.weight(1f).background(if (tab == index) Color(0xFF303641) else Color.Transparent, RoundedCornerShape(11.dp))
                     .clickable { tab = index }.padding(vertical = 11.dp), contentAlignment = Alignment.Center) {
                     Text(label, color = if (tab == index) ThinkText else ThinkMuted, style = MaterialTheme.typography.labelMedium)
@@ -255,24 +255,38 @@ fun ThinkRoomScreen(
                 }
             }
             else -> {
-                Text("جست‌وجو با گوگل", color = ThinkText, fontWeight = FontWeight.SemiBold)
-                Text("صفحه نتایج گوگل مستقیماً داخل اتاق فکر باز می‌شود.", color = ThinkMuted, style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.weight(1f),
-                        placeholder = { Text("چی رو جست‌وجو کنیم؟") }, singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = ThinkText, unfocusedTextColor = ThinkText))
-                    IconButton(onClick = { if (searchQuery.isNotBlank()) webQuery = searchQuery.trim() }) {
-                        Icon(Icons.Default.Search, null, tint = ThinkText)
+                Text("میز تحلیل چندجانبه", color = ThinkText, fontWeight = FontWeight.SemiBold)
+                Text("موضوعت را مطرح کن؛ اتاق فکر آن را از دیدگاه‌های مختلف بررسی می‌کند. جست‌وجوی وب در این مرحله هنوز به موتور تحلیل متصل نیست.", color = ThinkMuted, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("چه موضوعی را بررسی کنیم؟") }, minLines = 2, maxLines = 4)
+                Spacer(Modifier.height(10.dp))
+                listOf("استراتژیست" to "هدف، بازار، منابع و امکان‌پذیری", "طراح" to "راه‌حل‌های خلاقانه و تجربه متفاوت", "منتقد" to "نقاط ضعف، ریسک‌ها و فرض‌های نادرست", "پژوهشگر" to "شواهد و اطلاعات موردنیاز برای راستی‌آزمایی").forEach { (name, desc) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircleOutline, null, tint = ThinkMuted, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Column { Text(name, color = ThinkText); Text(desc, color = ThinkMuted, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                if (webQuery.isBlank()) {
-                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("موضوع موردنظرت را جست‌وجو کن.", color = ThinkMuted)
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = {
+                    val topic = searchQuery.trim()
+                    if (topic.isNotBlank() && !busy) {
+                        busy = true; error = ""; answer = ""; searchQuery = ""
+                        scope.launch {
+                            try {
+                                val promptText = "تو میز تحلیل چندجانبه اتاق فکر هستی. فقط فارسی پاسخ بده. موضوع را در پنج بخش بررسی کن: ۱) تحلیل استراتژیک و امکان‌پذیری ۲) نگاه خلاقانه و راه‌حل‌ها ۳) نقد سخت‌گیرانه، ریسک‌ها و نقاط کور ۴) شواهد و اطلاعات به‌روز موردنیاز برای راستی‌آزمایی ۵) جمع‌بندی بی‌طرفانه و قدم بعدی. فرضیات را از واقعیت جدا کن. اگر جست‌وجوی زنده وب انجام نداده‌ای، هرگز ادعا نکن که منبعی را بررسی کرده‌ای؛ موارد نیازمند بررسی وب را مشخص کن. موضوع: " + topic
+                                answer = ChatClient().send(baseUrl, model, apiKey, promptText)
+                            } catch (e: Exception) { error = e.message ?: "تحلیل انجام نشد." }
+                            finally { busy = false }
+                        }
                     }
-                } else {
-                    GoogleSearchWebView(webQuery, Modifier.fillMaxWidth().weight(1f))
+                }, enabled = !busy && searchQuery.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                    if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Default.AutoAwesome, null)
+                    Spacer(Modifier.width(8.dp)); Text(if (busy) "در حال بررسی چندجانبه…" else "تحلیل چندجانبه موضوع")
+                }
+                if (answer.isNotBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    Card(colors = CardDefaults.cardColors(containerColor = ThinkCard)) { Column(Modifier.padding(14.dp)) { Text("گزارش میز تحلیل", color = ThinkMuted, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(8.dp)); Text(answer, color = ThinkText) } }
                 }
             }
         }
