@@ -19,6 +19,24 @@ object PersianAssistantIntentResolver {
     fun resolve(raw: String, trips: List<LocalTrip> = emptyList()): AssistantIntentResolution {
         val text = normalize(raw)
         if (text.isBlank()) return AssistantIntentResolution.NoMatch
+        // Daily journal intents use the registered assistant tool.
+        if (text.contains("روزنگار") || text.contains("گزارش روزانه") || text.contains("اتفاقات امروز")) {
+            val wantsRead = listOf("نمایش", "نشون بده", "بگو", "چی ثبت", "چه ثبت", "گزارش", "لیست", "ببینم", "بخوان").any { text.contains(it) } || text.contains("امروز") || text.contains("این هفته")
+            if (wantsRead) {
+                val period = if (text.contains("هفته")) "week" else if (text.contains("اخیر") || text.contains("آخرین")) "recent" else "today"
+                return ready(AssistantModule.JOURNAL, "list", ActionAccess.READ, mapOf("period" to period))
+            }
+            val detail = raw.replace(Regex("(?i).*?(?:در روزنگار(?: هوشمند)?|گزارش روزانه)\\s*(?:ثبت کن|اضافه کن|یادداشت کن)?\\s*[:：-]?\\s*"), "").trim()
+            if (detail.isBlank() || detail == raw.trim()) return AssistantIntentResolution.Clarify("چه اتفاقی را در روزنگار ثبت کنم؟ مثلاً: امروز جلسه کاری داشتم.")
+            val category = when {
+                listOf("ورزش", "دوچرخه", "دویدن", "پیاده‌روی", "تمرین").any { text.contains(it) } -> "ورزش"
+                listOf("کار", "جلسه", "پروژه", "مشتری").any { text.contains(it) } -> "کار"
+                listOf("خرید", "هزینه", "پرداخت").any { text.contains(it) } -> "مالی و خرید"
+                listOf("سفر", "طبیعت", "گردش").any { text.contains(it) } -> "سفر و طبیعت"
+                else -> "شخصی"
+            }
+            return ready(AssistantModule.JOURNAL, "add_entry", ActionAccess.WRITE, mapOf("category" to category, "title" to detail.take(48), "detail" to detail))
+        }
 
         if (listOf("یادت باشه", "به خاطر بسپار", "این رو ذخیره کن", "این را ذخیره کن").any { text.contains(it) }) {
             val note = text.replace("یادت باشه", "").replace("به خاطر بسپار", "")
@@ -265,5 +283,37 @@ class MemoryAssistantTool(private val store: AssistantDataStore) : AssistantTool
             AssistantToolResult(true, "این نکته در حافظه ذخیره شد.")
         }
         else -> AssistantToolResult(false, "عملیات حافظه ناشناخته است.")
+    }
+}
+
+class JournalAssistantTool(context: Context) : AssistantTool {
+    override val module = AssistantModule.JOURNAL
+    private val store = DailyJournalStore(context.applicationContext)
+
+    override suspend fun validate(action: AssistantAction): ActionValidation = when (action.operation) {
+        "list" -> ActionValidation.Valid
+        "add_entry" -> if (action.parameters["detail"].isNullOrBlank()) ActionValidation.NeedsClarification("چه اتفاقی را در روزنگار ثبت کنم؟") else ActionValidation.Valid
+        else -> ActionValidation.Invalid("این عملیات روزنگار پشتیبانی نمی‌شود.")
+    }
+
+    override suspend fun execute(action: AssistantAction): AssistantToolResult {
+        return when (action.operation) {
+            "list" -> {
+                val now = System.currentTimeMillis()
+                val rows = when (action.parameters["period"]) {
+                    "week" -> store.report(now - 7L * 24L * 60L * 60L * 1000L, now + 1L)
+                    "recent" -> store.entries().take(10)
+                    else -> store.report(DailyJournalStore.startOfDay(now), now + 1L)
+                }
+                val label = when (action.parameters["period"]) { "week" -> "هفت روز اخیر"; "recent" -> "آخرین رویدادها"; else -> "امروز" }
+                val message = if (rows.isEmpty()) "در روزنگار برای «" + label + "» موردی ثبت نشده است." else "روزنگار " + label + " (" + rows.size + " مورد):\n" + rows.joinToString("\n") { "• " + DailyJournalStore.dateLabel(it.timestamp) + " | " + it.category + " | " + it.title + ": " + it.detail }
+                AssistantToolResult(true, message)
+            }
+            "add_entry" -> {
+                val item = store.add(action.parameters["category"].orEmpty().ifBlank { "شخصی" }, action.parameters["title"].orEmpty().ifBlank { "رویداد روزانه" }, action.parameters.getValue("detail"))
+                AssistantToolResult(true, "رویداد در روزنگار ثبت شد: " + item.category + " — " + item.title)
+            }
+            else -> AssistantToolResult(false, "عملیات روزنگار ناشناخته است.")
+        }
     }
 }
