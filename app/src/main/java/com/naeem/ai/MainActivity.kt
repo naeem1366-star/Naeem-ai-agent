@@ -519,6 +519,7 @@ fun NaeemApp(
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
     var apiKey by remember { mutableStateOf(store.apiKeyFor(store.baseUrl()).ifBlank { store.apiKey() }) }
+    var pendingApiConfig by remember { mutableStateOf<ParsedApiConfig?>(null) }
     var imageModel by remember { mutableStateOf(store.imageModel()) }
     var selectedImageBase64 by remember { mutableStateOf<String?>(null) }
     var selectedImage by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
@@ -893,6 +894,14 @@ fun NaeemApp(
         val imageToSend = selectedImageBase64
         val imagePreview = selectedImage
         if ((question.isBlank() && imageToSend.isNullOrBlank()) || busy) return
+        // Intercept labelled credentials locally before they can enter chat history or leave the device.
+        val parsedApiConfig = if (imageToSend.isNullOrBlank()) ApiConfigTextParser.parse(question) else null
+        if (parsedApiConfig != null) {
+            pendingApiConfig = parsedApiConfig
+            prompt = ""
+            error = ""
+            return
+        }
         val finalQuestion = question.ifBlank { "این تصویر را با جزئیات بررسی و تحلیل کن." }
         val shouldGenerateImage = imageMode || isImageGenerationRequest(finalQuestion)
         prompt = ""
@@ -1676,6 +1685,44 @@ fun NaeemApp(
                     }) { Text("ذخیره", color = Gold) }
                 },
                 dismissButton = { TextButton(onClick = { renameConversationId = null }) { Text("انصراف", color = Muted) } }
+            )
+        }
+
+        pendingApiConfig?.let { config ->
+            AlertDialog(
+                onDismissRequest = { pendingApiConfig = null },
+                containerColor = Panel,
+                title = { Text("تنظیم خودکار API", color = Gold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:", color = Color.White)
+                        Text("آدرس سرور: \${config.baseUrl}", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall)
+                        Text("کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
+                        config.chatModel?.let { Text("مدل چت: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        config.imageModel?.let { Text("مدل تصویر: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        config.videoModel?.let { Text("مدل ویدیو: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        config.speechModel?.let { Text("مدل گفتار: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        Text("کلید به‌صورت رمزگذاری‌شده روی گوشی ذخیره می‌شود و متن حاوی آن وارد تاریخچه چت یا درخواست مدل نمی‌شود.", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val selected = pendingApiConfig ?: return@TextButton
+                        store.save(selected.baseUrl, selected.chatModel ?: model, selected.apiKey)
+                        baseUrl = selected.baseUrl
+                        apiKey = selected.apiKey
+                        selected.chatModel?.let { model = it }
+                        selected.imageModel?.let { imageModel = it; store.saveImageModel(it) }
+                        selected.videoModel?.let { store.saveModelFor("video", it) }
+                        selected.speechModel?.let { store.saveModelFor("audio_tts", it) }
+                        selected.chatModel?.let { store.saveModelFor("chat", it) }
+                        providerTestStatus = "تنظیمات API با موفقیت روی گوشی ذخیره شد."
+                        pendingApiConfig = null
+                    }) { Text("ذخیره امن تنظیمات", color = Gold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingApiConfig = null }) { Text("لغو", color = Muted) }
+                }
             )
         }
 
