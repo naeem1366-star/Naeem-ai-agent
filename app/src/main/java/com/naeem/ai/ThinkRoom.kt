@@ -146,7 +146,7 @@ fun ThinkRoomScreen(
             Icon(Icons.Default.AutoAwesome, null, tint = ThinkMuted)
         }
         Row(Modifier.fillMaxWidth().background(ThinkCard, RoundedCornerShape(14.dp)).padding(4.dp)) {
-            listOf("میز تحلیل", "پروژه‌ها").forEachIndexed { index, label ->
+            listOf("هم‌فکری", "پروژه‌ها", "میز تحلیل").forEachIndexed { index, label ->
                 Box(Modifier.weight(1f).background(if (tab == index) Color(0xFF303641) else Color.Transparent, RoundedCornerShape(11.dp))
                     .clickable { tab = index }.padding(vertical = 11.dp), contentAlignment = Alignment.Center) {
                     Text(label, color = if (tab == index) ThinkText else ThinkMuted, style = MaterialTheme.typography.labelMedium)
@@ -160,7 +160,7 @@ fun ThinkRoomScreen(
                 Text("از چند زاویه به موضوعت نگاه کن", color = ThinkText, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(9.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    listOf("هم‌فکر", "استراتژیست", "طراح", "منتقد").forEach { item ->
+                    listOf("هم‌فکر", "استراتژیست", "طراح", "منتقد", "پژوهشگر").forEach { item ->
                         FilterChip(selected = role == item, onClick = { role = item }, label = { Text(item) })
                     }
                 }
@@ -208,6 +208,7 @@ fun ThinkRoomScreen(
                                         "استراتژیست" -> "در نقش استراتژیست دقیق و واقع‌گرا پاسخ بده؛ بازار، منابع، ریسک‌ها و مسیر اجرا را بررسی کن."
                                         "طراح" -> "در نقش طراح خلاق فکر کن؛ چند راه‌حل متفاوت، تجربه کاربر و جزئیات اجرایی پیشنهاد بده."
                                         "منتقد" -> "در نقش منتقد سخت‌گیر اما منصف پاسخ بده؛ فرض‌های ضعیف، تناقض‌ها، ریسک‌ها و راه اصلاح را روشن کن."
+                                        "پژوهشگر" -> "در نقش پژوهشگر دقیق پاسخ بده؛ ادعاها را از شواهد جدا کن، اطلاعات نامطمئن را مشخص کن و برای راستی‌آزمایی منبع بخواه."
                                         else -> "هم‌فکر عمیق و صریح باش؛ سؤال‌های لازم را مشخص کن، مزایا و معایب را بسنج و پیشنهاد عملی بده."
                                     }
                                     answer = ChatClient().send(baseUrl, model, apiKey,
