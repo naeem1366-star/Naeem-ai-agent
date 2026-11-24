@@ -201,20 +201,21 @@ class MainActivity : FragmentActivity() {
             }
         })
         promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("قفل نعیم ای‌آی")
+            .setTitle("قفل Naeem ai")
             .setSubtitle("برای ورود اثر انگشت یا قفل صفحه گوشی را تأیید کن")
             .setAllowedAuthenticators(authenticators)
             .build()
         val store = SecureConfigStore(this)
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
+        val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        introCompleted.value = false
+        introCompleted.value = appPrefs.getBoolean("app_intro_completed", false)
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             MaterialTheme(typography = naeemTypography()) {
             if (unlocked.value) {
                 if (!introCompleted.value) {
-                    AppIntegrationIntro(onEnter = { introCompleted.value = true })
+                    AppIntegrationIntro(onEnter = { appPrefs.edit().putBoolean("app_intro_completed", true).apply(); introCompleted.value = true })
                 } else if (!profileCompleted.value) {
                     UserProfileSetup(onSave = { name, interests, about, style ->
                         profilePrefs.edit()
@@ -246,7 +247,6 @@ class MainActivity : FragmentActivity() {
         super.onStop()
         if (unlocked.value) {
             unlocked.value = false
-            introCompleted.value = false
             requireAuthentication = true
         }
     }
@@ -372,7 +372,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         else -> "کنترل همیشه دست توست"
     }
     val pageDescription = when (page) {
-        0 -> "اینجا فقط یک صفحه چت نیست؛ یک فضای شخصی برای فکر کردن، برنامه‌ریزی و مدیریت بخش‌های مختلف زندگی و کار توست."
+        0 -> "اینجا شما با یک ابرهوش مصنوعی روبه‌رو هستید؛ فضایی فراتر از یک گفت‌وگوی ساده برای فکر کردن، برنامه‌ریزی و مدیریت بخش‌های مختلف زندگی و کار."
         1 -> "می‌توانی با متن یا صدا با دستیار حرف بزنی. او موضوع را تشخیص می‌دهد و در قابلیت‌های متصل برنامه از ابزار مناسب کمک می‌گیرد."
         2 -> "از سلامت و ورزش تا امور مالی، سفر و ثبت اتفاق‌های روزانه؛ هر موضوع فضای مخصوص خودش را دارد."
         3 -> "برای ایده‌پردازی، یادگیری، خبر، بازار، تصویر، سرگرمی و کشف چیزهای تازه هم فضاهای جداگانه‌ای در نظر گرفته شده."
