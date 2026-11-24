@@ -170,7 +170,7 @@ fun SupraStudioDashboard(
 
     Column(
         Modifier.fillMaxSize().background(Color(0xFF090D13))
-            .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
+            .verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
