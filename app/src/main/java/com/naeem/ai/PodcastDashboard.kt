@@ -1,6 +1,11 @@
 package com.naeem.ai
 
-import android.media.MediaPlayer
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import androidx.core.content.ContextCompat
 import android.text.Html
 import android.util.Xml
 import androidx.compose.foundation.background
@@ -179,41 +184,57 @@ fun PodcastDashboard(onClose:()->Unit){
     var addFeedDialog by remember{mutableStateOf(false)}
     var feedTitle by remember{mutableStateOf("")}
     var feedUrl by remember{mutableStateOf("")}
-    var player by remember{mutableStateOf<MediaPlayer?>(null)}
+    var playerTitle by remember{mutableStateOf("")}
     var current by remember{mutableStateOf<PodcastEpisode?>(null)}
     var playing by remember{mutableStateOf(false)}
     var prepared by remember{mutableStateOf(false)}
     var position by remember{mutableIntStateOf(0)}
     var duration by remember{mutableIntStateOf(0)}
     var playError by remember{mutableStateOf("")}
-    var progressJob by remember{mutableStateOf<Job?>(null)}
+    var seekRequested by remember{mutableStateOf(false)}
     val bg=Color(0xFF0B0E13);val panel=Color(0xFF1B222C);val accent=Color(0xFFDDE5EF);val muted=Color(0xFF9BA8B8)
 
+    fun sendPlaybackAction(action:String, episode:PodcastEpisode?=null, seek:Int?=null) {
+        val intent=Intent(context,PodcastPlaybackService::class.java).setAction(action)
+        episode?.let {
+            intent.putExtra(PodcastPlaybackService.EXTRA_URL,it.audioUrl)
+            intent.putExtra(PodcastPlaybackService.EXTRA_TITLE,it.title)
+            intent.putExtra(PodcastPlaybackService.EXTRA_SHOW,it.showTitle)
+        }
+        seek?.let { intent.putExtra(PodcastPlaybackService.EXTRA_POSITION,it) }
+        if(action==PodcastPlaybackService.ACTION_PLAY) ContextCompat.startForegroundService(context,intent)
+        else context.startService(intent)
+    }
     fun stopPlayer(){
-        progressJob?.cancel();progressJob=null
-        runCatching{player?.stop()};runCatching{player?.release()}
-        player=null;current=null;playing=false;prepared=false;position=0;duration=0
+        sendPlaybackAction(PodcastPlaybackService.ACTION_STOP)
+        current=null;playing=false;prepared=false;position=0;duration=0;playerTitle=""
     }
     fun playEpisode(ep:PodcastEpisode){
-        stopPlayer();playError=""
-        val mp=MediaPlayer();player=mp;current=ep
-        mp.setOnPreparedListener{
-            prepared=true;duration=it.duration.coerceAtLeast(0);it.start();playing=true
-            progressJob=scope.launch{
-                while(playing && player===it){
-                    position=runCatching{it.currentPosition}.getOrDefault(position)
-                    delay(500)
+        playError=""
+        current=ep;playerTitle=ep.title;position=0;duration=0;prepared=false;playing=false
+        sendPlaybackAction(PodcastPlaybackService.ACTION_PLAY,ep)
+    }
+    DisposableEffect(Unit){
+        val receiver=object:BroadcastReceiver(){
+            override fun onReceive(ctx:Context?,intent:Intent?){
+                intent ?: return
+                val errorMessage=intent.getStringExtra("error")
+                if(!errorMessage.isNullOrBlank()){playError=errorMessage;prepared=false;playing=false;return}
+                val url=intent.getStringExtra(PodcastPlaybackService.EXTRA_URL).orEmpty()
+                if(url.isNotBlank() && current?.audioUrl!=url){
+                    current=PodcastEpisode(url,intent.getStringExtra(PodcastPlaybackService.EXTRA_TITLE).orEmpty(),"",url,"","",intent.getStringExtra(PodcastPlaybackService.EXTRA_SHOW).orEmpty())
                 }
+                position=intent.getIntExtra(PodcastPlaybackService.EXTRA_POSITION,0)
+                duration=intent.getIntExtra("duration",0)
+                playing=intent.getBooleanExtra("playing",false)
+                prepared=intent.getBooleanExtra("prepared",false)
             }
         }
-        mp.setOnCompletionListener{playing=false;position=duration}
-        mp.setOnErrorListener{_,what,extra->playError="پخش این فایل ممکن نشد ($what/$extra).";playing=false;true}
-        runCatching{mp.setDataSource(ep.audioUrl);mp.prepareAsync()}.onFailure{
-            playError=it.message?:"آماده‌سازی فایل صوتی ناموفق بود."
-            runCatching{mp.release()};player=null
-        }
+        val filter=IntentFilter(PodcastPlaybackService.ACTION_STATUS)
+        if(Build.VERSION.SDK_INT>=33) context.registerReceiver(receiver,filter,Context.RECEIVER_NOT_EXPORTED)
+        else @Suppress("DEPRECATION") context.registerReceiver(receiver,filter)
+        onDispose{runCatching{context.unregisterReceiver(receiver)}}
     }
-    DisposableEffect(Unit){onDispose{stopPlayer()}}
     fun loadFeed(feed:PodcastFeed){
         selectedFeed=feed;loading=true;error="";episodes=emptyList();savedOnly=false
         scope.launch{
@@ -232,7 +253,7 @@ fun PodcastDashboard(onClose:()->Unit){
                 Text("پادکست",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                 Text("فیدهای عمومی رایگان • پخش مستقیم داخل Supra AI",color=muted,style=MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick={stopPlayer();onClose()}){Icon(Icons.Default.Close,null,tint=accent)}
+            IconButton(onClick={onClose}){Icon(Icons.Default.Close,null,tint=accent)}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(7.dp),verticalAlignment=Alignment.CenterVertically){
             FilterChip(selected=!savedOnly,onClick={savedOnly=false},label={Text("کشف پادکست")})
@@ -276,16 +297,15 @@ fun PodcastDashboard(onClose:()->Unit){
                     Text("در حال پخش",color=muted,style=MaterialTheme.typography.labelSmall)
                     Text(current!!.title,color=Color.White,fontWeight=FontWeight.Bold,maxLines=2)
                     if(playError.isNotBlank())Text(playError,color=Color(0xFFFFB4A9),style=MaterialTheme.typography.bodySmall)
-                    Slider(value=if(duration>0)position.toFloat().coerceIn(0f,duration.toFloat()) else 0f,onValueChange={position=it.toInt()},onValueChangeFinished={runCatching{player?.seekTo(position)}},valueRange=0f..duration.coerceAtLeast(1).toFloat(),enabled=prepared)
+                    Slider(value=if(duration>0)position.toFloat().coerceIn(0f,duration.toFloat()) else 0f,onValueChange={position=it.toInt()},onValueChangeFinished={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=position)},valueRange=0f..duration.coerceAtLeast(1).toFloat(),enabled=prepared)
                     Row(verticalAlignment=Alignment.CenterVertically){
                         Text("%02d:%02d".format(position/60000,(position/1000)%60),color=muted,style=MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.weight(1f))
-                        IconButton(enabled=prepared,onClick={runCatching{player?.seekTo((position-15000).coerceAtLeast(0))}}){Icon(Icons.Default.Replay15,null,tint=accent)}
+                        IconButton(enabled=prepared,onClick={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=(position-15000).coerceAtLeast(0))}){Icon(Icons.Default.Replay15,null,tint=accent)}
                         IconButton(enabled=prepared,onClick={
-                            if(playing){runCatching{player?.pause()};playing=false}
-                            else{runCatching{player?.start()};playing=true}
+                            sendPlaybackAction(PodcastPlaybackService.ACTION_TOGGLE)
                         }){Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(30.dp))}
-                        IconButton(enabled=prepared,onClick={runCatching{player?.seekTo((position+15000).coerceAtMost(duration))}}){Icon(Icons.Default.Forward15,null,tint=accent)}
+                        IconButton(enabled=prepared,onClick={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=(position+15000).coerceAtMost(duration))}){Icon(Icons.Default.Forward15,null,tint=accent)}
                         IconButton(onClick={stopPlayer}){Icon(Icons.Default.Stop,null,tint=accent)}
                         Spacer(Modifier.weight(1f))
                         Text("%02d:%02d".format(duration/60000,(duration/1000)%60),color=muted,style=MaterialTheme.typography.labelSmall)
