@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import android.support.v4.media.MediaMetadataCompat
@@ -96,6 +97,7 @@ class PodcastPlaybackService : Service() {
         duration = 0
         startForeground(NOTIFICATION_ID, buildNotification())
         val mp = MediaPlayer()
+        mp.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK)
         player = mp
         mp.setOnPreparedListener {
             prepared = true
