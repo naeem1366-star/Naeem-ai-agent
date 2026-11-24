@@ -321,99 +321,91 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
     val silver = Color(0xFFE0E5EC)
     val muted = Color(0xFFB0BAC6)
+    val spaces = listOf(
+        "سلامت و تغذیه" to "ثبت وعده‌های غذایی، خوراکی‌ها، کالری و اطلاعات مراقبت روزانه؛ بعضی ثبت‌های تخصصی هنوز به تکمیل اتصال نیاز دارند.",
+        "باشگاه ورزش" to "ثبت تمرین قدرتی و هوازی، مدت، مسافت و رکوردها و پیگیری روند فعالیت.",
+        "دفتر مالی" to "ثبت درآمد و هزینه، دسته‌بندی مخارج، مشاهده تراکنش‌ها و گزارش مالی.",
+        "سفر و هم‌سفرها" to "برنامه‌ریزی مقصد و تاریخ، مدیریت همراهان و ثبت هزینه‌های هر سفر.",
+        "اتاق فکر" to "بررسی ایده‌ها، نقد چندجانبه، تحقیق و تبدیل فکر به پروژه و اقدام.",
+        "به آینده وارد شو" to "۱۲ تجربه فکری برای خلاقیت، تحلیل، تصمیم‌گیری و حل مسئله.",
+        "نوت‌بوک و یادآورها" to "ثبت کارها، زمان‌بندی و دریافت اعلان روی گوشی.",
+        "روایت هفته و ماه" to "جمع‌بندی اطلاعات ثبت‌شده در بخش‌های متصل و روزنگار گفتگو؛ هرچه داده‌ها کامل‌تر باشند گزارش دقیق‌تر می‌شود.",
+        "حافظه هوشمند" to "نگهداری نکته‌هایی که صریحاً می‌خواهی دستیار برای گفتگوهای بعدی به خاطر بسپارد.",
+        "نبض بازار و اخبار" to "فضای بررسی بازار و موضوعات روز؛ دسترسی به داده زنده به منبع و اتصال فعال وابسته است.",
+        "آلبوم تصاویر، سینما و موسیقی" to "مدیریت تصاویر ساخته‌شده، کشف فیلم و موسیقی و پیشنهاد بر اساس سلیقه.",
+        "Naeem Trail، بازی‌ها و تحلیل اینستاگرام" to "ابزارهای طبیعت‌گردی، سرگرمی و بررسی عملکرد شبکه اجتماعی؛ بعضی قابلیت‌های پیشرفته این فضاها هنوز در حال توسعه‌اند."
+    )
     Box(Modifier.fillMaxSize().background(
         Brush.verticalGradient(colorStops = arrayOf(0.0f to Color(0xFF050608), 0.58f to Color(0xFF050608), 0.82f to Color(0xFF08152F), 1.0f to Color(0xFF142D70)))
     )) {
         Column(
             Modifier.fillMaxSize().navigationBarsPadding().imePadding()
-                .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
+                .verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
-            ThinkingOrb(diameter = 246.dp, active = true)
-            Text(
-                "دستیار هوشمند نعیم؛ بیشتر از یک پاسخ‌گو",
-                color = silver,
-                fontSize = 16.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false
-            )
-            Text(
-                "می‌فهمد، به خاطر می‌سپارد و با اجازه تو عمل می‌کند.",
-                color = Color(0xFFC2A8E8), fontSize = 12.sp, lineHeight = 15.sp,
-                maxLines = 1, softWrap = false, fontWeight = FontWeight.Medium
-            )
+            Spacer(Modifier.height(4.dp))
+            ThinkingOrb(diameter = 172.dp, active = true)
+            Text("NAEEM AI", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+            Text("یک ابرنرم‌افزار هوش مصنوعی؛ فراتر از یک چت‌بات", color = silver, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("یک مغز هوشمند، مجموعه‌ای از فضاهای تخصصی و تجربه‌ای یکپارچه برای زندگی و کار.", color = Color(0xFFC2A8E8), style = MaterialTheme.typography.bodyMedium)
             Surface(
-                color = Color(0xCC171C27), shape = RoundedCornerShape(24.dp),
+                color = Color(0xCC171C27), shape = RoundedCornerShape(22.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x554F607A)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(19.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("تفاوت اصلی کجاست؟", color = silver, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "یک همراه دیجیتال برای گفت‌وگو و استفاده از ابزارهای کاربردی زندگی و کار؛ از برنامه‌ریزی و پیگیری کارها تا مدیریت مالی، سلامت و ایده‌پردازی. همه در یک فضای یکپارچه، با کنترل نهایی در دست تو.",
+                        "Naeem AI فقط برای پاسخ دادن به سؤال‌ها ساخته نشده است. وقتی خودت گفتگو یا میکروفون را فعال می‌کنی، می‌تواند گفتار و مفهوم حرف‌هایت را تحلیل کند، موضوع را تشخیص دهد و در قابلیت‌های متصل داخل اپلیکیشن از آن استفاده کند. لازم نیست برای هر موضوع از ابتدا وارد یک فرم جداگانه شوی.",
                         color = muted, style = MaterialTheme.typography.bodyMedium,
                         lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        listOf(
-                            "مالی" to Color(0xFFD8BD83), "سلامت" to Color(0xFF9AD6B0),
-                            "ورزش" to Color(0xFF91BFE8), "سفر" to Color(0xFFA8C99A)
-                        ).forEach { (label, tint) ->
-                            Surface(color = tint.copy(alpha = 0.13f), shape = RoundedCornerShape(50)) {
-                                Text(label, color = tint, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
+                    Divider(color = Color(0x554F607A))
+                    Text("یک مثال از زندگی واقعی", color = silver, fontWeight = FontWeight.Bold)
+                    Text(
+                        "تصور کن آخر روز برای دستیار تعریف می‌کنی: «امروز ساعت ۷ صبح رفتم باشگاه و یک ساعت تمرین کردم؛ برای صبحانه تخم‌مرغ و نان خوردم؛ بعد رفتم سر کار و چند جلسه داشتم؛ ۳ میلیون تومان خرید کردم؛ عصر کمی خوابیدم و شب دوچرخه‌سواری کردم.»",
+                        color = muted, style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
+                    )
+                    Text(
+                        "دستیار می‌تواند بخش‌های مختلف روایت را تشخیص دهد و در روزنگار هوشمند ثبت کند؛ فعالیت ورزشی، تغذیه، کار، خرید و هزینه، استراحت و طبیعت‌گردی هرکدام دسته‌بندی می‌شوند. عملیات مالی و ورزشیِ پشتیبانی‌شده نیز می‌توانند به ابزارهای تخصصی خود متصل شوند. اگر مبلغ، زمان یا موضوعی مبهم باشد، از تو سؤال می‌پرسد و برای اقدام‌های مهم تأیید می‌گیرد.",
+                        color = muted, style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
+                    )
+                    Text(
+                        "با ادامه ثبت روزانه، روایت هفته و ماه می‌تواند تصویری از فعالیت‌ها، تمرین‌ها، هزینه‌ها و اتفاق‌های ثبت‌شده بسازد؛ گزارش‌ها بر اساس داده‌های واقعی ذخیره‌شده‌اند، نه حدس و اطلاعاتی که وارد نکرده‌ای.",
+                        color = muted, style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
+                    )
+                }
+            }
+            Text("فضاهای تخصصی Naeem AI", color = silver, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+            spaces.forEach { (title, detail) ->
+                Surface(color = Color(0xAA171C27), shape = RoundedCornerShape(15.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(title, color = silver, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        Text(detail, color = muted, style = MaterialTheme.typography.bodySmall, lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.3)
                     }
                 }
             }
-            Text("یک گفتگو؛ چندین فضای هماهنگ؛ کنترل همیشه دست توست.", color = Color(0xFF9BA7B5), fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1, softWrap = false)
-
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Text(
-                    "طراحی، ایده‌پردازی و توسعه نرم‌افزار",
-                    color = Color(0xFF9BA7B5),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Normal
-                )
-                Text(
-                    "نعیم دهقانی",
-                    color = Color(0xFFE0E5EC),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    "DESIGNED, CONCEPTUALIZED & DEVELOPED BY",
-                    color = Color(0xFF7F8996),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                        letterSpacing = 0.7.sp
-                    )
-                )
-                Text(
-                    "Naeem Dehghani",
-                    color = Color(0xFFB0BAC6),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                        letterSpacing = 0.2.sp
-                    ),
-                    fontWeight = FontWeight.Medium
-                )
+            Surface(color = Color(0xAA171C27), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("کنترل همیشه دست توست", color = silver, fontWeight = FontWeight.Bold)
+                    Text("میکروفون فقط با انتخاب تو فعال می‌شود؛ شنود دائمی انجام نمی‌شود. اطلاعات مهم پیش از ثبت یا تغییر به تأیید تو می‌رسند. امکاناتی که هنوز کامل نشده‌اند، در خود برنامه مشخص شده‌اند.", color = muted, style = MaterialTheme.typography.bodySmall)
+                }
             }
-
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("طراحی، ایده‌پردازی و توسعه نرم‌افزار", color = Color(0xFF9BA7B5), style = MaterialTheme.typography.labelMedium)
+                Text("نعیم دهقانی", color = silver, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                Text("DESIGNED, CONCEPTUALIZED & DEVELOPED BY", color = Color(0xFF7F8996), style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, letterSpacing = 0.7.sp))
+                Text("Naeem Dehghani", color = muted, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif))
+            }
             Button(
                 onClick = onEnter, modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)),
                 shape = RoundedCornerShape(18.dp)
-            ) { Text("شروع تجربه دستیار هوشمند نعیم", fontWeight = FontWeight.Bold) }
+            ) { Text("شروع تجربه Naeem AI", fontWeight = FontWeight.Bold) }
             Spacer(Modifier.height(8.dp))
         }
     }
@@ -680,8 +672,16 @@ fun NaeemApp(store: SecureConfigStore) {
 
 
     suspend fun routeAssistantIntent(question: String): String? {
+        val journal = DailyJournalStore(context)
+        val captured = journal.captureNarrative(question)
+        if (captured.size >= 2) {
+            val categories = captured.map { it.category }.distinct().joinToString("، ")
+            return "روایتت به روزنگار هوشمند اضافه شد. \${captured.size} مورد در این دسته‌ها ثبت شد: $categories.\nبرای ثبت جزئیات تخصصی یا اصلاح هر مورد، می‌توانی وارد فضای مربوط شوی."
+        }
         return when (val resolution = PersianAssistantIntentResolver.resolve(question, TravelStore(context).load())) {
-            AssistantIntentResolution.NoMatch -> null
+            AssistantIntentResolution.NoMatch -> if (captured.isNotEmpty()) {
+                "این مورد در روزنگار هوشمند، در بخش «\${captured.first().category}» ثبت شد."
+            } else null
             is AssistantIntentResolution.Clarify -> resolution.question
             is AssistantIntentResolution.Ready -> when (val routed = assistantRouter.route(resolution.action)) {
                 is ActionRouteResult.Completed -> {
@@ -1680,12 +1680,10 @@ private fun assistantActionPreview(action: AssistantAction): String {
 private data class GuidedTourItem(val target: String, val title: String, val description: String)
 
 private val guidedTourItems = listOf(
-    GuidedTourItem("گوی هوشمند", "مرکز گفت‌وگو و تحلیل", "از اینجا با دستیار در ارتباطی. می‌توانی سؤال بپرسی، درباره موضوعی گفت‌وگو کنی، تصویر بفرستی یا درخواست ساخت تصویر بدهی. پاسخ‌ها بر اساس مدل و ابزارهای متصل آماده می‌شوند."),
-    GuidedTourItem("میکروفون", "گفت‌وگوی صوتی", "با لمس این دکمه، میکروفون فعال می‌شود و گفتارت به متن تبدیل می‌شود تا دستیار درخواستت را تحلیل کند. دریافت صدا فقط با انتخاب تو شروع می‌شود و شنود دائمی انجام نمی‌شود."),
-    GuidedTourItem("کادر نوشتن پیام", "نوشتن و ارسال درخواست", "درخواستت را اینجا بنویس؛ می‌توانی سؤال، توضیح یک کار یا جزئیات لازم برای بخش‌های مختلف را وارد کنی. برای درخواست‌های طولانی، واضح و مرحله‌به‌مرحله توضیح بده."),
-    GuidedTourItem("ارسال پیام", "فرستادن درخواست برای بررسی", "با این دکمه پیام ارسال می‌شود. دستیار موضوع را تشخیص می‌دهد و پاسخ می‌دهد یا در صورت پشتیبانی، اطلاعات را برای ثبت در بخش مرتبط آماده می‌کند. پیش از ثبت عملیات مهم، خلاصه آن برای تأیید تو نمایش داده می‌شود."),
-    GuidedTourItem("منوی فضاها", "ورود به بخش‌های برنامه", "از این منو به فضاهای اصلی دسترسی داری: سلامت و تغذیه و برنامه ورزشی؛ دفتر مالی و نبض بازار؛ اتاق فکر و به آینده وارد شو؛ سفر و طبیعت‌گردی؛ اخبار، یادآورها و برنامه‌ریزی؛ حافظه و آلبوم تصاویر؛ بازی، سینما، موسیقی و تحلیل اینستاگرام. هر بخش ابزارها و داده‌های مخصوص خودش را دارد و بعضی قابلیت‌ها هنوز در حال توسعه‌اند."),
-    GuidedTourItem("راهنمای شناور", "هر زمان خواستی دوباره آموزش را ببین", "پس از پایان آموزش، این دکمه کوچک همیشه در گوشه صفحه می‌ماند. هر وقت خواستی می‌توانی راهنما را دوباره باز کنی و مراحل آشنایی را مرور کنی.")
+    GuidedTourItem("گوی هوشمند", "گفت‌وگو و درک درخواست", "سؤال بپرس، درباره روزت حرف بزن یا تصویر بفرست. دستیار موضوع را تشخیص می‌دهد و از ابزارهای متصل کمک می‌گیرد."),
+    GuidedTourItem("میکروفون", "صحبت کن، نه فقط تایپ", "با لمس میکروفون گفتارت به متن تبدیل می‌شود. میکروفون فقط با انتخاب تو فعال می‌شود و شنود دائمی وجود ندارد."),
+    GuidedTourItem("منوی فضاها", "ابزار مناسب هر موضوع", "ورزش، تغذیه، مالی، سفر، اتاق فکر، حافظه و بقیه فضاها را از اینجا باز کن. برای نمونه، می‌توانی یک روایت روزانه بگویی تا بخش‌های مختلفش در روزنگار دسته‌بندی شوند."),
+    GuidedTourItem("تأیید و گزارش", "اطلاعاتت را مرور کن", "پیش از عملیات مهم، جزئیات را بررسی و تأیید کن. از «روایت هفته و ماه» جمع‌بندی داده‌های ثبت‌شده را ببین؛ دکمه راهنما هم همیشه برای مرور دوباره در دسترس است.")
 )
 
 @Composable
