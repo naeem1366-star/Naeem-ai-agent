@@ -1021,6 +1021,19 @@ fun NaeemApp(store: SecureConfigStore) {
             }
         }
 
+        if (tutorialStep >= 0) {
+            GuidedTourOverlay(
+                step = tutorialStep,
+                onPrevious = { if (tutorialStep > 0) tutorialStep-- },
+                onNext = {
+                    if (tutorialStep >= guidedTourItems.lastIndex) {
+                        onboardingPrefs.edit().putBoolean("guided_tour_completed", true).apply()
+                        tutorialStep = -1
+                    } else tutorialStep++
+                }
+            )
+        }
+
         if (showHub) {
             Dialog(onDismissRequest = { showHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Box(Modifier.fillMaxSize()) {
@@ -1565,5 +1578,104 @@ private fun assistantActionPreview(action: AssistantAction): String {
         AssistantModule.SPORTS -> "ثبت تمرین «" + p["title"].orEmpty() + "»؛ " + p["minutes"].orEmpty() + " دقیقه، " + p["distance"].orEmpty() + " کیلومتر"
         AssistantModule.TRAVEL -> "ثبت هزینهٔ سفر: " + (amount ?: "مبلغ نامشخص") + "، عنوان: " + p["title"].orEmpty() + "، پرداخت‌کننده: " + p["payer"].orEmpty()
         AssistantModule.MEMORY -> "ذخیره در حافظه: «" + p["note"].orEmpty() + "»"
+    }
+}
+
+private data class GuidedTourItem(val target: String, val title: String, val description: String)
+
+private val guidedTourItems = listOf(
+    GuidedTourItem("منوی همه قابلیت‌ها", "از اینجا وارد بخش‌های برنامه شو", "این منو دروازه ورود به فضاهای مختلف برنامه است؛ از سلامت و ورزش تا سفر، امور مالی، اتاق فکر و سرگرمی."),
+    GuidedTourItem("گوی هوشمند", "مرکز حضور و تعامل", "گوی وضعیت دستیار را نشان می‌دهد؛ هنگام فکر کردن، شنیدن یا پاسخ صوتی می‌تواند حالت فعال خود را نمایش دهد."),
+    GuidedTourItem("کادر نوشتن پیام", "درخواستت را اینجا بنویس", "هر سؤال، دستور یا توضیحی را وارد کن. می‌توانی متن طولانی بنویسی، تصویر بفرستی یا از دستیار بخواهی موضوعی را بررسی کند."),
+    GuidedTourItem("میکروفون", "با صدا با برنامه حرف بزن", "با لمس میکروفون، دریافت گفتار فعال می‌شود. صدایت به متن تبدیل می‌شود تا درخواستت تحلیل شود؛ برنامه شنود دائمی ندارد."),
+    GuidedTourItem("دکمه ارسال", "درخواست را برای تحلیل بفرست", "بعد از نوشتن پیام، این دکمه درخواست را ارسال می‌کند. پاسخ می‌تواند متنی یا صوتی باشد و بعضی عملیات قبل از ثبت از تو تأیید می‌گیرند."),
+    GuidedTourItem("مرور فضاها", "آشنایی با ابزارهای برنامه", "در این بخش فهرست کامل فضاها و ابزارها را می‌بینی. در ادامه، هرکدام را جداگانه معرفی می‌کنیم."),
+    GuidedTourItem("سلامت و تغذیه", "برنامه غذایی و پیگیری بدن", "اطلاعات بدنی و هدف وزنی را ثبت کن، غذاها و وعده‌ها را از بانک غذایی انتخاب کن و کالری و درشت‌مغذی‌ها را بررسی کن."),
+    GuidedTourItem("باشگاه ورزش", "تمرین و ثبت پیشرفت", "برنامه‌های تمرینی و فعالیت‌ها را دنبال کن و مدت، مسافت، وزنه‌ها و رکوردهای ورزشی را ثبت کن."),
+    GuidedTourItem("دفتر مالی", "درآمد، هزینه و گزارش", "تراکنش‌ها را ثبت و دسته‌بندی کن و گزارش ماهانه و تراز مالی خودت را ببین."),
+    GuidedTourItem("نبض بازار", "بررسی بازارها و دارایی‌ها", "درباره طلا، ارز، رمزارز و بازارهای مالی سؤال کن و داده‌های در دسترس را تحلیل یا مقایسه کن؛ قیمت زنده به منبع معتبر وابسته است."),
+    GuidedTourItem("اتاق فکر", "ایده‌ها را از چند زاویه بررسی کن", "با نقش‌هایی مانند استراتژیست، طراح، منتقد و پژوهشگر هم‌فکری کن، جست‌وجو انجام بده و ایده را به قدم اجرایی تبدیل کن."),
+    GuidedTourItem("به آینده وارد شو", "۱۲ تجربه برای فکر کردن متفاوت", "شورای مخالفان، نسخه دوم خودم، جهان‌های موازی، باستان‌شناس ذهن، پرونده‌های حل‌نشده، ترکیب ایده‌ها، مأموریت، پیام از آینده، کالبدشکافی ایده، نقشه دانش، آشوب خلاق و اتاق فرمان."),
+    GuidedTourItem("سفر و هم‌سفرها", "برنامه‌ریزی سفر و هزینه‌ها", "سفرها، مقصد، تاریخ، همراهان و مخارج را مدیریت کن و سهم هزینه هر نفر را بررسی کن."),
+    GuidedTourItem("Naeem Trail", "ثبت مسیر طبیعت‌گردی", "برای ثبت مسیر با GPS، ذخیره نقاط و فایل GPX طراحی شده؛ نقشه و مسیریابی آفلاین هنوز در حال توسعه است."),
+    GuidedTourItem("نوت‌بوک", "یادداشت و برنامه‌ریزی", "کارها را همراه توضیح، تاریخ و ساعت ثبت کن و برای زمان انجامشان اعلان یادآوری بگیر."),
+    GuidedTourItem("یادآور دارو", "زمان مصرف دارو را فراموش نکن", "نام دارو و ساعت مصرف را ثبت کن تا اعلان روزانه روی گوشی دریافت کنی."),
+    GuidedTourItem("حافظه هوشمند", "نکته‌های مهم را نگه دار", "اطلاعاتی را که می‌خواهی در گفتگوهای بعدی در دسترس باشند ثبت و مدیریت کن؛ ذخیره با تأیید تو انجام می‌شود."),
+    GuidedTourItem("آلبوم تصاویر", "آرشیو تصویرهای ساخته‌شده", "تصاویر ساخته‌شده را در یک محل ببین و آرشیو خودت را مدیریت کن."),
+    GuidedTourItem("اخبار مهم", "پیگیری خبرها", "خوراک‌های خبری را مرور کن و تیترهای مهم را ببین؛ گردآوری و تحلیل جامع چندمنبعی هنوز در حال تکمیل است."),
+    GuidedTourItem("سینما و موسیقی", "کشف فیلم و موسیقی", "فیلم‌ها را بر اساس حال‌وهوا پیدا کن و درباره آثار سؤال بپرس؛ برای موسیقی هم بر اساس سبک و سلیقه پیشنهاد بگیر."),
+    GuidedTourItem("تحلیل اینستاگرام", "بررسی عملکرد صفحه اجتماعی", "آمار بازدید و تعامل را وارد کن تا نرخ تعامل و عملکرد محتوا تحلیل شود. اتصال خودکار به حساب رسمی هنوز نیازمند مجوز Meta است."),
+    GuidedTourItem("بازی‌ها", "سرگرمی و بازی گروهی", "بخش بازی‌ها شامل پانتومیم و چند تجربه سرگرمی دیگر است؛ بعضی بازی‌های هوشمند هنوز در حال توسعه‌اند."),
+    GuidedTourItem("تنظیمات", "اتصال، مدل و امنیت", "مدل و نشانی سرویس، کلید API و گزینه‌های امنیتی را از این بخش مدیریت کن.")
+)
+
+@Composable
+private fun GuidedTourOverlay(
+    step: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val item = guidedTourItems[step.coerceIn(guidedTourItems.indices)]
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(Color(0xE6000000)).padding(horizontal = 22.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF171C25)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.55f))
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(15.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Text("راهنمای شروع", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
+                        Text("${step + 1} از ${guidedTourItems.size}", color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
+                    }
+                    LinearProgressIndicator(
+                        progress = { (step + 1).toFloat() / guidedTourItems.size },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = Color(0xFF9CB9F4),
+                        trackColor = Color(0xFF303847)
+                    )
+                    Box(
+                        Modifier.fillMaxWidth().background(Color(0xFF242E40), RoundedCornerShape(18.dp)).padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color(0xFFB8CCF5), modifier = Modifier.size(34.dp))
+                            Text("محل توجه", color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelSmall)
+                            Text(item.target, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                    Text(item.title, color = Color(0xFFE7ECF2), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Text(item.description, color = Color(0xFFB8C2CE), style = MaterialTheme.typography.bodyMedium, lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35)
+                    Text("برای ادامه آموزش، از دکمه بعدی استفاده کن. تا پایان راهنما، بخش‌های دیگر قفل می‌مانند.", color = Color(0xFF8794A5), style = MaterialTheme.typography.labelSmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (step > 0) {
+                            OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f)) { Text("قبلی") }
+                        }
+                        Button(
+                            onClick = onNext,
+                            modifier = Modifier.weight(1.5f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE3ED), contentColor = Color(0xFF111722)),
+                            shape = RoundedCornerShape(15.dp)
+                        ) {
+                            Text(if (step == guidedTourItems.lastIndex) "پایان آموزش و ورود" else "بعدی")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
