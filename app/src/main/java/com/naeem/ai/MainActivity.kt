@@ -445,6 +445,7 @@ fun NaeemApp(store: SecureConfigStore) {
     var showNews by remember { mutableStateOf(false) }
     var showMedication by remember { mutableStateOf(false) }
     var showPlanner by remember { mutableStateOf(false) }
+    var showThinkRoom by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
@@ -1033,7 +1034,8 @@ fun NaeemApp(store: SecureConfigStore) {
                         onSocial = { showHub = false; showSocialAnalytics = true },
                         onNews = { showHub = false; showNews = true },
                         onMedication = { showHub = false; showMedication = true },
-                        onPlanner = { showHub = false; showPlanner = true }
+                        onPlanner = { showHub = false; showPlanner = true },
+                        onThinkRoom = { showHub = false; showThinkRoom = true }
                     ) }
                 }
                 }
@@ -1057,6 +1059,18 @@ fun NaeemApp(store: SecureConfigStore) {
             Dialog(onDismissRequest = { showPlanner = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("wrapped") { WeeklyPlannerDashboard(onClose = { showPlanner = false }) }
+                }
+            }
+        }
+        if (showThinkRoom) {
+            Dialog(onDismissRequest = { showThinkRoom = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ThinkRoomScreen(
+                        onClose = { showThinkRoom = false },
+                        baseUrl = baseUrl,
+                        model = model,
+                        apiKey = apiKey
+                    )
                 }
             }
         }
