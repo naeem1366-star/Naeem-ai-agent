@@ -46,6 +46,7 @@ import java.net.URLEncoder
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Calendar
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -353,7 +354,7 @@ private fun PeriodTrackerCard(context: Context) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.EditCalendar, null)
+            Icon(Icons.Default.CalendarMonth, null)
             Spacer(Modifier.width(8.dp))
             Text(if (lastStart > 0L) dateFormat.format(Date(lastStart)) else "انتخاب تاریخ شروع")
         }
@@ -386,7 +387,7 @@ private fun PeriodTrackerCard(context: Context) {
                     .putString("symptoms", symptoms.joinToString("|"))
                     .apply()
             },
-            enabled = lastStart > 0L && cycleLength.toIntOrNull() in 15..60 && bleedDays.toIntOrNull() in 1..15,
+            enabled = lastStart > 0L && (cycleLength.toIntOrNull() ?: 0) in 15..60 && (bleedDays.toIntOrNull() ?: 0) in 1..15,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = HMint, contentColor = FB)
         ) {
