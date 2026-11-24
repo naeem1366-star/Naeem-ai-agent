@@ -576,6 +576,7 @@ fun NaeemApp(
     var showMusic by remember { mutableStateOf(false) }
     var showPodcast by remember { mutableStateOf(false) }
     var showVideoCreator by remember { mutableStateOf(false) }
+    var showProfessionalVideo by remember { mutableStateOf(false) }
     var showTravel by remember { mutableStateOf(false) }
     var showSports by remember { mutableStateOf(false) }
     var showTrail by remember { mutableStateOf(false) }
@@ -1322,7 +1323,8 @@ fun NaeemApp(
                         onMedication = { showHub = false; showMedication = true },
                         onPlanner = { showHub = false; showPlanner = true },
                         onThinkRoom = { showHub = false; showThinkRoom = true },
-                        onFuture = { showHub = false; showFutureGateway = true }
+                        onFuture = { showHub = false; showFutureGateway = true },
+                         onProfessionalVideo = { showHub = false; showProfessionalVideo = true }
                     ) }
                 }
                 }
@@ -1440,6 +1442,13 @@ fun NaeemApp(
             Dialog(onDismissRequest = { showPodcast = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
                     ModuleScreenBackdrop("music") { PodcastDashboard(onClose = { showPodcast = false }) }
+                }
+            }
+        }
+        if (showProfessionalVideo) {
+            Dialog(onDismissRequest = { showProfessionalVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false })
                 }
             }
         }
