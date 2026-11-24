@@ -855,7 +855,7 @@ private class TrackSearch{
  }
 }
 
-@Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ DiscoverDashboard(onClose,onAskAi,"موسیقی",true) }
+@Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ MusicStudioDashboard(onClose,onAskAi) }
 
 // Graphite and silver 3D feature gallery for Naeem AI.
 
