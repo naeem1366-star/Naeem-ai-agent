@@ -71,7 +71,13 @@ class DailyJournalStore(context: Context) {
                     "مالی و خرید" -> "خرید یا هزینه"
                     else -> "فعالیت سفر و طبیعت"
                 }
-                captured += add(category, title, part)
+                // Avoid creating a new journal row when the same sentence is repeated
+                // by voice recognition or sent again within a short interval.
+                val duplicate = entries().any {
+                    it.detail.equals(part, ignoreCase = true) &&
+                        System.currentTimeMillis() - it.timestamp in 0L..(15L * 60L * 1000L)
+                }
+                if (!duplicate) captured += add(category, title, part)
             }
         }
         return captured
