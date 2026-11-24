@@ -42,7 +42,7 @@ fun ProfessionalVideoDashboard(
     val api = remember(baseUrl, apiKey) { NetArzApiClient(baseUrl, apiKey) }
     val defaults = listOf("sora-2", "sora-2-pro", "veo-3.1", "veo-3.1-fast", "veo-3.1-lite")
     var models by remember { mutableStateOf(defaults) }
-    var selectedModel by remember { mutableStateOf("veo-3.1-fast") }
+    var selectedModel by remember { mutableStateOf(SecureConfigStore(context).modelFor("video").ifBlank { "veo-3.1-fast" }) }
     var prompt by remember { mutableStateOf("") }
     var duration by remember { mutableIntStateOf(8) }
     var resolution by remember { mutableStateOf("720p") }
