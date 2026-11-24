@@ -2,8 +2,13 @@ package com.naeem.ai
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -186,8 +191,8 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
             }
             IconButton(onClick={stopMix();onClose()}){Icon(Icons.Default.Close,null,tint=Color.White)}
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically){
-            listOf("کشف آهنگ","میز دی‌جی","آلبوم‌ها").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically){
+            listOf("کشف آهنگ","میز دی‌جی","آلبوم‌ها","ساخت موسیقی").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}
             Spacer(Modifier.weight(1f))
             IconButton(onClick={settings=true}){Icon(Icons.Default.Tune,"تنظیم منابع",tint=Color(0xFFD4D9E0))}
         }
@@ -200,6 +205,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
         }
         if(message.isNotBlank()) Text(message,color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
         when(tab){
+            "ساخت موسیقی"-> MusicCreationPanel(onMessage={message=it})
             "کشف آهنگ"->{
                 OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("نام آهنگ، خواننده یا سبک")})
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
