@@ -748,6 +748,12 @@ fun NaeemApp(store: SecureConfigStore) {
                 is ActionRouteResult.Completed -> {
                     ledgerEntries = ledgerStore.entries()
                     memories = dataStore.memories()
+                    when (resolution.action.module) {
+                        AssistantModule.FINANCE -> showFinance = true
+                        AssistantModule.SPORTS -> showSports = true
+                        AssistantModule.TRAVEL -> showTravel = true
+                        else -> Unit
+                    }
                     routed.result.message
                 }
                 is ActionRouteResult.ConfirmationRequired -> {
@@ -768,6 +774,12 @@ fun NaeemApp(store: SecureConfigStore) {
                 is ActionRouteResult.Completed -> {
                     ledgerEntries = ledgerStore.entries()
                     memories = dataStore.memories()
+                    when (action.module) {
+                        AssistantModule.FINANCE -> showFinance = true
+                        AssistantModule.SPORTS -> showSports = true
+                        AssistantModule.TRAVEL -> showTravel = true
+                        else -> Unit
+                    }
                     messages.add(ChatMessage(result.result.message, false))
                 }
                 is ActionRouteResult.ClarificationRequired -> messages.add(ChatMessage(result.question, false))
