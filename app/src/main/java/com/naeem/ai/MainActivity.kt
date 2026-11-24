@@ -279,9 +279,17 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
             ThinkingOrb(diameter = 132.dp, active = true)
             Text("اول با هم آشنا بشیم", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text("چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت.", color = Color(0xFFB0BAC6), style = MaterialTheme.typography.bodyMedium)
-            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("دوست داری چی صدات کنم؟") }, placeholder = { Text("مثلاً نعیم") })
-            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text("به چه چیزهایی علاقه داری؟ (اختیاری)") }, placeholder = { Text("مثلاً طراحی، تکنولوژی، سفر…") }, minLines = 2)
-            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)") }, placeholder = { Text("شغل، هدف‌ها یا موضوعات موردعلاقه…") }, minLines = 2)
+            val profileFieldColors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White, unfocusedTextColor = Color(0xFFF1F4F8),
+                focusedContainerColor = Color(0xFF17243A), unfocusedContainerColor = Color(0xFF17243A),
+                focusedBorderColor = Color(0xFFB7D2FF), unfocusedBorderColor = Color(0xFF71839D),
+                focusedLabelColor = Color(0xFFB7D2FF), unfocusedLabelColor = Color(0xFFCAD4E2),
+                focusedPlaceholderColor = Color(0xFF9EADC2), unfocusedPlaceholderColor = Color(0xFF9EADC2),
+                cursorColor = Color(0xFFB7D2FF)
+            )
+            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("دوست داری چی صدات کنم؟") }, placeholder = { Text("مثلاً نعیم") }, colors = profileFieldColors)
+            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text("به چه چیزهایی علاقه داری؟ (اختیاری)") }, placeholder = { Text("مثلاً طراحی، تکنولوژی، سفر…") }, minLines = 2, colors = profileFieldColors)
+            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)") }, placeholder = { Text("شغل، هدف‌ها یا موضوعات موردعلاقه…") }, minLines = 2, colors = profileFieldColors)
             Text("لحن گفت‌وگو", color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم").forEach { option ->
@@ -320,101 +328,125 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
 
 @Composable
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
-    val silver = Color(0xFFE0E5EC)
-    val muted = Color(0xFFB0BAC6)
+    var page by remember { mutableStateOf(0) }
+    val silver = Color(0xFFE8EDF5)
+    val muted = Color(0xFFB9C5D5)
     val spaces = listOf(
-        "سلامت و تغذیه" to "ثبت وعده‌های غذایی، خوراکی‌ها، کالری و اطلاعات مراقبت روزانه؛ اتصال کامل ثبت گفتگویی به پرونده سلامت هنوز در حال توسعه است.",
-        "باشگاه ورزش" to "ثبت تمرین قدرتی و هوازی، مدت، مسافت، ست و تکرار و پیگیری سوابق و پیشرفت.",
-        "دفتر مالی" to "ثبت درآمد و هزینه، دسته‌بندی مخارج، مشاهده تراکنش‌ها و محاسبه جمع و مانده مالی.",
-        "سفر و هم‌سفرها" to "ساخت سفر، تعیین مقصد و تاریخ، افزودن همراهان، ثبت هزینه‌ها و مشاهده وضعیت آب‌وهوای مقصد.",
-        "اتاق فکر" to "بررسی ایده‌ها، نقد چندجانبه، تحقیق و تبدیل فکر به پروژه و قدم اجرایی.",
-        "به آینده وارد شو" to "۱۲ تجربه فکری برای خلاقیت، تحلیل، تصمیم‌گیری، کشف ارتباط‌ها و حل مسئله.",
-        "نوت‌بوک" to "ثبت کارها و یادداشت‌ها، تعیین تاریخ و ساعت و دریافت اعلان روی گوشی.",
-        "یادآور دارو" to "تنظیم ساعت مصرف دارو و دریافت اعلان محلی روی گوشی.",
-        "روایت هفته و ماه" to "مشاهده گزارش هفت روز اخیر یا ماه جاری از سوابق مالی، ورزشی و اتفاق‌هایی که در روزنگار گفتگو ثبت شده‌اند.",
-        "حافظه هوشمند" to "ذخیره نکته‌هایی که صریحاً می‌خواهی دستیار برای گفتگوهای بعدی به خاطر بسپارد و استفاده از آن‌ها در پاسخ‌ها.",
-        "نبض بازار" to "بررسی و تحلیل دارایی‌ها و بازارهایی مانند طلا، ارز و رمزارز؛ قیمت زنده به منبع داده و اتصال فعال وابسته است.",
-        "اخبار مهم" to "فضای اختصاصی برای پیگیری و بررسی خبرهای ایران و جهان؛ گردآوری زنده و خودکار خبرها هنوز تکمیل نشده است.",
-        "آلبوم تصاویر" to "نگهداری و مدیریت تصاویری که با ابزار ساخت تصویر در اپ تولید می‌کنی.",
-        "بازی‌ها" to "فضای سرگرمی و بازی‌های تعاملی؛ در حال حاضر پانتومیم فعال است و بازی‌های دیگر در حال توسعه‌اند.",
-        "سینما" to "کشف فیلم، دریافت پیشنهاد بر اساس حال‌وهوا و بررسی سبک و داستان آثار.",
-        "موسیقی" to "کشف آهنگ و هنرمند، جست‌وجو و شنیدن پیش‌نمایش‌های در دسترس.",
-        "تحلیل اینستاگرام" to "بررسی آمار بازدید و تعامل و عملکرد محتوا؛ اتصال خودکار به حساب به مجوز رسمی Meta نیاز دارد.",
-        "Naeem Trail" to "فضای طبیعت‌گردی و مسیرها؛ ثبت خودکار GPS و نقشه آفلاین هنوز کامل نشده‌اند.",
-        "تنظیمات" to "مدیریت اتصال مدل هوش مصنوعی، نشانی سرویس، کلید API و تنظیمات امنیتی برنامه."
+        "سلامت و تغذیه" to "غذا، کالری و مراقبت روزانه",
+        "باشگاه ورزش" to "تمرین، فعالیت و پیشرفت",
+        "دفتر مالی" to "درآمد، هزینه و گزارش مالی",
+        "سفر و هم‌سفرها" to "برنامه سفر و هزینه‌های همراهان",
+        "اتاق فکر" to "تحلیل ایده و تبدیل آن به پروژه",
+        "به آینده وارد شو" to "تجربه‌های فکری و حل مسئله",
+        "نوت‌بوک" to "یادداشت، کارها و اعلان‌ها",
+        "یادآور دارو" to "یادآوری زمان مصرف دارو",
+        "روایت هفته و ماه" to "مرور اتفاق‌ها و فعالیت‌های ثبت‌شده",
+        "حافظه هوشمند" to "نگهداری نکته‌های مورد تأیید تو",
+        "نبض بازار" to "بررسی بازارها و دارایی‌ها",
+        "اخبار مهم" to "پیگیری و بررسی خبرها",
+        "آلبوم تصاویر" to "آرشیو تصویرهای ساخته‌شده",
+        "بازی‌ها" to "سرگرمی و تجربه‌های تعاملی",
+        "سینما و موسیقی" to "کشف فیلم، هنرمند و موسیقی",
+        "تحلیل اینستاگرام" to "بررسی آمار و عملکرد محتوا",
+        "Naeem Trail" to "طبیعت‌گردی و مسیرها",
+        "تنظیمات" to "اتصال مدل و مدیریت امنیت"
     )
-    Box(Modifier.fillMaxSize().background(
-        Brush.verticalGradient(colorStops = arrayOf(0.0f to Color(0xFF050608), 0.58f to Color(0xFF050608), 0.82f to Color(0xFF08152F), 1.0f to Color(0xFF142D70)))
-    )) {
+    val pageTitle = when (page) {
+        0 -> "به Naeem AI خوش آمدی"
+        1 -> "یک مغز هوشمند، چندین فضای تخصصی"
+        2 -> "برای زندگی روزمره"
+        3 -> "برای فکر، کار و کشف"
+        else -> "کنترل همیشه دست توست"
+    }
+    val pageDescription = when (page) {
+        0 -> "اینجا فقط یک صفحه چت نیست؛ یک فضای شخصی برای فکر کردن، برنامه‌ریزی و مدیریت بخش‌های مختلف زندگی و کار توست."
+        1 -> "می‌توانی با متن یا صدا با دستیار حرف بزنی. او موضوع را تشخیص می‌دهد و در قابلیت‌های متصل برنامه از ابزار مناسب کمک می‌گیرد."
+        2 -> "از سلامت و ورزش تا امور مالی، سفر و ثبت اتفاق‌های روزانه؛ هر موضوع فضای مخصوص خودش را دارد."
+        3 -> "برای ایده‌پردازی، یادگیری، خبر، بازار، تصویر، سرگرمی و کشف چیزهای تازه هم فضاهای جداگانه‌ای در نظر گرفته شده."
+        else -> "میکروفون فقط با انتخاب تو فعال می‌شود. اطلاعات مهم پیش از ثبت یا تغییر به تأیید تو می‌رسند و اطلاعات پروفایل روی همین گوشی نگهداری می‌شوند."
+    }
+    val featureItems = when (page) {
+        2 -> spaces.take(6)
+        3 -> spaces.drop(6).take(6)
+        else -> spaces.drop(12)
+    }
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF07101D), Color(0xFF102744), Color(0xFF172E55))))) {
+        Image(
+            painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.22f }, contentScale = ContentScale.Crop
+        )
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x66050A12), Color(0x99091427), Color(0xCC101D35)))))
         Column(
-            Modifier.fillMaxSize().navigationBarsPadding().imePadding()
-                .verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(15.dp)
+            Modifier.fillMaxSize().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(4.dp))
-            ThinkingOrb(diameter = 172.dp, active = true)
-            Text("NAEEM AI", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-            Text("یک ابرنرم‌افزار هوش مصنوعی؛ فراتر از یک چت‌بات", color = silver, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("یک مغز هوشمند، مجموعه‌ای از فضاهای تخصصی و تجربه‌ای یکپارچه برای زندگی و کار.", color = Color(0xFFC2A8E8), style = MaterialTheme.typography.bodyMedium)
-            Surface(
-                color = Color(0xCC171C27), shape = RoundedCornerShape(22.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x554F607A)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("تفاوت اصلی کجاست؟", color = silver, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Naeem AI فقط برای پاسخ دادن به سؤال‌ها ساخته نشده است. وقتی خودت گفتگو یا میکروفون را فعال می‌کنی، می‌تواند گفتار و مفهوم حرف‌هایت را تحلیل کند، موضوع را تشخیص دهد و در قابلیت‌های متصل داخل اپلیکیشن از آن استفاده کند. لازم نیست برای هر موضوع از ابتدا وارد یک فرم جداگانه شوی.",
-                        color = muted, style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
-                    )
-                    Divider(color = Color(0x554F607A))
-                    Text("یک مثال از زندگی واقعی", color = silver, fontWeight = FontWeight.Bold)
-                    Text(
-                        "تصور کن آخر روز برای دستیار تعریف می‌کنی: «امروز ساعت ۷ صبح رفتم باشگاه و یک ساعت تمرین کردم؛ برای صبحانه تخم‌مرغ و نان خوردم؛ بعد رفتم سر کار و چند جلسه داشتم؛ ۳ میلیون تومان خرید کردم؛ عصر کمی خوابیدم و شب دوچرخه‌سواری کردم.»",
-                        color = muted, style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
-                    )
-                    Text(
-                        "دستیار می‌تواند بخش‌های مختلف روایت را تشخیص دهد و در روزنگار هوشمند ثبت کند؛ فعالیت ورزشی، تغذیه، کار، خرید و هزینه، استراحت و طبیعت‌گردی هرکدام دسته‌بندی می‌شوند. عملیات مالی و ورزشیِ پشتیبانی‌شده نیز می‌توانند به ابزارهای تخصصی خود متصل شوند. اگر مبلغ، زمان یا موضوعی مبهم باشد، از تو سؤال می‌پرسد و برای اقدام‌های مهم تأیید می‌گیرد.",
-                        color = muted, style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
-                    )
-                    Text(
-                        "با ادامه ثبت روزانه، روایت هفته و ماه می‌تواند تصویری از فعالیت‌ها، تمرین‌ها، هزینه‌ها و اتفاق‌های ثبت‌شده بسازد؛ گزارش‌ها بر اساس داده‌های واقعی ذخیره‌شده‌اند، نه حدس و اطلاعاتی که وارد نکرده‌ای.",
-                        color = muted, style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.35
-                    )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("NAEEM AI", color = silver.copy(alpha = 0.82f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text("${page + 1} از 5", color = muted, style = MaterialTheme.typography.labelMedium)
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(5) { index ->
+                    Box(Modifier.weight(1f).height(4.dp).background(if (index <= page) Color(0xFFB7D2FF) else Color(0x557D8CA3), RoundedCornerShape(4.dp)))
                 }
             }
-            Text("فضاهای تخصصی Naeem AI", color = silver, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-            spaces.forEach { (title, detail) ->
-                Surface(color = Color(0xAA171C27), shape = RoundedCornerShape(15.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(title, color = silver, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                        Text(detail, color = muted, style = MaterialTheme.typography.bodySmall, lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.3)
+            Spacer(Modifier.height(20.dp))
+            ThinkingOrb(diameter = if (page == 0) 142.dp else 92.dp, active = true)
+            Spacer(Modifier.height(15.dp))
+            Text(pageTitle, color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text(pageDescription, color = muted, style = MaterialTheme.typography.bodyMedium, lineHeight = 23.sp)
+            Spacer(Modifier.height(18.dp))
+            if (page == 1) {
+                Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("مثلاً می‌توانی بگویی:", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold)
+                        Text("«امروز یک ساعت ورزش کردم، برای صبحانه تخم‌مرغ خوردم و سه میلیون تومان خرید داشتم.»", color = silver, style = MaterialTheme.typography.bodyMedium)
+                        Text("دستیار می‌تواند موضوع‌های مختلف را تشخیص دهد و در بخش‌های مرتبط ثبت کند؛ هرجا نیاز به تأیید یا توضیح باشد از تو می‌پرسد.", color = muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            } else if (page in 2..4) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    featureItems.forEach { (title, detail) ->
+                        Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(13.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x334F78AC)), modifier = Modifier.fillMaxWidth()) {
+                            Row(Modifier.padding(horizontal = 13.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Circle, contentDescription = null, tint = Color(0xFF9FC4F4), modifier = Modifier.size(8.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(title, color = silver, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall)
+                                    Text(detail, color = muted, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (page == 0) {
+                Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("شروع ساده است", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold)
+                        Text("در چند قدم کوتاه با امکانات آشنا می‌شوی؛ بعد اسمت را وارد می‌کنی و وارد فضای خودت می‌شوی.", color = muted, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            } else {
+                Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("حریم خصوصی و اختیار", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold)
+                        Text("میکروفون دائماً روشن نیست. اطلاعات پروفایل روی گوشی ذخیره می‌شود. بعضی قابلیت‌ها هنوز در حال توسعه‌اند و وضعیت آن‌ها داخل برنامه مشخص می‌شود.", color = muted, style = MaterialTheme.typography.bodyMedium)
+                        Divider(color = Color(0x557D97BA))
+                        Text("طراحی، ایده‌پردازی و توسعه", color = muted, style = MaterialTheme.typography.labelSmall)
+                        Text("نعیم دهقانی", color = silver, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            Surface(color = Color(0xAA171C27), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("کنترل همیشه دست توست", color = silver, fontWeight = FontWeight.Bold)
-                    Text("میکروفون فقط با انتخاب تو فعال می‌شود؛ شنود دائمی انجام نمی‌شود. اطلاعات مهم پیش از ثبت یا تغییر به تأیید تو می‌رسند. امکاناتی که هنوز کامل نشده‌اند، در خود برنامه مشخص شده‌اند.", color = muted, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (page > 0) {
+                    OutlinedButton(onClick = { page-- }, modifier = Modifier.weight(1f).height(54.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF91A9CB)), colors = ButtonDefaults.outlinedButtonColors(contentColor = silver), shape = RoundedCornerShape(16.dp)) { Text("قبلی") }
+                }
+                Button(onClick = { if (page == 4) onEnter() else page++ }, modifier = Modifier.weight(if (page > 0) 1.5f else 1f).height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)), shape = RoundedCornerShape(16.dp)) {
+                    Text(if (page == 4) "شروع تجربه Naeem AI" else "بعدی", fontWeight = FontWeight.Bold)
                 }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text("طراحی، ایده‌پردازی و توسعه نرم‌افزار", color = Color(0xFF9BA7B5), style = MaterialTheme.typography.labelMedium)
-                Text("نعیم دهقانی", color = silver, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                Text("DESIGNED, CONCEPTUALIZED & DEVELOPED BY", color = Color(0xFF7F8996), style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, letterSpacing = 0.7.sp))
-                Text("Naeem Dehghani", color = muted, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif))
-            }
-            Button(
-                onClick = onEnter, modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)),
-                shape = RoundedCornerShape(18.dp)
-            ) { Text("شروع تجربه Naeem AI", fontWeight = FontWeight.Bold) }
-            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -1734,7 +1766,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
     Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {
         Box(Modifier.fillMaxSize()) {
             Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
-                drawRect(Color(0xE6000000))
+                drawRect(Color(0x88070B12))
                 if (targetBounds != Rect.Zero) {
                     val pad = 9.dp.toPx()
                     val left = targetBounds.left - pad
