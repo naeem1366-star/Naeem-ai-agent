@@ -548,6 +548,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 listOf(
                     FinanceAssistantTool(ledgerStore),
                     SportsAssistantTool(context.applicationContext),
+                    HealthAssistantTool(context.applicationContext),
                     TravelAssistantTool(context.applicationContext),
                     MemoryAssistantTool(dataStore),
                     JournalAssistantTool(context.applicationContext)
@@ -556,9 +557,11 @@ fun NaeemApp(store: SecureConfigStore) {
         )
     }
     var pendingAssistantAction by remember { mutableStateOf<AssistantAction?>(null) }
+    var pendingJournalDetail by remember { mutableStateOf<String?>(null) }
     var showFinance by remember { mutableStateOf(false) }
     var showHub by remember { mutableStateOf(false) }
     var showHealth by remember { mutableStateOf(false) }
+    var showJournal by remember { mutableStateOf(false) }
     var showGames by remember { mutableStateOf(false) }
     var showDiscover by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
@@ -734,15 +737,25 @@ fun NaeemApp(store: SecureConfigStore) {
 
     suspend fun routeAssistantIntent(question: String): String? {
         val journal = DailyJournalStore(context)
-        val captured = if (question.contains("روزنگار") || question.contains("گزارش روزانه")) emptyList() else journal.captureNarrative(question)
-        if (captured.size >= 2) {
-            val categories = captured.map { it.category }.distinct().joinToString("، ")
-            return "روایتت به روزنگار هوشمند اضافه شد. ${captured.size} مورد در این دسته‌ها ثبت شد: $categories.\nبرای ثبت جزئیات تخصصی یا اصلاح هر مورد، می‌توانی وارد فضای مربوط شوی."
+        fun mirrorSuccessfulWrite(module: AssistantModule, operation: String) {
+            if (question.contains("روزنگار") || question.contains("گزارش روزانه")) return
+            val captured = journal.captureNarrative(question)
+            if (captured.isEmpty()) {
+                val category = when (module) {
+                    AssistantModule.SPORTS -> "ورزش"
+                    AssistantModule.HEALTH -> "تغذیه و سلامت"
+                    AssistantModule.TRAVEL -> "سفر و طبیعت"
+                    AssistantModule.FINANCE -> "مالی و خرید"
+                    else -> "شخصی"
+                }
+                journal.add(category, operation, question)
+            }
         }
         return when (val resolution = PersianAssistantIntentResolver.resolve(question, TravelStore(context).load())) {
-            AssistantIntentResolution.NoMatch -> if (captured.isNotEmpty()) {
-                "این مورد در روزنگار هوشمند، در بخش «${captured.first().category}» ثبت شد."
-            } else null
+            AssistantIntentResolution.NoMatch -> {
+                val captured = if (question.contains("روزنگار") || question.contains("گزارش روزانه")) emptyList() else journal.captureNarrative(question)
+                if (captured.isEmpty()) null else "روایتت در روزنگار ثبت شد (${captured.size} مورد)."
+            }
             is AssistantIntentResolution.Clarify -> resolution.question
             is AssistantIntentResolution.Ready -> when (val routed = assistantRouter.route(resolution.action)) {
                 is ActionRouteResult.Completed -> {
@@ -751,13 +764,17 @@ fun NaeemApp(store: SecureConfigStore) {
                     when (resolution.action.module) {
                         AssistantModule.FINANCE -> showFinance = true
                         AssistantModule.SPORTS -> showSports = true
+                        AssistantModule.HEALTH -> showHealth = true
                         AssistantModule.TRAVEL -> showTravel = true
                         else -> Unit
                     }
+                    if (resolution.action.access == ActionAccess.WRITE && routed.result.success)
+                        mirrorSuccessfulWrite(resolution.action.module, resolution.action.operation)
                     routed.result.message
                 }
                 is ActionRouteResult.ConfirmationRequired -> {
                     pendingAssistantAction = routed.action
+                    pendingJournalDetail = question
                     assistantActionPreview(routed.action)
                 }
                 is ActionRouteResult.ClarificationRequired -> routed.question
@@ -766,7 +783,6 @@ fun NaeemApp(store: SecureConfigStore) {
             }
         }
     }
-
     fun confirmPendingAssistantAction() {
         val action = pendingAssistantAction ?: return
         scope.launch {
@@ -777,9 +793,25 @@ fun NaeemApp(store: SecureConfigStore) {
                     when (action.module) {
                         AssistantModule.FINANCE -> showFinance = true
                         AssistantModule.SPORTS -> showSports = true
+                        AssistantModule.HEALTH -> showHealth = true
                         AssistantModule.TRAVEL -> showTravel = true
                         else -> Unit
                     }
+                    pendingJournalDetail?.let { detail ->
+                        val journal = DailyJournalStore(context)
+                        val captured = journal.captureNarrative(detail)
+                        if (captured.isEmpty()) {
+                            val category = when (action.module) {
+                                AssistantModule.SPORTS -> "ورزش"
+                                AssistantModule.HEALTH -> "تغذیه و سلامت"
+                                AssistantModule.TRAVEL -> "سفر و طبیعت"
+                                AssistantModule.FINANCE -> "مالی و خرید"
+                                else -> "شخصی"
+                            }
+                            journal.add(category, action.operation, detail)
+                        }
+                    }
+                    pendingJournalDetail = null
                     messages.add(ChatMessage(result.result.message, false))
                 }
                 is ActionRouteResult.ClarificationRequired -> messages.add(ChatMessage(result.question, false))
@@ -952,6 +984,7 @@ fun NaeemApp(store: SecureConfigStore) {
                             activeConversationId = conversationStore.create()
                             conversationReload++
                             pendingAssistantAction = null
+                            pendingJournalDetail = null
                             error = ""
                             prompt = ""
                             selectedImage = null
@@ -1249,6 +1282,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         onSport = { showHub = false; showSports = true },
                         onMarkets = { showHub = false; showMarkets = true },
                         onWrapped = { showHub = false; showWrapped = true },
+                        onJournal = { showHub = false; showJournal = true },
                         onTrail = { showHub = false; showTrail = true },
                         onSocial = { showHub = false; showSocialAnalytics = true },
                         onNews = { showHub = false; showNews = true },
@@ -1258,6 +1292,13 @@ fun NaeemApp(store: SecureConfigStore) {
                         onFuture = { showHub = false; showFutureGateway = true }
                     ) }
                 }
+                }
+            }
+        }
+        if (showJournal) {
+            Dialog(onDismissRequest = { showJournal = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ModuleScreenBackdrop("journal") { DailyJournalDashboard(onClose = { showJournal = false }) }
                 }
             }
         }
