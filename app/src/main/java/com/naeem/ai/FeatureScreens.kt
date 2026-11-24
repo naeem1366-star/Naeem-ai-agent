@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import android.app.DatePickerDialog
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
@@ -43,6 +44,8 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.net.URLEncoder
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -80,7 +83,7 @@ fun FeatureHub(
         Entry("نوت‌بوک","یادداشت‌ها و برنامه‌های من","ثبت کارها و اعلان","کارها را با تاریخ و ساعت ثبت کن؛ می‌توانی فهرست را مرور و موارد انجام‌شده را حذف کنی.","ذخیره محلی و اعلان زمان‌بندی‌شده",Icons.Default.CalendarMonth,onPlanner,"نوت بوک یادداشت کار برنامه ریزی فردا وظایف یادآوری"),
         Entry("دفتر مالی","مدیریت پول","درآمد، هزینه و گزارش مالی","فقط در گفتگو بگو چه مبلغی خرج کردی یا درآمد داشتی؛ مغز هوشمند مبلغ، تاریخ و دسته را درمی‌آورد، ابهام را می‌پرسد و پس از تأییدت در دفتر مالی ثبت می‌کند.","اتصال دستیار: فعال",Icons.Default.AccountBalanceWallet,onFinance,"مالی پول هزینه درآمد"),
         Entry("روایت هفته و ماه","گزارش عملکرد و روزنگار","جمع‌بندی فعالیت‌ها و اتفاق‌ها","گزارش هفت روز اخیر یا ماه جاری را ببین؛ اطلاعات ثبت‌شده در دفتر مالی و ورزش همراه با روایت‌های دسته‌بندی‌شده روزانه نمایش داده می‌شوند. گزارش فقط بر اساس داده‌های ذخیره‌شده است.","گزارش مالی، ورزشی و روزنگار گفتگو",Icons.Default.AutoAwesome,onWrapped,"گزارش هفتگی گزارش ماهانه روزنگار جمع‌بندی عملکرد"),
-        Entry("سلامت و تغذیه","بدن، تغذیه و مراقبت‌های روزانه","غذا، کالری، چرخه قاعدگی و داروها","در گفتگو بگو چه خورده‌ای، چه فعالیتی داشته‌ای یا چه دارویی را در چه ساعتی مصرف می‌کنی؛ مغز هوشمند باید اطلاعات را تشخیص دهد و در دفتر سلامت ثبت کند. این فضا همچنین برای تقویم چرخه قاعدگی، ثبت علائم و یادآوری زمان دارو در نظر گرفته شده است. ثبت خودکار از گفتگو، تقویم چرخه و یادآور دارو هنوز پیاده‌سازی نشده‌اند.","اتصال کامل سلامت به دستیار: در حال توسعه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
+        Entry("سلامت و تغذیه","بدن، تغذیه و مراقبت‌های روزانه","غذا، کالری، ثبت چرخه قاعدگی و داروها","در گفتگو بگو چه خورده‌ای یا چه فعالیتی داشته‌ای؛ اطلاعات تغذیه و فعالیت را در دفتر سلامت ثبت کن. تقویم چرخه قاعدگی اکنون در همین داشبورد امکان ثبت تاریخ شروع، طول چرخه، مدت خون‌ریزی و علائم و نمایش برآورد دوره بعد را دارد. ثبت خودکار از گفتگو و یادآور دارو هنوز در حال توسعه‌اند.","داشبورد سلامت فعال؛ اتصال کامل به دستیار در حال توسعه",Icons.Default.Favorite,onHealth,"سلامت تغذیه کالری غذا"),
         Entry("حافظه هوشمند","یادداشت‌های من","نکته‌ها و اطلاعات مهم","وقتی در گفتگو می‌گویی «این را یادت بماند»، مغز هوشمند نکته را آماده می‌کند، برای تأیید نشان می‌دهد و پس از اجازه‌ات ذخیره می‌کند تا در گفتگوهای بعدی به کار بیاید.","اتصال دستیار: فعال",Icons.Default.Bookmark,onMemory,"حافظه یادداشت"),
         Entry("آلبوم تصاویر","آرشیو آثار","تصاویر ساخته‌شده","در گفتگو تصویر را توصیف یا اصلاح کن؛ مغز هوشمند درخواست را برای ابزار تصویر آماده می‌کند. تصاویر ساخته‌شده در آلبوم نگهداری می‌شوند و مدیریت آرشیو از همین بخش است.","ابزار تصویر متصل؛ مدیریت آرشیو در همین بخش",Icons.Default.Collections,onAlbum,"آلبوم تصویر عکس"),
         Entry("بازی‌ها","چالش و سرگرمی","پانتومیم و تجربه‌های هوشمند آینده","در بازی‌های هوشمند، مغز گفتگو می‌تواند نقش را توضیح دهد، معما بسازد و روند بازی را هدایت کند. فعلاً پانتومیم فعال است و بازی‌های داستانی دیگر هنوز در حال توسعه‌اند.","بازی‌های متصل به AI: در حال توسعه",Icons.Default.SportsEsports,onGames,"بازی سرگرمی پانتومیم"),
@@ -298,6 +301,116 @@ private val HMuted=Color(0xFF9AA3AE)
  }
 }
 
+
+@Composable
+private fun PeriodTrackerCard(context: Context) {
+    val prefs = remember { context.getSharedPreferences("naeem_cycle_local", Context.MODE_PRIVATE) }
+    var lastStart by remember { mutableLongStateOf(prefs.getLong("last_start", 0L)) }
+    var cycleLength by remember { mutableStateOf(prefs.getInt("cycle_length", 28).toString()) }
+    var bleedDays by remember { mutableStateOf(prefs.getInt("bleed_days", 5).toString()) }
+    val symptomOptions = listOf("دل‌درد", "کمردرد", "سردرد", "خستگی", "نفخ", "تغییر خلق", "حساسیت سینه", "تهوع")
+    val symptoms = remember {
+        mutableStateListOf<String>().apply {
+            val saved = prefs.getString("symptoms", "") ?: ""
+            if (saved.isNotBlank()) addAll(saved.split("|").filter { it in symptomOptions })
+        }
+    }
+    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.US) }
+    val cycle = cycleLength.toIntOrNull()?.coerceIn(15, 60) ?: 28
+    val bleed = bleedDays.toIntOrNull()?.coerceIn(1, 15) ?: 5
+    val nextStart = if (lastStart > 0L) Calendar.getInstance().apply {
+        timeInMillis = lastStart
+        add(Calendar.DAY_OF_YEAR, cycle)
+    }.timeInMillis else 0L
+    val periodEnd = if (lastStart > 0L) Calendar.getInstance().apply {
+        timeInMillis = lastStart
+        add(Calendar.DAY_OF_YEAR, bleed - 1)
+    }.timeInMillis else 0L
+
+    HCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.CalendarMonth, null, tint = HMint)
+            Spacer(Modifier.width(8.dp))
+            Text("تقویم چرخه قاعدگی", color = HMint, fontWeight = FontWeight.Bold)
+        }
+        Text("اطلاعات چرخه فقط روی همین گوشی ذخیره می‌شود.", color = HMuted, style = MaterialTheme.typography.bodySmall)
+        Text("تاریخ شروع آخرین پریود", color = Color.White, fontWeight = FontWeight.SemiBold)
+        OutlinedButton(
+            onClick = {
+                val initial = Calendar.getInstance().apply {
+                    if (lastStart > 0L) timeInMillis = lastStart
+                }
+                DatePickerDialog(
+                    context,
+                    { _, year, month, day ->
+                        lastStart = Calendar.getInstance().apply {
+                            set(year, month, day, 12, 0, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                    },
+                    initial.get(Calendar.YEAR), initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.EditCalendar, null)
+            Spacer(Modifier.width(8.dp))
+            Text(if (lastStart > 0L) dateFormat.format(Date(lastStart)) else "انتخاب تاریخ شروع")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HInput("طول چرخه (روز)", cycleLength, { cycleLength = it.filter(Char::isDigit).take(2) }, Modifier.weight(1f))
+            HInput("مدت خون‌ریزی (روز)", bleedDays, { bleedDays = it.filter(Char::isDigit).take(2) }, Modifier.weight(1f))
+        }
+        Text("علائم تجربه‌شده", color = Color.White, fontWeight = FontWeight.SemiBold)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            symptomOptions.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    pair.forEach { symptom ->
+                        FilterChip(
+                            selected = symptom in symptoms,
+                            onClick = {
+                                if (symptom in symptoms) symptoms.remove(symptom) else symptoms.add(symptom)
+                            },
+                            label = { Text(symptom, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
+        }
+        Button(
+            onClick = {
+                prefs.edit()
+                    .putLong("last_start", lastStart)
+                    .putInt("cycle_length", cycle)
+                    .putInt("bleed_days", bleed)
+                    .putString("symptoms", symptoms.joinToString("|"))
+                    .apply()
+            },
+            enabled = lastStart > 0L && cycleLength.toIntOrNull() in 15..60 && bleedDays.toIntOrNull() in 1..15,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = HMint, contentColor = FB)
+        ) {
+            Icon(Icons.Default.Save, null)
+            Spacer(Modifier.width(7.dp))
+            Text("ذخیره اطلاعات چرخه")
+        }
+        if (lastStart > 0L) {
+            Divider(color = FB)
+            Text("برآورد چرخه بعدی", color = HMint, fontWeight = FontWeight.Bold)
+            Text("شروع احتمالی دوره بعد: " + dateFormat.format(Date(nextStart)), color = Color.White)
+            Text("پایان احتمالی خون‌ریزی ثبت‌شده: " + dateFormat.format(Date(periodEnd)), color = HMuted, style = MaterialTheme.typography.bodySmall)
+            Text("طول چرخه تنظیم‌شده: $cycle روز", color = HMuted, style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text("برای دیدن برآورد دوره بعد، تاریخ شروع آخرین پریود را انتخاب و اطلاعات را ذخیره کن.", color = HMuted, style = MaterialTheme.typography.bodySmall)
+        }
+        Text(
+            "این تاریخ‌ها تقریبی‌اند؛ چرخه می‌تواند تغییر کند. این ابزار تشخیص پزشکی نیست و نباید برای پیشگیری از بارداری یا تعیین قطعی زمان باروری استفاده شود.",
+            color = Color(0xFFFFD39A),
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
 @Composable fun HealthDashboard(onClose:()->Unit){
  val ctx=LocalContext.current;val store=remember{HStore(ctx)}
  var height by remember{mutableStateOf(store.get("h"))};var weight by remember{mutableStateOf(store.get("w"))};var age by remember{mutableStateOf(store.get("age"))}
@@ -345,6 +458,7 @@ private val HMuted=Color(0xFF9AA3AE)
     Text("هدف",color=FM);Row{listOf("کاهش وزن","حفظ وزن","افزایش وزن").forEach{FilterChip(selected=goal==it,onClick={goal=it},label={Text(it,style=MaterialTheme.typography.labelSmall)})}}
     Button(onClick={store.put("h",height);store.put("w",weight);store.put("age",age);store.put("sex",sex);store.put("activity",activity);store.put("goal",goal)},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=HMint,contentColor=FB)){Text("ذخیرهٔ پروفایل")}
    }}
+   item { PeriodTrackerCard(ctx) }
    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
     HMetric("BMI",bmi?.let{String.format(Locale.US,"%.1f",it)}?:"—",bmi?.let{when{it<18.5->"کمبود وزن";it<25->"محدوده معمول";it<30->"اضافه‌وزن";else->"بالا"}}?:"قد و وزن را وارد کن",Modifier.weight(1f))
     HMetric("کالری پایه",bmr?.toInt()?.toString()?:"—","BMR روزانه",Modifier.weight(1f))
@@ -786,6 +900,17 @@ private fun FeatureMapTree(
                 "پشتیبان‌گیری و بازیابی اطلاعات با امکانات موجود در برنامه"
             ),
             "زیرساخت برنامه"
+        ))
+        add(Branch(
+            "تقویم چرخه قاعدگی",
+            listOf(
+                "ثبت تاریخ شروع آخرین پریود",
+                "تنظیم طول چرخه و مدت خون‌ریزی",
+                "ثبت علائم تجربه‌شده",
+                "محاسبه تقریبی تاریخ شروع دوره بعد",
+                "ذخیره اطلاعات به‌صورت محلی روی دستگاه"
+            ),
+            "قابلیت ثبت و برآورد محلی"
         ))
         modules.forEach { (title, description, status) ->
             add(Branch(title, listOf(description), status))
