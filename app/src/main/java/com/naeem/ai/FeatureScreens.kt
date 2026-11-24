@@ -62,7 +62,10 @@ fun FeatureHub(
     var showFeatureMap by remember { mutableStateOf(false) }
     val carouselState = rememberLazyListState()
     if (showFeatureMap) {
-        FeatureMapTree(onClose = { showFeatureMap = false })
+        FeatureMapTree(
+            onClose = { showFeatureMap = false },
+            modules = entries.map { Triple(it.title, it.subtitle + " · " + it.detail, it.aiStatus) }
+        )
         return
     }
     data class Entry(
@@ -743,32 +746,79 @@ private class TrackSearch{
 
 
 @Composable
-private fun FeatureMapTree(onClose: () -> Unit) {
+private fun FeatureMapTree(
+    onClose: () -> Unit,
+    modules: List<Triple<String, String, String>>
+) {
     val silver = Color(0xFFD4D9E0)
     val muted = Color(0xFF9AA3AE)
     val panel = Color(0xFF171B20)
     val line = Color(0xFF626C78)
+
     data class Branch(val title: String, val items: List<String>, val status: String = "در کد برنامه")
-    val branches = listOf(
-        Branch("هوش مصنوعی و گفتگو", listOf("چت هوشمند و پاسخ‌گویی", "گفت‌وگوی صوتی و خواندن پاسخ", "تحلیل تصویر و ساخت تصویر", "جست‌وجو و پژوهش وب", "تاریخچه و چند گفت‌وگو")),
-        Branch("حافظه هوشمند", listOf("یادداشت‌های قابل مدیریت", "استفاده از یادداشت‌های منتخب در گفتگو")),
-        Branch("مدیریت مالی", listOf("ثبت درآمد و هزینه", "دسته‌بندی تراکنش‌ها", "گزارش ماهانه و تراز مالی")),
-        Branch("ورزش", listOf("ثبت تمرین و فعالیت", "مدت، مسافت و جزئیات تمرین", "برنامه و سوابق ورزشی")),
-        Branch("سفر", listOf("مدیریت سفر و همراهان", "ثبت مخارج و سهم افراد", "آب‌وهوا و مسیر‌یابی آنلاین")),
-        Branch("سلامت و مراقبت روزانه", listOf("پروفایل بدن و محاسبه شاخص‌ها", "ثبت غذا و کالری از طریق گفتگو", "تقویم چرخه قاعدگی و ثبت علائم", "یادآور دارو و ثبت زمان مصرف"), "اتصال گفتگو و یادآورها در حال توسعه"),
-        Branch("برنامه‌ریز و بیدارباش", listOf("گفتن برنامه هفتگی در گفتگو", "تشخیص روزها و ساعت‌های بیداری", "تنظیم خودکار زنگ گوشی با اجازه کاربر", "تغییر یا لغو برنامه از طریق گفتگو"), "هنوز پیاده‌سازی نشده"),
-        Branch("طبیعت‌گردی | Naeem Trail", listOf("ثبت مسیر با GPS", "ذخیره نقاط و محاسبه مسافت", "ورود و خروجی GPX", "نقشه توپوگرافی آفلاین سراسر ایران", "مسیریابی آفلاین و هشدار خروج از مسیر"), "نقشه و مسیریابی آفلاین در حال توسعه"),
-        Branch("ابزارها و امنیت", listOf("قفل اثر انگشت یا قفل دستگاه", "تنظیم نشانی API و مدل هوش مصنوعی", "ذخیره امن کلید API"))
-    )
-    Column(Modifier.fillMaxSize().background(Color(0xFF090B0E)).padding(horizontal=18.dp, vertical=14.dp)) {
+    val branches = buildList {
+        add(Branch(
+            "مغز مرکزی و مسیر تصمیم‌گیری",
+            listOf(
+                "دریافت پیام یا درخواست کاربر",
+                "تشخیص موضوع و انتخاب مسیر یا ابزار مرتبط",
+                "بررسی اطلاعات لازم و پرسیدن سؤال در صورت ابهام",
+                "نمایش خلاصه و گرفتن تأیید پیش از اقدام‌های حساس",
+                "اجرای ابزار و ذخیره نتیجه در بخش مربوط؛ فقط در محدوده قابلیت‌های پیاده‌سازی‌شده"
+            ),
+            "هسته هماهنگ‌کننده"
+        ))
+        add(Branch(
+            "حافظه، داده و امنیت",
+            listOf(
+                "گفتگو و ابزارهای هوش مصنوعی با سرویس و مدل تنظیم‌شده",
+                "ذخیره محلی اطلاعات هر بخش در فضای داده مربوط به خودش",
+                "نگهداری رمزگذاری‌شده کلید اتصال روی دستگاه",
+                "پشتیبان‌گیری و بازیابی اطلاعات با امکانات موجود در برنامه"
+            ),
+            "زیرساخت برنامه"
+        ))
+        modules.forEach { (title, description, status) ->
+            add(Branch(title, listOf(description), status))
+        }
+    }
+
+    Column(Modifier.fillMaxSize().background(Color(0xFF090B0E)).padding(horizontal = 18.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("NAEEM AI  /  FEATURE MAP", color = muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Text("نقشه قابلیت‌های نرم‌افزار", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("NAEEM AI  /  LIVE FEATURE TREE", color = muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text("درخت زنده ساختار نرم‌افزار", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("نقشه بخش‌ها، نقش‌ها و مسیر کار مغز هوشمند", color = muted, style = MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick = onClose) { Icon(Icons.Default.Close, null, tint = silver) }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
+        Surface(
+            color = Color(0xFF202630),
+            shape = RoundedCornerShape(14.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B4654)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("نسخه نصب‌شده", color = muted, style = MaterialTheme.typography.labelSmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(BuildConfig.VERSION_NAME, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.weight(1f))
+                    Text("کد نسخه " + BuildConfig.VERSION_CODE, color = silver, style = MaterialTheme.typography.labelMedium)
+                }
+                Text(
+                    "نسخه قبلی: کد " + (BuildConfig.VERSION_CODE - 1).coerceAtLeast(0) + "  ·  نسخه بعدی: پس از انتشار ارتقای بعدی به‌روزرسانی می‌شود",
+                    color = muted,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    "این نقشه از فهرست اصلی فضاهای برنامه ساخته می‌شود؛ با اضافه یا تغییر یک بخش در فهرست اصلی، شاخه آن هم در این صفحه به‌روز می‌شود.",
+                    color = muted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -781,7 +831,7 @@ private fun FeatureMapTree(onClose: () -> Unit) {
                         Icon(Icons.Default.AccountTree, null, tint = silver, modifier = Modifier.size(30.dp))
                         Spacer(Modifier.height(5.dp))
                         Text("Naeem AI", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
-                        Text("هسته هوشمند مرکزی و هماهنگ‌کننده ماژول‌ها", color = muted, style = MaterialTheme.typography.bodySmall)
+                        Text("ریشه درخت · هسته هوشمند و هماهنگ‌کننده فضاها", color = muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 Box(Modifier.width(2.dp).height(18.dp).background(line))
@@ -801,13 +851,16 @@ private fun FeatureMapTree(onClose: () -> Unit) {
                                 Box(Modifier.size(8.dp).background(silver, CircleShape))
                                 Spacer(Modifier.width(9.dp))
                                 Text(branch.title, color = silver, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Text(branch.status, color = muted, style = MaterialTheme.typography.labelSmall)
                             }
                             branch.items.forEach { item ->
                                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text("└", color = line)
-                                    Text(item, color = Color(0xFFD0D5DC), style = MaterialTheme.typography.bodySmall)
+                                    Text(item, color = Color(0xFFD0D5DC), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                 }
+                            }
+                            Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(9.dp)) {
+                                Text(branch.status, color = muted, style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
                             }
                         }
                     }
@@ -815,12 +868,15 @@ private fun FeatureMapTree(onClose: () -> Unit) {
             }
             item {
                 Spacer(Modifier.height(4.dp))
-                Text("وضعیت قابلیت‌ها بر اساس کد فعلی برنامه است؛ موارد در حال توسعه هنوز قابلیت کامل و آزموده‌شده محسوب نمی‌شوند.", color = muted, style = MaterialTheme.typography.labelSmall)
+                Text(
+                    "وضعیت هر بخش از توضیحات ثبت‌شده در فهرست اصلی برنامه می‌آید. «فعال» به معنی اتصال یا امکان موجود است و عبارت‌های «در حال توسعه» یا «نیازمند تنظیم» به معنی قابلیت کامل و آزموده‌شده نیست.",
+                    color = muted,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }
 }
-
 
 @Composable
 fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
