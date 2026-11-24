@@ -207,7 +207,7 @@ class MainActivity : FragmentActivity() {
             }
         })
         promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("قفل Naeem ai")
+            .setTitle("قفل Supra AI")
             .setSubtitle("برای ورود اثر انگشت یا قفل صفحه گوشی را تأیید کن")
             .setAllowedAuthenticators(authenticators)
             .build()
@@ -332,7 +332,7 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
                 Box(Modifier.size(112.dp).background(Color(0xFF202329), CircleShape), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Fingerprint, contentDescription = "اثر انگشت", tint = silver, modifier = Modifier.size(64.dp))
                 }
-                Text("نعیم ای‌آی", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Supra AI", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold); Text("by Naeem deh", color = Color(0xFF9299A3), style = MaterialTheme.typography.labelSmall) }
                 Text("فضای شخصی تو", color = Color(0xFF9299A3), style = MaterialTheme.typography.bodyMedium)
                 Text(message, color = Color(0xFF9299A3), style = MaterialTheme.typography.bodySmall)
                 Button(onClick = onUnlock, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF343A42))) {
@@ -400,7 +400,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("نعیم ای‌آی", color = silver.copy(alpha = 0.82f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) { Text("Supra AI", color = silver.copy(alpha = 0.92f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = muted, style = MaterialTheme.typography.labelSmall) }
                 Text(listOf("یک از پنج", "دو از پنج", "سه از پنج", "چهار از پنج", "پنج از پنج")[page], color = muted, style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.height(12.dp))
@@ -463,7 +463,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                     OutlinedButton(onClick = { page-- }, modifier = Modifier.weight(1f).height(54.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF91A9CB)), colors = ButtonDefaults.outlinedButtonColors(contentColor = silver), shape = RoundedCornerShape(16.dp)) { Text("قبلی") }
                 }
                 Button(onClick = { if (page == 4) onEnter() else page++ }, modifier = Modifier.weight(if (page > 0) 1.5f else 1f).height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)), shape = RoundedCornerShape(16.dp)) {
-                    Text(if (page == 4) "شروع تجربه نعیم ای‌آی" else "بعدی", fontWeight = FontWeight.Bold)
+                    Text(if (page == 4) "شروع تجربه Supra AI" else "بعدی", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -904,7 +904,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 containerColor = Panel,
                 icon = { Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = Gold) },
                 title = { Text("ساخت ویدیو", color = Gold, fontWeight = FontWeight.Bold) },
-                text = { Text("این قابلیت در حال توسعه است و در نسخه‌های آینده به نعیم ای‌آی اضافه می‌شود.", color = Color(0xFFD0D5DC)) },
+                text = { Text("این قابلیت در حال توسعه است و در نسخه‌های آینده به Supra AI اضافه می‌شود.", color = Color(0xFFD0D5DC)) },
                 confirmButton = {
                     TextButton(onClick = { showVideoDevelopment = false }) {
                         Text("متوجه شدم", color = Gold)
@@ -920,12 +920,12 @@ fun NaeemApp(store: SecureConfigStore) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_brain_mark),
-                                contentDescription = "نشان مغز هوشمند نعیم ای‌آی",
+                                contentDescription = "نشان مغز هوشمند Supra AI",
                                 modifier = Modifier.size(28.dp)
                             )
                             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Text("نعیم ای‌آی", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
-                                Text("دستیار هوشمند شخصی", style = MaterialTheme.typography.labelSmall, color = Muted)
+                                Text("Supra AI", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                                Text("by Naeem deh", style = MaterialTheme.typography.labelSmall, color = Muted)
                             }
                         }
                     },
@@ -1068,7 +1068,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("نعیم ای‌آی", color = Gold.copy(alpha = 0.78f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) { Text("Supra AI", color = Gold.copy(alpha = 0.92f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = Muted, style = MaterialTheme.typography.labelSmall) }
                         Spacer(Modifier.height(8.dp))
                         ThinkingOrb(diameter = 142.dp, active = false, onClick = { playThinkingOrbSound(context) })
                         Spacer(Modifier.height(15.dp))
@@ -1116,7 +1116,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 },
                                 color = Gold, fontWeight = FontWeight.SemiBold
                             )
-                            Text("گوی هوشمند نعیم ای‌آی", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text("گوی هوشمند Supra AI", color = Muted, style = MaterialTheme.typography.labelSmall)
                             if (busy) {
                                 LinearProgressIndicator(
                                     Modifier.fillMaxWidth().padding(top = 5.dp),
@@ -1167,7 +1167,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF30363E) else Panel)
                             ) {
                                 Column(Modifier.padding(14.dp)) {
-                                    Text(if (msg.fromUser) "شما" else "نعیم ای‌آی", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(if (msg.fromUser) "شما" else "Supra AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(5.dp))
                                     Text(msg.text, color = Color(0xFFE7ECF2), style = MaterialTheme.typography.bodyLarge)
                                     msg.image?.let { image ->
@@ -1388,7 +1388,7 @@ fun NaeemApp(store: SecureConfigStore) {
             AlertDialog(
                 onDismissRequest = { showMemory = false },
                 containerColor = Panel,
-                title = { Text("حافظه نعیم ای‌آی", color = Gold) },
+                title = { Text("حافظه Supra AI", color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -1617,7 +1617,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                onClick = { backupExportLauncher.launch("NaeemAI-Backup.json") },
+                                onClick = { backupExportLauncher.launch("SupraAI-Backup.json") },
                                 enabled = backupPassphrase.length >= 8,
                                 modifier = Modifier.weight(1f)
                             ) { Text("خروجی گرفتن", color = Gold) }
