@@ -383,6 +383,122 @@ private val HMuted=Color(0xFF9AA3AE)
 @Composable private fun FMetric(title:String,value:String,sub:String,modifier:Modifier){Card(modifier,colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(title,color=FM,style=MaterialTheme.typography.labelSmall);Text(value,color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(sub,color=FM,style=MaterialTheme.typography.labelSmall)}}}
 
 @Composable fun GamesHub(onClose:()->Unit){
+    var selected by remember { mutableStateOf("") }
+    val games = listOf(
+        Triple("پانتومیم", "بازی گروهی و زمان‌دار", Color(0xFFE0A68E)),
+        Triple("محاسبه سریع", "سرعت و دقت ذهن", Color(0xFF91BFE8)),
+        Triple("حافظه رنگ‌ها", "تمرکز و حافظه دیداری", Color(0xFF9AD6B0)),
+        Triple("مافیا", "نقش مخفی و استدلال گروهی", Color(0xFFC2A8E8))
+    )
+    if (selected.isNotEmpty()) {
+        when (selected) {
+            "پانتومیم" -> CharadesGameScreen(onClose = { selected = "" })
+            "محاسبه سریع" -> GameDetailFrame("محاسبه سریع", "ذهن را به چالش بکش", Color(0xFF91BFE8), { selected = "" }) { QuickMathGame() }
+            "حافظه رنگ‌ها" -> GameDetailFrame("حافظه رنگ‌ها", "الگو را به خاطر بسپار", Color(0xFF9AD6B0), { selected = "" }) { ColorMemoryGame() }
+            "مافیا" -> GameDetailFrame("مافیا", "شب، روز و نقش‌های پنهان", Color(0xFFC2A8E8), { selected = "" }) { MafiaGame() }
+        }
+        return
+    }
+    Column(Modifier.fillMaxSize().background(
+        ComposeBrush.verticalGradient(listOf(Color(0xFF10131B), Color(0xFF090B10), Color(0xFF171321)))
+    ).padding(horizontal = 18.dp, vertical = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("NAEEM AI  /  GAME STUDIO", color = Color(0xFFE0A68E), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text("باشگاه بازی", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+                Text("هر بازی، یک تجربه مستقل", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodySmall)
+            }
+            IconButton(onClick = onClose) { Icon(Icons.Default.Close, null, tint = Color.White) }
+        }
+        Spacer(Modifier.height(16.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF20232D)), shape = RoundedCornerShape(24.dp)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(54.dp).background(
+                    ComposeBrush.linearGradient(listOf(Color(0xFFE0A68E), Color(0xFFC2A8E8))),
+                    RoundedCornerShape(18.dp)
+                ), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.SportsEsports, null, tint = Color(0xFF11131A), modifier = Modifier.size(30.dp))
+                }
+                Spacer(Modifier.width(13.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("وقتشه بازی شروع بشه", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("یک بازی را انتخاب کن و وارد صفحه اختصاصی آن شو.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        Text("بازی‌های در دسترس", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            columns = GridCells.Fixed(2), modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(games.size) { index ->
+                val game = games[index]
+                val icon = when (game.first) {
+                    "پانتومیم" -> Icons.Default.TheaterComedy
+                    "محاسبه سریع" -> Icons.Default.Calculate
+                    "حافظه رنگ‌ها" -> Icons.Default.Palette
+                    else -> Icons.Default.Visibility
+                }
+                Card(
+                    modifier = Modifier.fillMaxWidth().height(190.dp).clickable { selected = game.first },
+                    shape = RoundedCornerShape(23.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1E28)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+                ) {
+                    Box(Modifier.fillMaxSize().background(
+                        ComposeBrush.linearGradient(listOf(game.third.copy(alpha = 0.25f), Color(0xFF1A1E28), Color(0xFF10131A)))
+                    ).padding(15.dp)) {
+                        Box(Modifier.align(Alignment.TopEnd).size(76.dp).background(game.third.copy(alpha = 0.10f), CircleShape))
+                        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                            Box(Modifier.size(54.dp).background(game.third.copy(alpha = 0.18f), RoundedCornerShape(17.dp)), contentAlignment = Alignment.Center) {
+                                Icon(icon, null, tint = game.third, modifier = Modifier.size(31.dp))
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(game.first, color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleMedium)
+                                Text(game.second, color = Color(0xFFBFC6D0), style = MaterialTheme.typography.labelSmall)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("ورود به بازی", color = game.third, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.width(5.dp))
+                                    Icon(Icons.Default.ArrowBack, null, tint = game.third, modifier = Modifier.size(15.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable private fun GameDetailFrame(
+    title: String, subtitle: String, accent: Color, onBack: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Column(Modifier.fillMaxSize().background(
+        ComposeBrush.verticalGradient(listOf(Color(0xFF10131B), Color(0xFF090B10)))
+    ).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = accent) }
+            Column(Modifier.weight(1f)) {
+                Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                Text(subtitle, color = accent, style = MaterialTheme.typography.labelSmall)
+            }
+            Box(Modifier.size(42.dp).background(accent.copy(alpha = 0.14f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.SportsEsports, null, tint = accent)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        androidx.compose.foundation.layout.Box(Modifier.weight(1f).fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) { content() }
+        }
+    }
+}
+
+@Composable private fun CharadesGameScreen(onClose:()->Unit){
  var seconds by remember{mutableIntStateOf(60)}
  var running by remember{mutableStateOf(false)}
  var team by remember{mutableIntStateOf(1)}
@@ -398,7 +514,7 @@ private val HMuted=Color(0xFF9AA3AE)
  LaunchedEffect(running,seconds){if(running&&seconds>0){kotlinx.coroutines.delay(1000);seconds=(seconds-1).coerceAtLeast(0);if(seconds<=1)running=false}}
  fun next(){word=decks[category].orEmpty().random();seconds=60;running=false;showWord=true;round++}
  Column(Modifier.fillMaxSize().background(Color(0xFF0A0C10).copy(alpha=0.84f))){
-  Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه بازی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("پانتومیم، محاسبه سریع، حافظه رنگ‌ها و مافیای گروهی",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
+  Row(Modifier.fillMaxWidth().background(Color(0xFF1B1F25)).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("حدس بزن، زمان را مدیریت کن و امتیاز بگیر",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=Color(0xFF303741),shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
@@ -408,9 +524,6 @@ private val HMuted=Color(0xFF9AA3AE)
     Button(onClick={if(team==1)score1++ else score2++;next()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFD4D9E0),contentColor=Color(0xFF171B21)),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CheckCircle,null);Text("حدس درست بود! +۱")}
    }}}
    item{Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF20252D)),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF303741) else Color(0xFF20252D)),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFFD4D9E0),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=Color(0xFFBFC6D0),style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
-   item { QuickMathGame() }
-   item { ColorMemoryGame() }
-   item { MafiaGame() }
   }
  }
 }
