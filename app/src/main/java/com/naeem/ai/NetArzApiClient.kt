@@ -116,7 +116,7 @@ class NetArzApiClient(
 
     suspend fun waitForVideo(
         jobId: String,
-        onProgress: (NetArzVideoJob) -> Unit
+        onProgress: suspend (NetArzVideoJob) -> Unit
     ): ByteArray = withContext(Dispatchers.IO) {
         val deadline = System.currentTimeMillis() + 25L * 60L * 1000L
         while (System.currentTimeMillis() < deadline) {
