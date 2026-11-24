@@ -83,6 +83,16 @@ class DailyJournalStore(context: Context) {
         return captured
     }
 
+    fun remove(id: String) {
+        val remaining = entries().filterNot { it.id == id }
+        val array = JSONArray()
+        remaining.forEach { row ->
+            array.put(JSONObject().put("id", row.id).put("timestamp", row.timestamp)
+                .put("category", row.category).put("title", row.title).put("detail", row.detail))
+        }
+        prefs.edit().putString("entries", array.toString()).apply()
+    }
+
     fun report(from: Long, to: Long): List<DailyJournalEntry> =
         entries().filter { it.timestamp in from until to }.sortedBy { it.timestamp }
 
