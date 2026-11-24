@@ -518,7 +518,7 @@ fun NaeemApp(
     var showSettings by remember { mutableStateOf(false) }
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
-    var apiKey by remember { mutableStateOf(store.apiKey()) }
+    var apiKey by remember { mutableStateOf(store.apiKeyFor(store.baseUrl()).ifBlank { store.apiKey() }) }
     var imageModel by remember { mutableStateOf(store.imageModel()) }
     var selectedImageBase64 by remember { mutableStateOf<String?>(null) }
     var selectedImage by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
@@ -531,6 +531,13 @@ fun NaeemApp(
     var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
     var selectedModelType by remember { mutableStateOf("chat") }
     var testingProvider by remember { mutableStateOf(false) }
+    fun switchApiProvider(url: String) {
+        store.rememberApiKey(baseUrl, apiKey)
+        baseUrl = url
+        apiKey = store.apiKeyFor(url)
+        providerTestStatus = if (apiKey.isBlank()) "برای این درگاه هنوز کلید ذخیره نشده؛ کلید مربوط به همان سرویس را وارد کن." else ""
+        availableModels = emptyList()
+    }
     val conversationStore = remember { ConversationStore(context) }
     var activeConversationId by remember { mutableStateOf(conversationStore.activeId()) }
     var conversationReload by remember { mutableStateOf(0) }
@@ -697,7 +704,7 @@ fun NaeemApp(
                 val textChunks = audioClient.splitText(text)
                 for (textChunk in textChunks) {
                     if (!isActive) break
-                    val audioBytes = audioClient.synthesize(baseUrl, apiKey, textChunk)
+                    val audioBytes = audioClient.synthesize(baseUrl, apiKey, textChunk, store.speechModel())
                     val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
                     generatedFile.writeBytes(audioBytes)
                     val player = MediaPlayer()
@@ -1449,7 +1456,7 @@ fun NaeemApp(
         if (showProfessionalVideo) {
             Dialog(onDismissRequest = { showProfessionalVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
-                    ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false })
+                    ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, baseUrl = baseUrl, apiKey = apiKey)
                 }
             }
         }
@@ -1681,8 +1688,9 @@ fun NaeemApp(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("درگاه اتصال")
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            OutlinedButton(onClick = { baseUrl = "https://netarz.ir/api/ai/v1"; model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("نت‌ارز", color = Gold) }
-                            OutlinedButton(onClick = { baseUrl = "https://api.gapgpt.ir/v1"; model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("GapGPT", color = Gold) }
+                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("نت‌ارز", color = Gold) }
+                            OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("OpenAI مستقیم", color = Gold) }
+                            OutlinedButton(onClick = { switchApiProvider("https://api.gapgpt.ir/v1"); model = "gpt-4o-mini" }, modifier = Modifier.weight(1f)) { Text("GapGPT", color = Gold) }
                         }
                         Text("نشانی سرویس (Base URL)")
                         OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
@@ -1721,11 +1729,15 @@ fun NaeemApp(
                         }
                         if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                         if (availableModels.isNotEmpty()) {
-                            Text("مدل‌های دسته انتخاب‌شده؛ برای چت یا تصویر روی شناسه بزن:", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text("مدل‌های دسته انتخاب‌شده؛ روی شناسه بزن تا برای همان قابلیت ذخیره شود:", color = Muted, style = MaterialTheme.typography.labelSmall)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 availableModels.take(30).forEach { modelId ->
-                                    TextButton(onClick = { if (selectedModelType == "chat") model = modelId else if (selectedModelType == "image") imageModel = modelId }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
-                                        Text(modelId, color = if (model == modelId) Gold else Color.White, style = MaterialTheme.typography.labelSmall)
+                                    TextButton(onClick = {
+                                        store.saveModelFor(selectedModelType, modelId)
+                                        when (selectedModelType) { "chat" -> model = modelId; "image" -> imageModel = modelId }
+                                        providerTestStatus = "مدل $modelId برای دسته $selectedModelType ذخیره شد."
+                                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+                                        Text(modelId, color = if ((selectedModelType == "chat" && model == modelId) || (selectedModelType == "image" && imageModel == modelId) || store.modelFor(selectedModelType) == modelId) Gold else Color.White, style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
@@ -1763,6 +1775,8 @@ fun NaeemApp(
                     TextButton(onClick = {
                         store.save(baseUrl.trim(), model.trim(), apiKey.trim())
                         store.saveImageModel(imageModel)
+                        store.saveModelFor("chat", model)
+                        store.saveModelFor("image", imageModel)
                         showSettings = false
                     }) { Text("ذخیره", color = Gold) }
                 },
