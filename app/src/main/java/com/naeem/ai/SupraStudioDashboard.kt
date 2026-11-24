@@ -2,6 +2,7 @@ package com.naeem.ai
 
 import android.content.ContentValues
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.view.ViewGroup
@@ -46,7 +47,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private data class StudioClip(val uri: Uri, val name: String)
+private data class StudioClip(val uri: Uri, val name: String, val durationMs: Long, val trimStartMs: Long = 0L, val trimEndMs: Long = durationMs)
+
+private fun studioDurationMs(context: Context, uri: Uri): Long = runCatching {
+    MediaMetadataRetriever().let { retriever ->
+        try { retriever.setDataSource(context, uri); retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L }
+        finally { retriever.release() }
+    }
+}.getOrDefault(0L)
 
 private fun studioDisplayName(context: Context, uri: Uri): String {
     return runCatching {
@@ -70,12 +78,16 @@ fun SupraStudioDashboard(
     var exporting by remember { mutableStateOf(false) }
     var exportStatus by remember { mutableStateOf("برای شروع، ویدیوهایت را وارد کن.") }
     var exportPercent by remember { mutableIntStateOf(0) }
+    var muteOriginalAudio by remember { mutableStateOf(false) }
     var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
-    val previewUri = clips.getOrNull(selectedIndex)?.uri
-    val player = remember(previewUri) {
-        previewUri?.let { uri ->
+    val previewClip = clips.getOrNull(selectedIndex)
+    val previewUri = previewClip?.uri
+    val player = remember(previewClip) {
+        previewClip?.let { clip ->
+            val previewItem = MediaItem.Builder().setUri(clip.uri)
+                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.trimStartMs).setEndPositionMs(clip.trimEndMs.coerceAtLeast(clip.trimStartMs + 1L)).build()).build()
             ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(uri))
+                setMediaItem(previewItem)
                 prepare()
                 playWhenReady = false
             }
@@ -94,7 +106,10 @@ fun SupraStudioDashboard(
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            if (clips.none { it.uri == uri }) clips.add(StudioClip(uri, studioDisplayName(context, uri)))
+            if (clips.none { it.uri == uri }) {
+                val duration = studioDurationMs(context, uri)
+                clips.add(StudioClip(uri, studioDisplayName(context, uri), duration))
+            }
         }
         if (clips.isNotEmpty()) {
             selectedIndex = selectedIndex.coerceIn(0, clips.lastIndex)
@@ -112,7 +127,10 @@ fun SupraStudioDashboard(
         exportStatus = "در حال آماده‌سازی پروژه…"
         val outputFile = File(context.cacheDir, "supra_studio_${System.currentTimeMillis()}.mp4")
         val editedItems = clips.map { clip ->
-            EditedMediaItem.Builder(MediaItem.fromUri(clip.uri)).build()
+            val clippedItem = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.trimStartMs.coerceAtLeast(0L)).setEndPositionMs(clip.trimEndMs.coerceAtLeast(clip.trimStartMs + 1L)).build()
+            ).build()
+            EditedMediaItem.Builder(clippedItem).setRemoveAudio(muteOriginalAudio).build()
         }
         val sequence = EditedMediaItemSequence.Builder()
             .addItems(editedItems)
@@ -123,16 +141,18 @@ fun SupraStudioDashboard(
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     scope.launch {
                         exportStatus = "در حال ذخیره فایل نهایی…"
-                        val saved = withContext(Dispatchers.IO) {
-                            context.contentResolver.openOutputStream(destination, "w")?.use { output ->
-                                outputFile.inputStream().use { input -> input.copyTo(output) }
-                            } ?: throw IllegalStateException("محل ذخیره‌سازی باز نشد.")
-                            true
+                        runCatching {
+                            withContext(Dispatchers.IO) {
+                                val output = context.contentResolver.openOutputStream(destination, "w") ?: throw IllegalStateException("محل ذخیره‌سازی باز نشد.")
+                                output.use { stream -> outputFile.inputStream().use { input -> input.copyTo(stream) } }
+                            }
+                        }.onSuccess {
+                            exporting = false; activeTransformer = null; exportPercent = 100
+                            exportStatus = "خروجی MP4 با موفقیت ذخیره شد."
+                        }.onFailure { error ->
+                            exporting = false; activeTransformer = null
+                            exportStatus = "تدوین انجام شد اما ذخیره فایل ناموفق بود: ${error.message ?: "خطای دسترسی به محل ذخیره"}"
                         }
-                        exporting = false
-                        activeTransformer = null
-                        exportPercent = 100
-                        exportStatus = if (saved) "خروجی MP4 با موفقیت ذخیره شد." else "ذخیره خروجی ناموفق بود."
                         outputFile.delete()
                     }
                 }
@@ -294,6 +314,31 @@ fun SupraStudioDashboard(
             }
         }
 
+        clips.getOrNull(selectedIndex)?.let { clip ->
+            Surface(color = Color(0xFF111B29), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("برش کلیپ انتخاب‌شده", color = Color.White, fontWeight = FontWeight.Bold)
+                    if (clip.durationMs > 1000L) {
+                        Text("شروع: ${clip.trimStartMs / 1000.0}s", color = Color(0xFFB8C9E4), style = MaterialTheme.typography.labelMedium)
+                        Slider(value = clip.trimStartMs.toFloat().coerceIn(0f, (clip.durationMs - 500L).toFloat()), onValueChange = { value ->
+                            clips[selectedIndex] = clip.copy(trimStartMs = value.toLong().coerceIn(0L, clip.trimEndMs - 500L))
+                        }, valueRange = 0f..(clip.durationMs - 500L).toFloat(), enabled = !exporting)
+                        Text("پایان: ${clip.trimEndMs / 1000.0}s از ${clip.durationMs / 1000.0}s", color = Color(0xFFB8C9E4), style = MaterialTheme.typography.labelMedium)
+                        Slider(value = clip.trimEndMs.toFloat().coerceIn((clip.trimStartMs + 500L).toFloat(), clip.durationMs.toFloat()), onValueChange = { value ->
+                            clips[selectedIndex] = clip.copy(trimEndMs = value.toLong().coerceIn(clip.trimStartMs + 500L, clip.durationMs))
+                        }, valueRange = (clip.trimStartMs + 500L).toFloat()..clip.durationMs.toFloat(), enabled = !exporting)
+                    } else Text("مدت این فایل قابل تشخیص نیست؛ برش برای آن غیرفعال است.", color = Color(0xFFE5C58A), style = MaterialTheme.typography.bodySmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("بی‌صدا کردن صدای اصلی", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            Text("برای همه کلیپ‌های پروژه", color = Color(0xFF8996A8), style = MaterialTheme.typography.labelSmall)
+                        }
+                        Switch(checked = muteOriginalAudio, onCheckedChange = { muteOriginalAudio = it }, enabled = !exporting)
+                    }
+                }
+            }
+        }
+
         if (exporting) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF9CB9F4))
         }
@@ -301,8 +346,8 @@ fun SupraStudioDashboard(
 
         Surface(color = Color(0xFF111821), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("مرحله اول تدوینگر", color = Color.White, fontWeight = FontWeight.Bold)
-                Text("ورود چند کلیپ، پیش‌نمایش، تغییر ترتیب، حذف و مونتاژ واقعی روی گوشی با خروجی MP4. در نسخه‌های بعدی، برش دقیق، موسیقی جداگانه، متن و زیرنویس، فیلترها و لایه‌های تصویری به همین تایم‌لاین اضافه می‌شوند.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.bodySmall)
+                Text("ابزارهای فعال این نسخه", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("چند کلیپ در تایم‌لاین، پیش‌نمایش، جابه‌جایی ترتیب، حذف، برش ابتدا و انتهای هر کلیپ، بی‌صدا کردن صدای اصلی و خروجی MP4. موسیقی مستقل، متن و زیرنویس، افکت و ترنزیشن هنوز در صف توسعه‌اند.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.bodySmall)
                 Text("پردازش روی دستگاه انجام می‌شود؛ فایل‌ها برای تدوین به سرور ارسال نمی‌شوند.", color = Color(0xFF9ED7B2), style = MaterialTheme.typography.labelSmall)
             }
         }
