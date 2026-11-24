@@ -185,6 +185,7 @@ class MainActivity : FragmentActivity() {
     private val unlocked = mutableStateOf(false)
     private val introCompleted = mutableStateOf(false)
     private var promptShowing = false
+    private var awaitingActivityResult = false
     private var requireAuthentication = true
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
@@ -234,7 +235,11 @@ class MainActivity : FragmentActivity() {
                         profileCompleted.value = true
                     })
                 } else {
-                    NaeemApp(store)
+                    NaeemApp(
+                        store,
+                        onExternalActivityStarted = { awaitingActivityResult = true },
+                        onExternalActivityReturned = { awaitingActivityResult = false }
+                    )
                 }
             }
             else AppLockScreen(
@@ -251,7 +256,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
-        if (unlocked.value) {
+        if (unlocked.value && !awaitingActivityResult) {
             unlocked.value = false
             requireAuthentication = true
         }
@@ -493,7 +498,11 @@ private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NaeemApp(store: SecureConfigStore) {
+fun NaeemApp(
+    store: SecureConfigStore,
+    onExternalActivityStarted: () -> Unit,
+    onExternalActivityReturned: () -> Unit
+) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
     val userName = remember { profilePrefs.getString("user_name", "").orEmpty() }
@@ -1417,7 +1426,11 @@ fun NaeemApp(store: SecureConfigStore) {
         if (showVideoCreator) {
             Dialog(onDismissRequest = { showVideoCreator = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
-                    SupraStudioDashboard(onClose = { showVideoCreator = false })
+                    SupraStudioDashboard(
+                        onClose = { showVideoCreator = false },
+                        onExternalActivityStarted = onExternalActivityStarted,
+                        onExternalActivityReturned = onExternalActivityReturned
+                    )
                 }
             }
         }
