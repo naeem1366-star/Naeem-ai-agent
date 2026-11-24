@@ -1417,7 +1417,7 @@ fun NaeemApp(store: SecureConfigStore) {
         if (showVideoCreator) {
             Dialog(onDismissRequest = { showVideoCreator = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
-                    VideoCreatorDashboard(onClose = { showVideoCreator = false })
+                    SupraStudioDashboard(onClose = { showVideoCreator = false })
                 }
             }
         }
