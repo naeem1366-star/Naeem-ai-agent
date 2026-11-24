@@ -22,9 +22,9 @@ private data class ProVideoModel(val id: String, val title: String, val note: St
 @Composable
 fun ProfessionalVideoDashboard(onClose: () -> Unit) {
     val models = listOf(
-        ProVideoModel("gemini-omni-video", "Gemini Omni", "گزینه متعادل برای شروع و ساخت ویدیو از تصویر"),
-        ProVideoModel("kling-3.0", "Kling 3.0", "حرکت سینمایی و کنترل حرفه‌ای‌تر"),
-        ProVideoModel("seedance-2-5", "Seedance 2.5", "حرکت و جزئیات پیشرفته؛ مناسب خروجی‌های خلاقانه")
+        ProVideoModel("sora-2", "Sora 2", "ساخت ویدیو از توضیح متنی"),
+        ProVideoModel("veo-3.1", "Veo 3.1", "تولید ویدیوی همراه صدا؛ کیفیت‌های بالاتر"),
+        ProVideoModel("veo-3.1-fast", "Veo 3.1 Fast", "گزینه سریع‌تر برای تولید ویدیو")
     )
     var selectedModel by remember { mutableStateOf(models.first()) }
     var prompt by remember { mutableStateOf("") }
@@ -46,7 +46,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit) {
             IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, contentDescription = "بازگشت", tint = silver) }
             Column(Modifier.weight(1f)) {
                 Text("ویدیوساز حرفه‌ای", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                Text("تولید ویدیو با مدل‌های هوش مصنوعی", color = muted, style = MaterialTheme.typography.bodySmall)
+                Text("تولید ویدیو از طریق API نت‌ارز", color = muted, style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFD6C08A), modifier = Modifier.size(27.dp))
         }
@@ -141,7 +141,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit) {
             shape = RoundedCornerShape(13.dp)
         ) { Text("تولید ویدیو — پس از اتصال API فعال می‌شود") }
 
-        Text("پیشنهاد اتصال: Banana AI؛ یک API برای چند مدل ویدیویی. کلید API باید بعداً در سرور امن نگهداری شود، نه داخل فایل نصب اندروید.", color = muted, style = MaterialTheme.typography.labelSmall)
+        Text("درگاه نت‌ارز از Sora و Veo و برخی مدل‌های ویدیویی OpenRouter پشتیبانی می‌کند. Genjutsu Object Swap یک مسیر جداگانه دارد و فقط پس از تأیید وجود مدل در کاتالوگ قابل اتصال است. کلید API برای نسخه عمومی باید روی سرور امن بماند.", color = muted, style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(16.dp))
     }
 }
