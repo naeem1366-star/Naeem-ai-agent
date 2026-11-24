@@ -63,14 +63,15 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.TRAVEL, "delete_trip", ActionAccess.WRITE, mapOf("trip_id" to trip.id))
         }
 
-        // Create a trip only when the user clearly expresses an intention to go somewhere.
-        if ((text.contains("میخوام") || text.contains("می‌خوام") || text.contains("قصد دارم") || text.contains("برنامه دارم")) &&
-            (text.contains("برم") || text.contains("بروم") || text.contains("سفر کنم"))) {
-            val destination = Regex("""(?:برم|بروم|سفر کنم به|مسافرت کنم به)\s+(?:به\s+)?(.+)$""")
+        // Create a trip from natural future travel statements, including "دارم میرم سفر".
+        val travelIntent = text.contains("سفر") || text.contains("مسافرت")
+        val travelFuture = listOf("میخوام", "می‌خوام", "قصد دارم", "برنامه دارم", "دارم میرم", "دارم می‌روم", "میرم", "می‌روم", "راهی میشم", "راهی می‌شم").any { text.contains(it) }
+        if (travelIntent && travelFuture) {
+            val destination = Regex("""(?:سفر(?:\s+به)?|مسافرت(?:\s+به)?|برم(?:\s+به)?|بروم(?:\s+به)?|میرم(?:\s+به)?|می‌روم(?:\s+به)?)\s+(.+)$""")
                 .find(text)?.groupValues?.get(1)?.trim()
                 ?.replace(Regex("""(آخر هفته|این هفته|هفته آینده|هفته بعد|فردا|پس فردا|امروز).*?$"""), "")
                 ?.trim(' ', '،', '.', '؟')
-            if (destination.isNullOrBlank()) return AssistantIntentResolution.Clarify("مقصد سفرت کجاست؟ مثلاً بگو «می‌خوام آخر هفته برم شیراز».")
+            if (destination.isNullOrBlank()) return AssistantIntentResolution.Clarify("مقصد سفرت کجاست؟ مثلاً بگو «دارم میرم سفر به شیراز».")
             val dates = when {
                 text.contains("آخر هفته") -> "آخر هفته"
                 text.contains("هفته آینده") || text.contains("هفته بعد") -> "هفته آینده"
@@ -108,6 +109,19 @@ object PersianAssistantIntentResolver {
         if (text.contains("سفر") && listOf("لیست", "سفرهام", "سفرهای من").any { text.contains(it) })
             return ready(AssistantModule.TRAVEL, "list", ActionAccess.READ)
 
+        // Food entries are saved in the Health space, not only in the journal.
+        val foodAction = listOf("خوردم", "مصرف کردم", "میل کردم", "نوشیدم").any { text.contains(it) }
+        val foodMention = listOf("غذا", "صبحانه", "ناهار", "شام", "میان‌وعده", "برنج", "مرغ", "تخم مرغ", "نان", "ماست", "موز", "سیب", "بادام", "عدس", "تن ماهی", "شیر", "سیب‌زمینی").any { text.contains(it) }
+        if (foodAction && foodMention) {
+            val grams = parseGrams(text) ?: return AssistantIntentResolution.Clarify("مقدار غذا را به گرم بگو؛ مثلاً «۵۰۰ گرم برنج خوردم».")
+            val known = listOf("سینه مرغ پخته", "تخم مرغ", "برنج سفید پخته", "نان سنگک", "ماست کم‌چرب", "موز", "سیب", "بادام", "عدس پخته", "تن ماهی آبکش‌شده", "شیر کم‌چرب", "سیب‌زمینی آب‌پز")
+            val foodName = known.firstOrNull { normalize(text).contains(normalize(it)) }
+                ?: listOf("برنج", "مرغ", "تخم مرغ", "نان", "ماست", "موز", "سیب", "بادام", "عدس", "تن ماهی", "شیر", "سیب زمینی").firstOrNull { normalize(text).contains(normalize(it)) }
+                ?: "غذا"
+            val meal = when { text.contains("صبحانه") -> "صبحانه"; text.contains("ناهار") -> "ناهار"; text.contains("شام") -> "شام"; else -> "میان‌وعده" }
+            return ready(AssistantModule.HEALTH, "add_food", ActionAccess.WRITE, mapOf("food" to foodName, "grams" to grams.toString(), "meal" to meal))
+        }
+
         val isWorkout = listOf("تمرین", "ورزش", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
         if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز").any { text.contains(it) }) {
             val strength = listOf("وزنه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
@@ -124,8 +138,6 @@ object PersianAssistantIntentResolver {
                 text.contains("پرس") -> "پرس"
                 else -> "تمرین"
             }
-            if (!strength && minutes == null)
-                return AssistantIntentResolution.Clarify("مدت تمرین چند دقیقه بود؟ برای مثال «دوچرخه‌سواری ۲۵ کیلومتر در ۷۰ دقیقه».")
             val category = when {
                 strength -> "قدرتی"
                 title == "یوگا" -> "انعطاف"
@@ -173,6 +185,14 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.FINANCE, "recent", ActionAccess.READ)
 
         return AssistantIntentResolution.NoMatch
+    }
+
+    private fun parseGrams(text: String): Int? {
+        val numeric = Regex("""(\\d+(?:\\.\\d+)?)\\s*(?:گرم|g)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
+        if (numeric != null) return numeric.toInt().takeIf { it > 0 }
+        if (text.contains("نیم کیلو")) return 500
+        val words = mapOf("صد" to 100, "دویست" to 200, "سیصد" to 300, "چهارصد" to 400, "پانصد" to 500, "ششصد" to 600, "هفتصد" to 700, "هشتصد" to 800, "نهصد" to 900, "یک کیلو" to 1000, "یه کیلو" to 1000)
+        return words.entries.firstOrNull { text.contains(it.key) }?.value
     }
 
     private fun hasAmbiguousToman(text: String): Boolean {
@@ -236,6 +256,42 @@ class FinanceAssistantTool(private val store: LedgerStore) : AssistantTool {
             }
             else -> AssistantToolResult(false, "عملیات مالی ناشناخته است.")
         }
+    }
+}
+
+class HealthAssistantTool(context: Context) : AssistantTool {
+    override val module = AssistantModule.HEALTH
+    private val store = HStore(context.applicationContext)
+    override suspend fun validate(action: AssistantAction): ActionValidation = when (action.operation) {
+        "add_food" -> if ((action.parameters["grams"]?.toIntOrNull() ?: 0) > 0 && !action.parameters["food"].isNullOrBlank()) ActionValidation.Valid
+            else ActionValidation.NeedsClarification("نام غذا و مقدار آن به گرم را مشخص کن.")
+        "summary" -> ActionValidation.Valid
+        else -> ActionValidation.Invalid("این عملیات سلامت پشتیبانی نمی‌شود.")
+    }
+    override suspend fun execute(action: AssistantAction): AssistantToolResult = when (action.operation) {
+        "summary" -> {
+            val start = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,0); set(Calendar.MINUTE,0); set(Calendar.SECOND,0); set(Calendar.MILLISECOND,0) }.timeInMillis
+            val rows = store.logs().filter { it.at >= start }
+            AssistantToolResult(true, if (rows.isEmpty()) "امروز هنوز موردی در دفتر سلامت ثبت نشده." else
+                "دفتر سلامت امروز:\\n" + rows.joinToString("\\n") { "• " + it.name + " — " + it.kcal + " kcal" })
+        }
+        "add_food" -> {
+            val food = action.parameters.getValue("food")
+            val grams = action.parameters.getValue("grams").toInt()
+            val meal = action.parameters["meal"].orEmpty().ifBlank { "میان‌وعده" }
+            val normalizedFood = food.replace('ي','ی').replace('ك','ک')
+            val match = foodBank.firstOrNull { normalizedFood.contains(it.name) || it.name.contains(normalizedFood) }
+            val calories = if (match != null) (match.kcal * grams / 100.0).toInt() else 0
+            val protein = match?.let { it.protein * grams / 100.0 } ?: 0.0
+            val carbs = match?.let { it.carbs * grams / 100.0 } ?: 0.0
+            val fat = match?.let { it.fat * grams / 100.0 } ?: 0.0
+            val label = (match?.name ?: food) + " • " + grams + " گرم" + if (match == null) " (کالری نامشخص)" else ""
+            store.add(HLog(label, calories, "غذا • " + meal, System.currentTimeMillis(), protein, carbs, fat))
+            AssistantToolResult(true, if (match == null)
+                "مقدار «" + label + "» در دفتر سلامت ثبت شد. برای محاسبه کالری، نوع دقیق غذا را هم بگو."
+            else "«" + label + "» در دفتر سلامت ثبت شد؛ انرژی تقریبی: " + calories + " کیلوکالری.")
+        }
+        else -> AssistantToolResult(false, "عملیات سلامت ناشناخته است.")
     }
 }
 
