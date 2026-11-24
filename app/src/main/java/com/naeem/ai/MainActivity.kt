@@ -403,6 +403,9 @@ fun NaeemApp(store: SecureConfigStore) {
     var showWrapped by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
     var showAlbum by remember { mutableStateOf(false) }
+    var showNews by remember { mutableStateOf(false) }
+    var showMedication by remember { mutableStateOf(false) }
+    var showPlanner by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
@@ -988,9 +991,33 @@ fun NaeemApp(store: SecureConfigStore) {
                         onMarkets = { showHub = false; showMarkets = true },
                         onWrapped = { showHub = false; showWrapped = true },
                         onTrail = { showHub = false; showTrail = true },
-                        onSocial = { showHub = false; showSocialAnalytics = true }
+                        onSocial = { showHub = false; showSocialAnalytics = true },
+                        onNews = { showHub = false; showNews = true },
+                        onMedication = { showHub = false; showMedication = true },
+                        onPlanner = { showHub = false; showPlanner = true }
                     ) }
                 }
+                }
+            }
+        }
+        if (showNews) {
+            Dialog(onDismissRequest = { showNews = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ModuleScreenBackdrop("discover") { NewsDashboard(onClose = { showNews = false }) }
+                }
+            }
+        }
+        if (showMedication) {
+            Dialog(onDismissRequest = { showMedication = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ModuleScreenBackdrop("health") { MedicationReminderDashboard(onClose = { showMedication = false }) }
+                }
+            }
+        }
+        if (showPlanner) {
+            Dialog(onDismissRequest = { showPlanner = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    ModuleScreenBackdrop("wrapped") { WeeklyPlannerDashboard(onClose = { showPlanner = false }) }
                 }
             }
         }
