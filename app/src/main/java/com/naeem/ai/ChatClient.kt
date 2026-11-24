@@ -59,9 +59,9 @@ class ChatClient {
             }
             require(cleanKey.isNotBlank()) { "کلید API در تنظیمات وارد نشده است." }
             require(cleanKey.all { it.code in 0x21..0x7E }) {
-                "مقدار فیلد کلید API معتبر نیست؛ فقط کلید اصلی انگلیسی را از پنل GapGPT کپی کن. متن فارسی، فاصله یا توضیحات را وارد نکن."
+                "مقدار فیلد کلید API معتبر نیست؛ فقط کلید اصلی انگلیسی را از پنل سرویس API کپی کن. متن فارسی، فاصله یا توضیحات را وارد نکن."
             }
-            require(model.isNotBlank()) { "شناسه مدل در تنظیمات خالی است. نام مدل را دقیقاً از پنل GapGPT کپی کنید." }
+            require(model.isNotBlank()) { "شناسه مدل در تنظیمات خالی است. نام مدل را دقیقاً از پنل سرویس API کپی کنید." }
 
             var root = baseUrl.trim().trimEnd('/')
             require(root.startsWith("https://", ignoreCase = true)) {
@@ -113,8 +113,8 @@ class ChatClient {
                             val detail = parsed?.takeIf { it.isNotBlank() }
                                 ?: responseText.take(700).ifBlank { response.message }
                             val hint = when (response.code) {
-                                401 -> "\\nراهنما: کلید API یا اعتبار حساب GapGPT را بررسی کنید."
-                                403 -> "\\nراهنما: دسترسی کلید یا اعتبار حساب GapGPT را بررسی کنید."
+                                401 -> "\\nراهنما: کلید API یا اعتبار حساب سرویس API را بررسی کنید."
+                                403 -> "\\nراهنما: دسترسی کلید یا اعتبار حساب سرویس API را بررسی کنید."
                                 404 -> "\\nراهنما: آدرس سرویس و شناسه مدل را بررسی کنید."
                                 429 -> "\\nراهنما: محدودیت درخواست یا اعتبار API را بررسی کنید."
                                 else -> ""
@@ -141,7 +141,7 @@ class ChatClient {
                 } catch (e: UnknownHostException) {
                     if (index == endpoints.lastIndex) {
                         throw IllegalStateException(
-                            "نام سرور GapGPT از DNS گوشی پیدا نشد. اینترنت، DNS یا فیلترشکن را بررسی کن. آدرس تأییدشده سرویس: $root",
+                            "نام سرور سرویس API از DNS گوشی پیدا نشد. اینترنت، DNS یا فیلترشکن را بررسی کن. آدرس تأییدشده سرویس: $root",
                             e
                         )
                     }
