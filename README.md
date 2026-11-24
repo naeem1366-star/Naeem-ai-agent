@@ -1,4 +1,4 @@
-# Naeem AI
+# Supra AI
 
 A Persian-first Android AI assistant built with Kotlin and Jetpack Compose.
 
@@ -12,7 +12,7 @@ A Persian-first Android AI assistant built with Kotlin and Jetpack Compose.
 
 ## Build
 
-GitHub Actions builds the debug APK on pushes to `main` and on manual workflow dispatch. The APK is uploaded as an artifact named `NaeemAI-debug`.
+GitHub Actions builds the debug APK on pushes to `main` and on manual workflow dispatch. The APK is uploaded as an artifact named `SupraAI-debug`.
 
 ## Current limitations
 
