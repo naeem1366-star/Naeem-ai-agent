@@ -79,6 +79,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -141,22 +144,24 @@ private val NaeemPersianFont = FontFamily(
 
 private fun naeemTypography(): Typography {
     val base = Typography()
+    fun persian(style: androidx.compose.ui.text.TextStyle) =
+        style.copy(fontFamily = NaeemPersianFont, textDirection = TextDirection.ContentOrRtl)
     return Typography(
-        displayLarge = base.displayLarge.copy(fontFamily = NaeemPersianFont),
-        displayMedium = base.displayMedium.copy(fontFamily = NaeemPersianFont),
-        displaySmall = base.displaySmall.copy(fontFamily = NaeemPersianFont),
-        headlineLarge = base.headlineLarge.copy(fontFamily = NaeemPersianFont),
-        headlineMedium = base.headlineMedium.copy(fontFamily = NaeemPersianFont),
-        headlineSmall = base.headlineSmall.copy(fontFamily = NaeemPersianFont),
-        titleLarge = base.titleLarge.copy(fontFamily = NaeemPersianFont),
-        titleMedium = base.titleMedium.copy(fontFamily = NaeemPersianFont),
-        titleSmall = base.titleSmall.copy(fontFamily = NaeemPersianFont),
-        bodyLarge = base.bodyLarge.copy(fontFamily = NaeemPersianFont),
-        bodyMedium = base.bodyMedium.copy(fontFamily = NaeemPersianFont),
-        bodySmall = base.bodySmall.copy(fontFamily = NaeemPersianFont),
-        labelLarge = base.labelLarge.copy(fontFamily = NaeemPersianFont),
-        labelMedium = base.labelMedium.copy(fontFamily = NaeemPersianFont),
-        labelSmall = base.labelSmall.copy(fontFamily = NaeemPersianFont)
+        displayLarge = persian(base.displayLarge),
+        displayMedium = persian(base.displayMedium),
+        displaySmall = persian(base.displaySmall),
+        headlineLarge = persian(base.headlineLarge),
+        headlineMedium = persian(base.headlineMedium),
+        headlineSmall = persian(base.headlineSmall),
+        titleLarge = persian(base.titleLarge),
+        titleMedium = persian(base.titleMedium),
+        titleSmall = persian(base.titleSmall),
+        bodyLarge = persian(base.bodyLarge),
+        bodyMedium = persian(base.bodyMedium),
+        bodySmall = persian(base.bodySmall),
+        labelLarge = persian(base.labelLarge),
+        labelMedium = persian(base.labelMedium),
+        labelSmall = persian(base.labelSmall)
     )
 }
 
@@ -196,7 +201,7 @@ class MainActivity : FragmentActivity() {
             }
         })
         promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("قفل Naeem AI")
+            .setTitle("قفل نعیم ای‌آی")
             .setSubtitle("برای ورود اثر انگشت یا قفل صفحه گوشی را تأیید کن")
             .setAllowedAuthenticators(authenticators)
             .build()
@@ -205,6 +210,8 @@ class MainActivity : FragmentActivity() {
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
         introCompleted.value = false
         setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            MaterialTheme(typography = naeemTypography()) {
             if (unlocked.value) {
                 if (!introCompleted.value) {
                     AppIntegrationIntro(onEnter = { introCompleted.value = true })
@@ -229,6 +236,8 @@ class MainActivity : FragmentActivity() {
                     "برای ورود، هویتت را تأیید کن"
                 else "برای استفاده از قفل، ابتدا اثر انگشت یا قفل صفحه را در تنظیمات گوشی فعال کن."
             )
+            }
+            }
         }
         window.decorView.post { authenticate() }
     }
@@ -317,7 +326,7 @@ private fun AppLockScreen(onUnlock: () -> Unit, message: String) {
                 Box(Modifier.size(112.dp).background(Color(0xFF202329), CircleShape), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Fingerprint, contentDescription = "اثر انگشت", tint = silver, modifier = Modifier.size(64.dp))
                 }
-                Text("Naeem AI", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text("نعیم ای‌آی", color = silver, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 Text("فضای شخصی تو", color = Color(0xFF9299A3), style = MaterialTheme.typography.bodyMedium)
                 Text(message, color = Color(0xFF9299A3), style = MaterialTheme.typography.bodySmall)
                 Button(onClick = onUnlock, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF343A42))) {
@@ -352,11 +361,11 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         "بازی‌ها" to "سرگرمی و تجربه‌های تعاملی",
         "سینما و موسیقی" to "کشف فیلم، هنرمند و موسیقی",
         "تحلیل اینستاگرام" to "بررسی آمار و عملکرد محتوا",
-        "Naeem Trail" to "طبیعت‌گردی و مسیرها",
+        "مسیرهای نعیم" to "طبیعت‌گردی و مسیرها",
         "تنظیمات" to "اتصال مدل و مدیریت امنیت"
     )
     val pageTitle = when (page) {
-        0 -> "به Naeem AI خوش آمدی"
+        0 -> "به نعیم ای‌آی خوش آمدی"
         1 -> "یک مغز هوشمند، چندین فضای تخصصی"
         2 -> "برای زندگی روزمره"
         3 -> "برای فکر، کار و کشف"
@@ -385,8 +394,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("NAEEM AI", color = silver.copy(alpha = 0.82f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Text("${page + 1} از 5", color = muted, style = MaterialTheme.typography.labelMedium)
+                Text("نعیم ای‌آی", color = silver.copy(alpha = 0.82f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(listOf("یک از پنج", "دو از پنج", "سه از پنج", "چهار از پنج", "پنج از پنج")[page], color = muted, style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -448,7 +457,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                     OutlinedButton(onClick = { page-- }, modifier = Modifier.weight(1f).height(54.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF91A9CB)), colors = ButtonDefaults.outlinedButtonColors(contentColor = silver), shape = RoundedCornerShape(16.dp)) { Text("قبلی") }
                 }
                 Button(onClick = { if (page == 4) onEnter() else page++ }, modifier = Modifier.weight(if (page > 0) 1.5f else 1f).height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)), shape = RoundedCornerShape(16.dp)) {
-                    Text(if (page == 4) "شروع تجربه Naeem AI" else "بعدی", fontWeight = FontWeight.Bold)
+                    Text(if (page == 4) "شروع تجربه نعیم ای‌آی" else "بعدی", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -889,7 +898,7 @@ fun NaeemApp(store: SecureConfigStore) {
                 containerColor = Panel,
                 icon = { Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = Gold) },
                 title = { Text("ساخت ویدیو", color = Gold, fontWeight = FontWeight.Bold) },
-                text = { Text("این قابلیت در حال توسعه است و در نسخه‌های آینده به Naeem AI اضافه می‌شود.", color = Color(0xFFD0D5DC)) },
+                text = { Text("این قابلیت در حال توسعه است و در نسخه‌های آینده به نعیم ای‌آی اضافه می‌شود.", color = Color(0xFFD0D5DC)) },
                 confirmButton = {
                     TextButton(onClick = { showVideoDevelopment = false }) {
                         Text("متوجه شدم", color = Gold)
@@ -905,11 +914,11 @@ fun NaeemApp(store: SecureConfigStore) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_brain_mark),
-                                contentDescription = "نشان مغز هوشمند Naeem AI",
+                                contentDescription = "نشان مغز هوشمند نعیم ای‌آی",
                                 modifier = Modifier.size(28.dp)
                             )
                             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Text("Naeem AI", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                                Text("نعیم ای‌آی", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                                 Text("دستیار هوشمند شخصی", style = MaterialTheme.typography.labelSmall, color = Muted)
                             }
                         }
@@ -1045,7 +1054,7 @@ fun NaeemApp(store: SecureConfigStore) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("NAEEM AI", color = Gold.copy(alpha = 0.78f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Text("نعیم ای‌آی", color = Gold.copy(alpha = 0.78f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         ThinkingOrb(diameter = 142.dp, active = false)
                         Spacer(Modifier.height(15.dp))
@@ -1093,7 +1102,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 },
                                 color = Gold, fontWeight = FontWeight.SemiBold
                             )
-                            Text("گوی هوشمند Naeem AI", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text("گوی هوشمند نعیم ای‌آی", color = Muted, style = MaterialTheme.typography.labelSmall)
                             if (busy) {
                                 LinearProgressIndicator(
                                     Modifier.fillMaxWidth().padding(top = 5.dp),
@@ -1144,7 +1153,7 @@ fun NaeemApp(store: SecureConfigStore) {
                                 colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF30363E) else Panel)
                             ) {
                                 Column(Modifier.padding(14.dp)) {
-                                    Text(if (msg.fromUser) "شما" else "Naeem AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(if (msg.fromUser) "شما" else "نعیم ای‌آی", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(5.dp))
                                     Text(msg.text, color = Color(0xFFE7ECF2), style = MaterialTheme.typography.bodyLarge)
                                     msg.image?.let { image ->
@@ -1365,7 +1374,7 @@ fun NaeemApp(store: SecureConfigStore) {
             AlertDialog(
                 onDismissRequest = { showMemory = false },
                 containerColor = Panel,
-                title = { Text("حافظه Naeem AI", color = Gold) },
+                title = { Text("حافظه نعیم ای‌آی", color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -1807,7 +1816,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
-                        Text("${step + 1} از ${guidedTourItems.size}", color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
+                        Text(listOf("مرحله یک از چهار", "مرحله دو از چهار", "مرحله سه از چهار", "مرحله چهار از چهار")[step.coerceIn(0, 3)], color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
                     }
                     LinearProgressIndicator(progress = { (step + 1).toFloat() / guidedTourItems.size }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Color(0xFF9CB9F4), trackColor = Color(0xFF303847))
                     Text(item.target, color = Color(0xFFBFD2FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
