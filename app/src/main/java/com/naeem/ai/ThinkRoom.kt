@@ -136,7 +136,7 @@ fun ThinkRoomScreen(
         store.save(updated)
     }
 
-    Column(Modifier.fillMaxSize().background(ThinkBg).padding(horizontal = 18.dp)) {
+    Column(Modifier.fillMaxSize().background(ThinkBg).safeDrawingPadding().padding(horizontal = 18.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, null, tint = ThinkText) }
             Column(Modifier.weight(1f)) {
