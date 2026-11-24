@@ -5,6 +5,12 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- Keep the complete brain mark comfortably inside the launcher safe area. -->
+    <group
+        android:scaleX="0.78"
+        android:scaleY="0.78"
+        android:pivotX="54"
+        android:pivotY="54">
     <!-- Soft silver halo -->
     <path
         android:pathData="M52,18 C41,13 29,20 29,32 C18,35 16,47 22,54 C15,64 21,76 30,78 C33,89 44,92 53,85 M52,37 H68 V27 H79 M52,52 H86 M52,67 H68 V80 H79"
@@ -26,4 +32,5 @@
     <!-- Silver circuit terminals -->
     <path android:pathData="M79,23 A4,4 0,1 0,79.1 23 M86,48 A4,4 0,1 0,86.1 48 M79,80 A4,4 0,1 0,79.1 80"
         android:fillColor="#E7ECF2"/>
+    </group>
 </vector>
