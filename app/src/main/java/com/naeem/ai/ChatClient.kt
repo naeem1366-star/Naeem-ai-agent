@@ -18,7 +18,7 @@ class ChatClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    suspend fun fetchModels(baseUrl: String, apiKey: String): List<String> = withContext(Dispatchers.IO) {
+    suspend fun fetchModels(baseUrl: String, apiKey: String, type: String? = null): List<String> = withContext(Dispatchers.IO) {
         val cleanKey = apiKey.trim().removePrefix("Bearer ").removePrefix("bearer ").trim()
         require(cleanKey.isNotBlank()) { "کلید API در تنظیمات وارد نشده است." }
         require(cleanKey.all { it.code in 0x21..0x7E }) { "کلید API باید فقط شامل نویسه‌های انگلیسی معتبر باشد." }
@@ -26,7 +26,7 @@ class ChatClient {
         require(root.startsWith("https://", ignoreCase = true)) { "نشانی سرویس باید با https:// شروع شود." }
         if (root.endsWith("/models", ignoreCase = true)) root = root.removeSuffix("/models")
         val request = Request.Builder()
-            .url("$root/models")
+            .url("$root/models" + type?.takeIf { it.isNotBlank() }?.let { "?type=$it" }.orEmpty())
             .header("Authorization", "Bearer $cleanKey")
             .header("Accept", "application/json")
             .get()
