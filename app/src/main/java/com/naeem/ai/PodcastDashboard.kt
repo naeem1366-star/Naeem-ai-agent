@@ -301,12 +301,12 @@ fun PodcastDashboard(onClose:()->Unit){
                     Row(verticalAlignment=Alignment.CenterVertically){
                         Text("%02d:%02d".format(position/60000,(position/1000)%60),color=muted,style=MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.weight(1f))
-                        IconButton(enabled=prepared,onClick={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=(position-15000).coerceAtLeast(0))}){Icon(Icons.Default.Replay15,null,tint=accent)}
+                        IconButton(enabled=prepared,onClick={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=(position-15000).coerceAtLeast(0))}){Icon(Icons.Default.Replay,null,tint=accent)}
                         IconButton(enabled=prepared,onClick={
                             sendPlaybackAction(PodcastPlaybackService.ACTION_TOGGLE)
                         }){Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(30.dp))}
-                        IconButton(enabled=prepared,onClick={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=(position+15000).coerceAtMost(duration))}){Icon(Icons.Default.Forward15,null,tint=accent)}
-                        IconButton(onClick={stopPlayer}){Icon(Icons.Default.Stop,null,tint=accent)}
+                        IconButton(enabled=prepared,onClick={sendPlaybackAction(PodcastPlaybackService.ACTION_SEEK,seek=(position+15000).coerceAtMost(duration))}){Icon(Icons.Default.FastForward,null,tint=accent)}
+                        IconButton(onClick={stopPlayer()}){Icon(Icons.Default.Stop,null,tint=accent)}
                         Spacer(Modifier.weight(1f))
                         Text("%02d:%02d".format(duration/60000,(duration/1000)%60),color=muted,style=MaterialTheme.typography.labelSmall)
                     }
