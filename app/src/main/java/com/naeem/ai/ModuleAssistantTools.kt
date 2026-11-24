@@ -109,6 +109,9 @@ object PersianAssistantIntentResolver {
         if (text.contains("سفر") && listOf("لیست", "سفرهام", "سفرهای من").any { text.contains(it) })
             return ready(AssistantModule.TRAVEL, "list", ActionAccess.READ)
 
+        if (text.contains("سلامت") && listOf("امروز", "گزارش", "کالری", "ثبت").any { text.contains(it) })
+            return ready(AssistantModule.HEALTH, "summary", ActionAccess.READ)
+
         // Food entries are saved in the Health space, not only in the journal.
         val foodAction = listOf("خوردم", "مصرف کردم", "میل کردم", "نوشیدم").any { text.contains(it) }
         val foodMention = listOf("غذا", "صبحانه", "ناهار", "شام", "میان‌وعده", "برنج", "مرغ", "تخم مرغ", "نان", "ماست", "موز", "سیب", "بادام", "عدس", "تن ماهی", "شیر", "سیب‌زمینی").any { text.contains(it) }
@@ -122,12 +125,13 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.HEALTH, "add_food", ActionAccess.WRITE, mapOf("food" to foodName, "grams" to grams.toString(), "meal" to meal))
         }
 
-        val isWorkout = listOf("تمرین", "ورزش", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
+        val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
         if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز").any { text.contains(it) }) {
             val strength = listOf("وزنه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
             val minutes = Regex("""(\d+)\s*(دقیقه|min|minutes)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
             val distance = Regex("""(\d+(?:\.\d+)?)\s*(کیلومتر|km)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
             val title = when {
+                text.contains("باشگاه") || text.contains("بدنسازی") -> "تمرین باشگاه"
                 text.contains("دوچرخه") -> "دوچرخه‌سواری"
                 text.contains("دویدن") -> "دویدن"
                 text.contains("پیاده") -> "پیاده‌روی"
