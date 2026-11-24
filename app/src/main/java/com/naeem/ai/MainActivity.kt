@@ -305,6 +305,37 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             }
             Text("یک گفتگو؛ چندین فضای هماهنگ؛ کنترل همیشه دست توست.",
                 color = Color(0xFF9BA7B5), style = MaterialTheme.typography.labelMedium)
+
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    "طراحی، ایده‌پردازی و توسعه نرم‌افزار",
+                    color = Color(0xFFD8BD83),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "نعیم دهقانی",
+                    color = silver,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Designed, Conceptualized & Developed by",
+                    color = Color(0xFF9BA7B5),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    "Naeem Dehghani",
+                    color = silver.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
             Button(
                 onClick = onEnter, modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)),
