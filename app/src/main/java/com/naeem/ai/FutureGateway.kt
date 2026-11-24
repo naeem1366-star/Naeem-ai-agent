@@ -60,7 +60,8 @@ fun FutureGatewayScreen(onClose:()->Unit,baseUrl:String,model:String,apiKey:Stri
  var input by remember { mutableStateOf("") }
  var answer by remember { mutableStateOf("") }
  var error by remember { mutableStateOf("") }
- var busy by remember { mutableStateOf(false) }\n var showCreator by remember { mutableStateOf(false) }
+ var busy by remember { mutableStateOf(false) }
+ var showCreator by remember { mutableStateOf(false) }
  Column(Modifier.fillMaxSize().background(FutureBg).padding(horizontal=16.dp)){
   Row(Modifier.fillMaxWidth().padding(top=12.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically){
    IconButton(onClick={if(selected==null) onClose() else {selected=null;answer="";error=""}}){Icon(Icons.Default.ArrowBack,null,tint=FutureText)}
