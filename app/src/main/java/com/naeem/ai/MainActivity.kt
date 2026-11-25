@@ -333,7 +333,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         )
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x3354A8FF), Color(0x22406FA6), Color(0x33101D35)))))
         Column(
-            Modifier.fillMaxSize().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 18.dp),
+            Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -394,7 +394,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (page > 0) {
                     OutlinedButton(onClick = { page-- }, modifier = Modifier.weight(1f).height(54.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF91A9CB)), colors = ButtonDefaults.outlinedButtonColors(contentColor = silver), shape = RoundedCornerShape(16.dp)) { Text("قبلی") }
