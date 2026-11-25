@@ -16,8 +16,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val FinanceGold = Color(0xFFD4D9E0)
-private val FinancePanel = Color(0xFF20232A)
+private val FinanceGold = SupraGlass.Ice
+private val FinancePanel = SupraGlass.Glass
 
 @Composable
 fun FinanceDashboard(entries: List<LedgerEntry>, onAdd: (Long, String, String, Boolean) -> Unit, onDelete: (Long) -> Unit, onClose: () -> Unit) {
