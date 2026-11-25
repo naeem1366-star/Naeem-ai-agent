@@ -33,7 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-@Composable
 private data class PcPlannedAction(
     val type: String,
     val app: String = "",
@@ -44,6 +43,7 @@ private data class PcPlannedAction(
     val waitMs: Long = 0L
 )
 
+@Composable
 fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey: String) {
     var ip by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("8765") }
