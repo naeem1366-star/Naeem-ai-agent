@@ -1090,7 +1090,20 @@ fun NaeemApp(
                         Spacer(Modifier.height(8.dp))
                         ThinkingOrb(diameter = 142.dp, active = false, onClick = { playThinkingOrbSound(context) })
                         Spacer(Modifier.height(2.dp))
-                        HomeSpacesOrbit(onOpen = { showHub = true })
+                        HomeSpacesOrbit(onOpen = { index ->
+                            when (index) {
+                                0 -> { showTravel = true }
+                                1 -> { showTrail = true }
+                                2 -> { showSports = true }
+                                3 -> { showMarkets = true }
+                                4 -> { showThinkRoom = true }
+                                5 -> { showNews = true }
+                                6 -> { showFinance = true; ledgerEntries = ledgerStore.entries() }
+                                7 -> { showJournal = true }
+                                8 -> { showMusic = true }
+                                9 -> { showSettings = true }
+                            }
+                        })
                         Spacer(Modifier.height(8.dp))
                         Text("سلام " + userName.ifBlank { "دوست من" }, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodyMedium)
