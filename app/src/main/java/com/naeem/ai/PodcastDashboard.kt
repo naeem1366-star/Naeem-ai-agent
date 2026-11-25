@@ -55,7 +55,7 @@ private val freePodcastFeeds = listOf(
 private class PodcastFeedReader {
     private val http=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(25,TimeUnit.SECONDS).build()
     suspend fun load(feed:PodcastFeed):List<PodcastEpisode> = withContext(Dispatchers.IO) {
-        val request=Request.Builder().url(feed.url).header("User-Agent","SupraAI-Podcast/1.0").build()
+        val request=Request.Builder().url(feed.url).header("User-Agent","Ima-Podcast/1.0").build()
         http.newCall(request).execute().use { response ->
             if(!response.isSuccessful) error("فید پاسخ نداد: HTTP \${response.code}")
             val xml=response.body?.string().orEmpty()
@@ -249,9 +249,9 @@ fun PodcastDashboard(onClose:()->Unit){
     Column(Modifier.fillMaxSize().background(bg).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text("SUPRA AUDIO / PODCASTS",color=muted,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                Text("ایما / پادکست",color=muted,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("پادکست",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("فیدهای عمومی رایگان • پخش مستقیم داخل Supra AI",color=muted,style=MaterialTheme.typography.bodySmall)
+                Text("فیدهای عمومی رایگان • پخش مستقیم داخل ایما",color=muted,style=MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick={onClose}){Icon(Icons.Default.Close,null,tint=accent)}
         }
