@@ -38,6 +38,7 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 22.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("ایما", color = Color(0xFFE8EDF5), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 0.sp)
+            Text("Ima by Naeem Dehghani", color = Color(0xFFB9C5D5), fontSize = 11.sp, fontWeight = FontWeight.Medium)
             Text(when (mode) { "signup" -> "ساخت حساب کاربری"; "recovery" -> "بازیابی رمز عبور"; else -> "ورود به حساب" },
                 color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("با ایمیل و رمز عبور وارد فضای شخصی خودت شو", color = Color(0xFFB9C5D5), fontSize = 13.sp)
