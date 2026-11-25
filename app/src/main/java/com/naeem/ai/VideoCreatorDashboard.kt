@@ -115,7 +115,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         }
         if (prompt.isNotBlank()) {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Supra video prompt", prompt.trim()))
+            clipboard.setPrimaryClip(ClipData.newPlainText("Ima video prompt", prompt.trim()))
         }
         runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL)))
@@ -135,7 +135,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
             return
         }
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Supra video prompt", prompt.trim()))
+        clipboard.setPrimaryClip(ClipData.newPlainText("Ima video prompt", prompt.trim()))
         Toast.makeText(context, "توضیح ویدیو کپی شد.", Toast.LENGTH_SHORT).show()
     }
 
@@ -257,7 +257,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                         clipData = ClipData.newUri(context.contentResolver, outputName, outputUri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    runCatching { context.startActivity(Intent.createChooser(send, "اشتراک ویدیوی Supra")) }
+                    runCatching { context.startActivity(Intent.createChooser(send, "اشتراک ویدیوی ایما")) }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("اشتراک ویدیوی خروجی") }
