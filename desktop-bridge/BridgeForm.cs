@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -35,6 +36,7 @@ public sealed class BridgeForm : Form
     private readonly CancellationTokenSource _shutdown = new();
     private readonly string _pin = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
     private readonly string _token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    private readonly RSA _certificateKey;
     private readonly X509Certificate2 _certificate;
     private WebApplication? _server;
     private UdpClient? _discovery;
@@ -54,8 +56,8 @@ public sealed class BridgeForm : Form
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10F);
 
-        using var rsa = RSA.Create(2048);
-        var request = new CertificateRequest("CN=Naeem AI Desktop Bridge", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        _certificateKey = RSA.Create(2048);
+        var request = new CertificateRequest("CN=Naeem AI Desktop Bridge", _certificateKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
         request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
         request.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(request.PublicKey, false));
@@ -167,7 +169,7 @@ public sealed class BridgeForm : Form
             builder.Logging.ClearProviders();
             var localAddress = IPAddress.Parse(GetLocalIPv4());
             builder.WebHost.ConfigureKestrel(options =>
-                options.Listen(localAddress, Port, listen => listen.UseHttps(_certificate)));
+                options.Listen(IPAddress.Any, Port, listen => listen.UseHttps(_certificate)));
             var app = builder.Build();
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
@@ -497,19 +499,47 @@ public sealed class BridgeForm : Form
             try { await _server.StopAsync(TimeSpan.FromSeconds(2)); await _server.DisposeAsync(); } catch { }
         }
         _certificate.Dispose();
+        _certificateKey.Dispose();
     }
 
     private static string GetLocalIPv4()
     {
-        var addresses = Dns.GetHostEntry(Dns.GetHostName()).AddressList
-            .Where(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address))
+        var candidates = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(adapter => adapter.OperationalStatus == OperationalStatus.Up
+                && adapter.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                && adapter.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
+            .SelectMany(adapter =>
+            {
+                var properties = adapter.GetIPProperties();
+                var hasGateway = properties.GatewayAddresses.Any(gateway =>
+                    gateway.Address.AddressFamily == AddressFamily.InterNetwork
+                    && !gateway.Address.Equals(IPAddress.Any));
+                return properties.UnicastAddresses
+                    .Where(item => item.Address.AddressFamily == AddressFamily.InterNetwork
+                        && !IPAddress.IsLoopback(item.Address))
+                    .Select(item => new
+                    {
+                        Address = item.Address,
+                        IsPrivate = IsPrivateIPv4(item.Address),
+                        HasGateway = hasGateway,
+                        IsWifi = adapter.NetworkInterfaceType == NetworkInterfaceType.Wireless80211
+                    });
+            })
+            .Where(item => item.IsPrivate)
+            .OrderByDescending(item => item.IsWifi && item.HasGateway)
+            .ThenByDescending(item => item.HasGateway)
+            .ThenByDescending(item => item.IsWifi)
             .ToArray();
-        var privateAddress = addresses.FirstOrDefault(address =>
-            address.ToString().StartsWith("10.") ||
-            address.ToString().StartsWith("192.168.") ||
-            (address.GetAddressBytes()[0] == 172 && address.GetAddressBytes()[1] >= 16 && address.GetAddressBytes()[1] <= 31));
-        return (privateAddress ?? addresses.FirstOrDefault())?.ToString()
-            ?? throw new InvalidOperationException("اتصال شبکه محلی پیدا نشد. ابتدا کامپیوتر را به Wi-Fi یا LAN وصل کن.");
+
+        return candidates.FirstOrDefault()?.Address.ToString()
+            ?? throw new InvalidOperationException("آدرس شبکه محلی پیدا نشد. کامپیوتر را به Wi-Fi هات‌اسپات گوشی وصل کن و برنامه را دوباره اجرا کن.");
+    }
+
+    private static bool IsPrivateIPv4(IPAddress address)
+    {
+        var bytes = address.GetAddressBytes();
+        return bytes[0] == 10 || (bytes[0] == 192 && bytes[1] == 168)
+            || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31);
     }
 
     private static string GetLocalIPv4ForDisplay()

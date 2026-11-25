@@ -1,5 +1,6 @@
 package com.naeem.ai
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,7 +40,8 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
             SupraGlassPanel(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp), radius = 28.dp) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 22.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("ایما", color = Color(0xFFE8EDF5), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 0.sp)
+            Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما",
+                modifier = Modifier.size(104.dp), contentScale = ContentScale.Fit)
             Text("Ima by Naeem Dehghani", color = Color(0xFFB9C5D5), fontSize = 11.sp, fontWeight = FontWeight.Medium)
             Text(when (mode) { "signup" -> "ساخت حساب کاربری"; "recovery" -> "بازیابی رمز عبور"; else -> "ورود به حساب" },
                 color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)

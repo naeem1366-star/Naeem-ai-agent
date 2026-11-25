@@ -278,7 +278,7 @@ fun FeatureHub(
                     val scale=when(depth){0->1f;1->0.82f;else->0.66f}
                     val accent=listOf(Color(0xFF6EAFF0),Color(0xFF8CC4FF),Color(0xFF4F91D2),Color(0xFFB9D8FF),Color(0xFF76AEE5),Color(0xFF5E9BD8))[entries.indexOf(entry).coerceAtLeast(0)%6]
                     Surface(onClick={if(offset==0)entry.action()else centerIndex=itemIndex},
-                        modifier=Modifier.offset(x=(offset*106).dp,y=(depth*13).dp).width(174.dp).height(194.dp)
+                        modifier=Modifier.offset(x=(offset*126).dp,y=(depth*22).dp).width(150.dp).height(180.dp)
                             .graphicsLayer{
                                 scaleX=scale;scaleY=scale;rotationY=offset*-25f
                                 alpha=if(depth==2)0.66f else if(depth==1)0.88f else 1f
@@ -306,6 +306,14 @@ fun FeatureHub(
                     Spacer(Modifier.width(5.dp))
                     Text("جزئیات فضای انتخاب‌شده",color=gold)
                 }
+            }
+            OutlinedButton(onClick = { showFeatureMap = true }, modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, SupraGlass.Edge),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = gold)) {
+                Icon(Icons.Default.Apps, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("همه ابزارها", fontWeight = FontWeight.SemiBold)
             }
         }
     }

@@ -29,8 +29,8 @@ Name: "{autodesktop}\Naeem AI Desktop Bridge"; Filename: "{app}\NaeemAIDesktopBr
 Name: "desktopicon"; Description: "ساخت میانبر روی دسکتاپ"; GroupDescription: "میانبرها:"
 
 [Run]
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Naeem AI Desktop Bridge TCP"" dir=in action=allow protocol=TCP localport=8765 profile=private"; Flags: runhidden
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Naeem AI Desktop Bridge UDP"" dir=in action=allow protocol=UDP localport=8766 profile=private"; Flags: runhidden
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Naeem AI Desktop Bridge TCP"" dir=in action=allow protocol=TCP localport=8765 profile=any"; Flags: runhidden
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Naeem AI Desktop Bridge UDP"" dir=in action=allow protocol=UDP localport=8766 profile=any"; Flags: runhidden
 Filename: "{app}\NaeemAIDesktopBridge.exe"; Description: "اجرای برنامه پس از نصب"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]

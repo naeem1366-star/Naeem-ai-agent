@@ -167,7 +167,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
         Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("۱. پیدا کردن کامپیوتر", color = accent, style = MaterialTheme.typography.titleMedium)
-                Text("برنامه دسکتاپ را در ویندوز باز نگه دار. گوشی و کامپیوتر باید به یک مودم یا شبکه محلی وصل باشند.", color = muted, style = MaterialTheme.typography.bodySmall)
+                Text("برنامه دسکتاپ را در ویندوز باز نگه دار. اگر از هات‌اسپات گوشی استفاده می‌کنی، کامپیوتر را به Wi-Fi همان گوشی وصل کن؛ لازم نیست هر دو به مودم جداگانه وصل باشند.", color = muted, style = MaterialTheme.typography.bodySmall)
                 Button(
                     onClick = {
                         discovering = true
@@ -230,13 +230,14 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                 Button(
                     onClick = {
                         connecting = true
+                        status = "در حال بررسی مسیر شبکه و برقراری اتصال با $ip:$port …"
                         scope.launch {
                             try {
                                 client.connect(ip.trim(), port.toInt(), pin, fingerprint)
                                 connected = true
                             } catch (e: Exception) {
                                 connected = false
-                                status = e.message ?: "اتصال ناموفق بود."
+                                status = "اتصال ناموفق بود: " + (e.message ?: e.javaClass.simpleName)
                             } finally { connecting = false }
                         }
                     },
@@ -262,6 +263,14 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                         Spacer(Modifier.width(7.dp))
                         Text("قطع اتصال")
                     }
+                }
+                Surface(modifier = Modifier.fillMaxWidth(),
+                    color = if (connected) Color(0x223B9B70) else Color(0x22B9D8FF),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (connected) Color(0x6659C58A) else Color(0x557DAFE4))) {
+                    Text(status, modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        color = if (connected) Color(0xFFB9F0CE) else Color(0xFFD7E7FA),
+                        style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
