@@ -140,7 +140,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF0B0E13))
+        Modifier.fillMaxSize().background(Color.Transparent)
             .verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
