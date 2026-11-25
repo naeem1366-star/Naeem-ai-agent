@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -106,11 +107,10 @@ fun SupraGlassPanel(
     ) {
         Box {
             Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(listOf(Color(0x18FFFFFF), Color.Transparent, Color(0x080A65B8)))
-                )
-            )
-            content()
+                Modifier.fillMaxWidth().drawBehind {
+                    drawRect(Brush.verticalGradient(listOf(Color(0x18FFFFFF), Color.Transparent, Color(0x080A65B8))))
+                }
+            ) { content() }
         }
     }
 }
