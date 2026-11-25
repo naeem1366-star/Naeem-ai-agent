@@ -179,7 +179,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
             }
             Column(Modifier.weight(1f)) {
                 Text("استودیو ساخت ویدیو", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                Text("ویدیوساز رایگان Supra؛ بدون مصرف API نت‌ارز", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+                Text("ویدیوساز رایگان؛ بدون مصرف اعتبار API", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.Default.MovieCreation, contentDescription = null, tint = Color(0xFFD4D9E0), modifier = Modifier.size(27.dp))
         }
@@ -187,7 +187,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         Surface(color = Color(0xFF17251F), shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF477A5B))) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("ویدیوساز رایگان — مستقل از API حرفه‌ای", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
-                Text("این بخش هیچ اعتباری از نت‌ارز یا کلید API حرفه‌ای مصرف نمی‌کند. فرایند ساخت ویدیو از مسیر رایگان انجام می‌شود و ممکن است محدودیت کیفیت یا زمان داشته باشد.", color = Color(0xFFD0DBD2), style = MaterialTheme.typography.bodySmall)
+                Text("این بخش از اعتبار API حرفه‌ای استفاده نمی‌کند. فرایند ساخت ویدیو ممکن است محدودیت کیفیت یا زمان داشته باشد.", color = Color(0xFFD0DBD2), style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -208,7 +208,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                     color = Color(0xFF8BC6A0),
                     trackColor = Color(0xFF34463C)
                 )
-                Text("۳ بار شروع فرایند در هر بازه ۷ روزه. این شمارنده روی همین گوشی ذخیره می‌شود و سهمیه PixVerse را کنترل نمی‌کند.", color = Color(0xFFB8C3D1), style = MaterialTheme.typography.labelSmall)
+                Text("۳ بار شروع فرایند در هر بازه ۷ روزه. این شمارنده فقط روی همین گوشی ذخیره می‌شود و سهمیه سرویس را کنترل نمی‌کند.", color = Color(0xFFB8C3D1), style = MaterialTheme.typography.labelSmall)
             }
         }
 
