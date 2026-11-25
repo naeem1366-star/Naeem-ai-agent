@@ -1,6 +1,6 @@
-# Supra AI
+# ایما
 
-A Persian-first Android AI assistant built with Kotlin and Jetpack Compose.
+Ima — a Persian-first intelligent assistant built with Kotlin and Jetpack Compose.
 
 ## Included
 
@@ -8,11 +8,11 @@ A Persian-first Android AI assistant built with Kotlin and Jetpack Compose.
 - OpenAI-compatible chat completions client
 - Configurable API base URL and model
 - On-device encrypted storage for the API key
-- GitHub Actions workflow to build a debug APK
+- Built by Naeem Dehghani
 
 ## Build
 
-GitHub Actions builds the debug APK on pushes to `main` and on manual workflow dispatch. The APK is uploaded as an artifact named `SupraAI-debug`.
+GitHub Actions builds the debug APK on pushes to `main` and on manual workflow dispatch. The APK is uploaded as an artifact named `Ima-debug`.
 
 ## Current limitations
 
