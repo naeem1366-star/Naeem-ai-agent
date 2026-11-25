@@ -11,3 +11,7 @@ migrations_dir = "migrations"
 [vars]
 GHASEDAK_TEMPLATE_NAME = "naeem_login"
 ALLOWED_ORIGINS = ""
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
