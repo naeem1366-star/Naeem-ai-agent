@@ -26,6 +26,8 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
+private val CryptoPanelSurface = SupraGlass.Glass
+
 private data class CryptoCandidate(
     val id: String,
     val name: String,
@@ -89,8 +91,8 @@ fun CryptoAdvisorPanel(modifier: Modifier = Modifier) {
                     val url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=60&page=1&sparkline=false&price_change_percentage=24h%2C7d"
                     val request = Request.Builder().url(url).header("Accept", "application/json").build()
                     client.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) error("دریافت داده بازار ناموفق بود (HTTP ${response.code}).")
-                        response.body?.string() ?: error("پاسخ بازار خالی بود.")
+                        if (!response.isSuccessful) throw IllegalStateException("دریافت داده بازار ناموفق بود (HTTP ${response.code}).")
+                        response.body?.string() ?: throw IllegalStateException("پاسخ بازار خالی بود.")
                     }
                 }
                 val array = JSONArray(result)
@@ -128,7 +130,7 @@ fun CryptoAdvisorPanel(modifier: Modifier = Modifier) {
                         risk = risk
                     )
                 }.sortedByDescending { it.score }.take(12)
-                if (parsed.isEmpty()) error("داده کافی برای تحلیل دریافت نشد؛ کمی بعد دوباره تلاش کن.")
+                if (parsed.isEmpty()) throw IllegalStateException("داده کافی برای تحلیل دریافت نشد؛ کمی بعد دوباره تلاش کن.")
                 coins = parsed
                 updated = java.text.SimpleDateFormat("HH:mm  •  yyyy/MM/dd", Locale.getDefault()).format(java.util.Date())
             } catch (e: Exception) {
@@ -190,7 +192,7 @@ fun CryptoAdvisorPanel(modifier: Modifier = Modifier) {
             ) {
                 items(coins, key = { it.id }) { coin ->
                     Surface(
-                        color = MarketPanel,
+                        color = CryptoPanelSurface,
                         shape = RoundedCornerShape(16.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x223F6C98)),
                         modifier = Modifier.fillMaxWidth()
