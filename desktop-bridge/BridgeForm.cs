@@ -393,7 +393,15 @@ public sealed class BridgeForm : Form
                 break;
             case "freecad":
                 Add(Path.Combine(programFiles, "FreeCAD", "bin", "FreeCAD.exe"));
-                AddRange(programFiles, "FreeCAD*", "FreeCAD.exe");
+                try
+                {
+                    foreach (var directory in Directory.GetDirectories(programFiles, "FreeCAD*"))
+                    {
+                        Add(Path.Combine(directory, "bin", "FreeCAD.exe"));
+                        Add(Path.Combine(directory, "FreeCAD.exe"));
+                    }
+                }
+                catch { }
                 break;
             case "krita":
                 Add(Path.Combine(programFiles, "Krita (x64)", "bin", "krita.exe"));
