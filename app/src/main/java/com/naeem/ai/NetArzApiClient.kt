@@ -29,6 +29,7 @@ data class NetArzVideoModel(
     val seconds: List<Int>,
     val sizes: List<String>,
     val imageInput: Boolean,
+    val videoInput: Boolean,
     val audio: Boolean
 )
 
@@ -111,6 +112,7 @@ class NetArzApiClient(
                     seconds = strings("seconds").mapNotNull { it.toIntOrNull() },
                     sizes = strings("sizes"),
                     imageInput = caps.optBoolean("image_input", false),
+                    videoInput = caps.optBoolean("video_input", false),
                     audio = caps.optBoolean("audio", false)
                 )
             }
@@ -139,7 +141,8 @@ class NetArzApiClient(
         prompt: String,
         seconds: Int,
         size: String,
-        imageBase64: String? = null
+        imageBase64: String? = null,
+        videoBase64: String? = null
     ): NetArzVideoJob = withContext(Dispatchers.IO) {
         require(prompt.isNotBlank()) { "توضیح ویدیو را بنویس." }
         require(prompt.length <= 4000) { "توضیح ویدیو نباید بیشتر از ۴۰۰۰ نویسه باشد." }
@@ -149,6 +152,7 @@ class NetArzApiClient(
             .put("seconds", seconds.toString())
             .put("size", size)
         if (!imageBase64.isNullOrBlank()) payload.put("image", imageBase64)
+        if (!videoBase64.isNullOrBlank()) payload.put("video", videoBase64)
         val req = request("/videos")
             .header("Content-Type", "application/json")
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
@@ -243,10 +247,19 @@ class NetArzApiClient(
     }
 
     companion object {
-        suspend fun imageAsBase64(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
+        suspend fun imageAsBase64(context: Context, uri: Uri): String =
+            mediaAsBase64(context, uri, 15L * 1024L * 1024L, "خواندن عکس انتخاب‌شده ناموفق بود.", "حجم عکس بیشتر از ۱۵ مگابایت است.")
+
+        suspend fun mediaAsBase64(
+            context: Context,
+            uri: Uri,
+            maxBytes: Long,
+            readError: String = "خواندن فایل انتخاب‌شده ناموفق بود.",
+            sizeError: String = "حجم فایل انتخاب‌شده بیش از حد مجاز است."
+        ): String = withContext(Dispatchers.IO) {
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: throw IllegalStateException("خواندن عکس انتخاب‌شده ناموفق بود.")
-            require(bytes.size <= 15 * 1024 * 1024) { "حجم عکس بیشتر از ۱۵ مگابایت است." }
+                ?: throw IllegalStateException(readError)
+            require(bytes.size.toLong() <= maxBytes) { sizeError }
             Base64.encodeToString(bytes, Base64.NO_WRAP)
         }
     }
