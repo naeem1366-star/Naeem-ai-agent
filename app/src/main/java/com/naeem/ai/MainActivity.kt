@@ -863,7 +863,7 @@ fun NaeemApp(
                 Surface(
                     modifier = Modifier.fillMaxSize().safeDrawingPadding(),
                     shape = RoundedCornerShape(0.dp),
-                    color = Color.Transparent
+                    color = Color(0xFF050B16)
                 ) {
                     VideoCreatorDashboard(onClose = { showVideoDevelopment = false }, initialPrompt = prompt)
                 }
