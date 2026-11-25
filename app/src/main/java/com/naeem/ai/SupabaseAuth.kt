@@ -20,7 +20,7 @@ class SupabaseAuthClient(context: Context) {
     companion object {
         private const val SUPABASE_URL = "https://ifloyzpvgjgmneqgcggu.supabase.co"
         // Publishable client key only. Never place a service-role key in the Android app.
-        private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Vq7VtBwR8azcEKsIOmc-Q_aqO-fzSh"
+        private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Vq7VJtBwR8azcEKsIOmc-Q_aqO-fzSh"
     }
 
     private val http = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
