@@ -1,6 +1,10 @@
 package com.naeem.ai
 
 import android.util.Base64
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.zxing.integration.android.IntentIntegrator
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 import android.app.DownloadManager
@@ -67,6 +71,27 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
     val scope = rememberCoroutineScope()
     val aiClient = remember { ChatClient() }
     val context = LocalContext.current
+    val qrScanner = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val raw = result.data?.getStringExtra("SCAN_RESULT")
+        if (result.resultCode == Activity.RESULT_OK && !raw.isNullOrBlank()) {
+            runCatching {
+                val payload = JSONObject(raw)
+                require(payload.optString("type") == "naeem_ai_pc_pair") { "این کد مربوط به اتصال کامپیوتر نیست." }
+                val scannedIp = payload.getString("ip")
+                val scannedPort = payload.optInt("port", 8765)
+                val scannedPin = payload.getString("pin")
+                val scannedFingerprint = payload.getString("fingerprint")
+                require(scannedIp.isNotBlank() && scannedPort in 1..65535 && scannedPin.length == 6 && scannedFingerprint.filter(Char::isLetterOrDigit).length == 64) {
+                    "اطلاعات کد اتصال کامل یا معتبر نیست."
+                }
+                ip = scannedIp
+                port = scannedPort.toString()
+                pin = scannedPin
+                fingerprint = scannedFingerprint
+                status = "کد کامپیوتر خوانده شد؛ اطلاعات اتصال آماده است. حالا اتصال را بزن."
+            }.onFailure { status = it.message ?: "خواندن کد ناموفق بود." }
+        }
+    }
     val client = remember {
         PcBridgeClient(
             onStatus = {
@@ -181,6 +206,30 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
         Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("۲. جفت‌سازی امن", color = accent, style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(
+                    onClick = {
+                        val activity = context as? Activity
+                        if (activity == null) {
+                            status = "دوربین در این صفحه در دسترس نیست."
+                        } else {
+                            qrScanner.launch(
+                                IntentIntegrator(activity)
+                                    .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+                                    .setPrompt("کد اتصال نمایش‌داده‌شده روی کامپیوتر را اسکن کن")
+                                    .setBeepEnabled(false)
+                                    .setOrientationLocked(false)
+                                    .createScanIntent()
+                            )
+                        }
+                    },
+                    enabled = !connecting && !connected,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Link, null)
+                    Spacer(Modifier.width(7.dp))
+                    Text("اسکن کد اتصال با دوربین")
+                }
+                Text("روی کامپیوتر کد QR را باز کن و با دوربین گوشی اسکن کن؛ نشانی، کد شش‌رقمی و اثر انگشت امنیتی خودکار وارد می‌شوند.", color = muted, style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = ip, onValueChange = { ip = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("IP کامپیوتر") }, placeholder = { Text("مثلاً 192.168.1.20") })
                 OutlinedTextField(value = port, onValueChange = { port = it.filter(Char::isDigit).take(5) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("درگاه") })
                 OutlinedTextField(value = pin, onValueChange = { pin = it.filter(Char::isDigit).take(6) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("کد شش‌رقمی روی کامپیوتر") })
