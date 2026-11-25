@@ -37,7 +37,7 @@ function cors(request: Request, env: Env): Headers {
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 type SupabaseIdentity = { id: string; email: string };
@@ -47,7 +47,7 @@ async function supabaseIdentity(request: Request, env: Env): Promise<SupabaseIde
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!token || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return null;
   try {
-    const response = await fetch(env.SUPABASE_URL.replace(/\\/+$/, "") + "/auth/v1/user", {
+    const response = await fetch(env.SUPABASE_URL.replace(/\/+$/, "") + "/auth/v1/user", {
       headers: { "apikey": env.SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token, "Accept": "application/json" },
       signal: AbortSignal.timeout(12000)
     });
