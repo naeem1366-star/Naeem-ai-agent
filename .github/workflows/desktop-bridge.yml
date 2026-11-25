@@ -8,7 +8,7 @@ on:
     branches: ["feature/v2-foundation"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
@@ -33,3 +33,14 @@ jobs:
           name: NaeemAI-DesktopBridge-Setup-alpha1
           path: desktop-bridge/installer-output/NaeemAI-DesktopBridge-Setup-alpha1.exe
           if-no-files-found: error
+      - name: Publish Windows installer download
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pc-bridge-mvp'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-bridge-alpha1
+          name: Naeem AI Desktop Bridge alpha1
+          prerelease: true
+          overwrite_files: true
+          files: desktop-bridge/installer-output/NaeemAI-DesktopBridge-Setup-alpha1.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
