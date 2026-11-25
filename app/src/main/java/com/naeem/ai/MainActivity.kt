@@ -1239,7 +1239,12 @@ fun NaeemApp(
         if (showPcControl) {
             Dialog(onDismissRequest = { showPcControl = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
-                    PcControlScreen(onClose = { showPcControl = false })
+                    PcControlScreen(
+                        onClose = { showPcControl = false },
+                        baseUrl = baseUrl,
+                        model = model,
+                        apiKey = apiKey
+                    )
                 }
             }
         }
