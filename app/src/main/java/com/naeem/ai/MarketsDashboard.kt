@@ -3,6 +3,8 @@ package com.naeem.ai
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -115,7 +117,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
         refresh()
     }
 
-    val categories = listOf("همه", "ارز", "طلا و فلزات", "رمزارز", "انرژی")
+    val categories = listOf("همه", "ارز", "طلا و فلزات", "رمزارز", "انرژی", "پیشنهاد خرید")
     val visible = quotes.filter { q ->
         when (selected) {
             "ارز" -> q.family.contains("currency") || q.id in listOf("usd", "eur", "gbp", "aed", "cny", "usdt")
@@ -148,7 +150,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 }
             }
 
-            Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 categories.forEach { category ->
                     FilterChip(
                         selected = selected == category,
@@ -171,7 +173,9 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 Text("به‌روزرسانی دستی", color = MarketAccent, fontSize = 10.sp)
             }
 
-            if (quotes.isEmpty() && loading) {
+            if (selected == "پیشنهاد خرید") {
+                CryptoAdvisorPanel(Modifier.weight(1f))
+            } else if (quotes.isEmpty() && loading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = MarketAccent) }
             } else if (visible.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
