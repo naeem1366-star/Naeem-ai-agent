@@ -75,7 +75,7 @@ class PcBridgeClient(
 
     suspend fun connect(ip: String, port: Int, pin: String, fingerprint: String) = withContext(Dispatchers.IO) {
         closeSocket()
-        Thread.sleep(250)
+        Thread.sleep(600)
         val normalizedFingerprint = fingerprint.filter { it.isLetterOrDigit() }.uppercase()
         require(normalizedFingerprint.length == 64) {
             "اثر انگشت امنیتی معتبر نیست؛ آن را دقیقاً از پنجره کامپیوتر وارد کن."
