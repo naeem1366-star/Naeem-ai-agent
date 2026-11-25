@@ -75,16 +75,16 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
     )
 
     val items = listOf(
-        OrbitItem(Icons.Default.Luggage, "سفر", "برنامه‌ریزی سفر و همراهان", "مقصدها را بررسی کن، برنامه روزانه سفر را بچین، همراهان و هزینه‌ها را مدیریت کن و جزئیات مسیر را یک‌جا نگه دار.", Color(0xFF4EA6FF)),
-        OrbitItem(Icons.Default.Terrain, "طبیعت", "مسیرها و ماجراجویی در طبیعت", "برای طبیعت‌گردی و پیمایش آماده شو؛ مسیرها، نقاط مهم، اطلاعات سفر و تجربه‌های ثبت‌شده‌ات را در یک فضای اختصاصی دنبال کن.", Color(0xFF54C99A)),
-        OrbitItem(Icons.Default.FitnessCenter, "ورزش", "تمرین و پیشرفت بدنی", "فعالیت‌ها و تمرین‌هایت را ثبت کن، روند پیشرفت و رکوردها را ببین و برای رسیدن به هدف‌های ورزشی برنامه منظم‌تری بساز.", Color(0xFFFF875E)),
-        OrbitItem(Icons.Default.TrendingUp, "بازار", "رصد بازارها و دارایی‌ها", "قیمت‌ها و روند بازارهای مالی را دنبال کن، داده‌ها را کنار هم ببین و برای شناخت بهتر شرایط بازار از تحلیل و جمع‌بندی هوشمند کمک بگیر.", Color(0xFFFFC45C)),
-        OrbitItem(Icons.Default.Psychology, "اتاق فکر", "ایده‌پردازی و حل مسئله", "ایده‌های خام را وارد گفت‌وگو کن، از زاویه‌های مختلف بررسی‌شان کن، راه‌حل‌ها را مقایسه کن و قدم‌به‌قدم به یک طرح اجرایی برس.", Color(0xFFB18AFF)),
-        OrbitItem(Icons.Default.Newspaper, "اخبار", "خبرهای مهم و رویدادها", "موضوعات مهم را پیگیری کن، خبرها را با نگاه تحلیلی بخوان و برای درک بهتر اتفاق‌ها، زمینه و پیامدهای هر رویداد را بررسی کن.", Color(0xFF69C7E8)),
-        OrbitItem(Icons.Default.AccountBalanceWallet, "مالی", "مدیریت دخل‌وخرج", "درآمدها و هزینه‌ها را ثبت و دسته‌بندی کن، گزارش مالی بگیر و تصویر روشن‌تری از جریان پول و وضعیت بودجه‌ات داشته باش.", Color(0xFF5DD6C0)),
-        OrbitItem(Icons.Default.EventNote, "روزنگار", "یادداشت‌ها و اتفاق‌های روزانه", "یادداشت‌ها، کارها و اتفاق‌های مهم روز را ثبت کن؛ بعداً می‌توانی به آن‌ها برگردی و روند هفته‌ها و ماه‌هایت را مرور کنی.", Color(0xFFFF8DB5)),
-        OrbitItem(Icons.Default.MusicNote, "موسیقی", "کشف آهنگ و حال‌وهوای موسیقی", "موسیقی و هنرمندان تازه کشف کن، بر اساس حال‌وهوا جست‌وجو کن و درباره سبک‌ها، صداها و آثار موردعلاقه‌ات بیشتر بدان.", Color(0xFF9BAEFF)),
-        OrbitItem(Icons.Default.Settings, "تنظیمات", "اتصال‌ها و کنترل برنامه", "مدل هوش مصنوعی، صدا، دسترسی‌ها و اتصال به رایانه را مدیریت کن و تنظیمات و امنیت برنامه را مطابق نیازت تغییر بده.", Color(0xFFB5C0CC))
+        OrbitItem(Icons.Default.Luggage, "سفر", "برنامه‌ریزی سفر و همراهان", "مقصدها را بررسی کن، برنامه روزانه سفر را بچین، همراهان و هزینه‌ها را مدیریت کن و جزئیات مسیر را یک‌جا نگه دار.", Color(0xFF8EA8C8)),
+        OrbitItem(Icons.Default.Terrain, "طبیعت", "مسیرها و ماجراجویی در طبیعت", "برای طبیعت‌گردی و پیمایش آماده شو؛ مسیرها، نقاط مهم، اطلاعات سفر و تجربه‌های ثبت‌شده‌ات را در یک فضای اختصاصی دنبال کن.", Color(0xFF7FAE98)),
+        OrbitItem(Icons.Default.FitnessCenter, "ورزش", "تمرین و پیشرفت بدنی", "فعالیت‌ها و تمرین‌هایت را ثبت کن، روند پیشرفت و رکوردها را ببین و برای رسیدن به هدف‌های ورزشی برنامه منظم‌تری بساز.", Color(0xFFC58E78)),
+        OrbitItem(Icons.Default.TrendingUp, "بازار", "رصد بازارها و دارایی‌ها", "قیمت‌ها و روند بازارهای مالی را دنبال کن، داده‌ها را کنار هم ببین و برای شناخت بهتر شرایط بازار از تحلیل و جمع‌بندی هوشمند کمک بگیر.", Color(0xFFC5A66F)),
+        OrbitItem(Icons.Default.Psychology, "اتاق فکر", "ایده‌پردازی و حل مسئله", "ایده‌های خام را وارد گفت‌وگو کن، از زاویه‌های مختلف بررسی‌شان کن، راه‌حل‌ها را مقایسه کن و قدم‌به‌قدم به یک طرح اجرایی برس.", Color(0xFFA997C8)),
+        OrbitItem(Icons.Default.Newspaper, "اخبار", "خبرهای مهم و رویدادها", "موضوعات مهم را پیگیری کن، خبرها را با نگاه تحلیلی بخوان و برای درک بهتر اتفاق‌ها، زمینه و پیامدهای هر رویداد را بررسی کن.", Color(0xFF82AEB8)),
+        OrbitItem(Icons.Default.AccountBalanceWallet, "مالی", "مدیریت دخل‌وخرج", "درآمدها و هزینه‌ها را ثبت و دسته‌بندی کن، گزارش مالی بگیر و تصویر روشن‌تری از جریان پول و وضعیت بودجه‌ات داشته باش.", Color(0xFF78B5A8)),
+        OrbitItem(Icons.Default.EventNote, "روزنگار", "یادداشت‌ها و اتفاق‌های روزانه", "یادداشت‌ها، کارها و اتفاق‌های مهم روز را ثبت کن؛ بعداً می‌توانی به آن‌ها برگردی و روند هفته‌ها و ماه‌هایت را مرور کنی.", Color(0xFFC18FA4)),
+        OrbitItem(Icons.Default.MusicNote, "موسیقی", "کشف آهنگ و حال‌وهوای موسیقی", "موسیقی و هنرمندان تازه کشف کن، بر اساس حال‌وهوا جست‌وجو کن و درباره سبک‌ها، صداها و آثار موردعلاقه‌ات بیشتر بدان.", Color(0xFF929FC7)),
+        OrbitItem(Icons.Default.Settings, "تنظیمات", "اتصال‌ها و کنترل برنامه", "مدل هوش مصنوعی، صدا، دسترسی‌ها و اتصال به رایانه را مدیریت کن و تنظیمات و امنیت برنامه را مطابق نیازت تغییر بده.", Color(0xFFB6B0A4))
     )
 
     var rotation by remember { mutableFloatStateOf(0f) }
@@ -127,14 +127,14 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
                 val ovalSize = androidx.compose.ui.geometry.Size(w, h)
                 drawOval(
                     brush = ComposeBrush.linearGradient(
-                        listOf(Color(0xFF263B57), Color(0xFF8CBDEB), Color(0xFF263B57))
+                        listOf(Color(0xFF5B5040), Color(0xFFD8C49C), Color(0xFF5B5040))
                     ),
                     topLeft = topLeft,
                     size = ovalSize,
                     style = Stroke(width = 1.4.dp.toPx())
                 )
                 drawOval(
-                    color = Color(0xFF72B9FF).copy(alpha = .13f),
+                    color = Color(0xFFD8C49C).copy(alpha = .10f),
                     topLeft = topLeft,
                     size = ovalSize,
                     style = Stroke(width = 7.dp.toPx())
@@ -185,7 +185,7 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
                                         Color.White.copy(alpha = .98f),
                                         item.color.copy(alpha = .98f),
                                         item.color.copy(alpha = .72f),
-                                        Color(0xFF172438),
+                                        Color(0xFF29251F),
                                         Color(0xFF080D16)
                                     )
                                 )
@@ -213,7 +213,7 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
         val info = items[selected]
         Surface(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            color = Color(0xD91A2637),
+            color = Color(0xE8171715),
             shape = RoundedCornerShape(17.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, info.color.copy(alpha = .52f)),
             shadowElevation = 9.dp
