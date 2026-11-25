@@ -110,7 +110,7 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
                     )
                 }
             }
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF252B34)), shape = RoundedCornerShape(24.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("یک بازه، چند قدم از زندگی تو", color = accent, fontWeight = FontWeight.Bold)
                     Text("این گزارش از اطلاعاتی ساخته می‌شود که در بخش‌های متصل و روزنگار گفتگو ثبت کرده‌ای. موارد ثبت‌نشده در محاسبات ظاهر نمی‌شوند.", color = Color.White, style = MaterialTheme.typography.bodyMedium)
