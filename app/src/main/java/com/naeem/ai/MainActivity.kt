@@ -979,10 +979,16 @@ fun NaeemApp(
                 )
             },
             bottomBar = {
-                Surface(color = Color.Transparent, tonalElevation = 0.dp) {
+                Surface(
+                    color = Color(0xF2141412),
+                    tonalElevation = 0.dp,
+                    shape = RoundedCornerShape(25.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.18f)),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp)
+                ) {
                     Column(
                         Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         if (selectedImage != null) {
@@ -1095,16 +1101,35 @@ fun NaeemApp(
                     .padding(horizontal = 16.dp)
             ) {
                 if (messages.isEmpty()) {
-                    Spacer(Modifier.height(28.dp))
+                    Spacer(Modifier.height(12.dp))
                     Column(
                         Modifier.fillMaxWidth().weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) { Text("Supra AI", color = Color(0xFFE9DFC9), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = Color(0xFF8D877D), style = MaterialTheme.typography.labelSmall) }
-                        Spacer(Modifier.height(8.dp))
-                        ThinkingOrb(diameter = 142.dp, active = false, onClick = { playThinkingOrbSound(context) })
-                        Spacer(Modifier.height(2.dp))
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("سلام " + userName.ifBlank { "دوست من" }, color = Color(0xFFF1EBDD), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                Text("امروز چه کاری رو با هم جلو ببریم؟", color = Color(0xFFA9A39A), style = MaterialTheme.typography.bodySmall)
+                                Spacer(Modifier.height(3.dp))
+                                Surface(
+                                    color = Color(0xFF24211B),
+                                    shape = RoundedCornerShape(50.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.24f))
+                                ) {
+                                    Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Box(Modifier.size(6.dp).background(Color(0xFF8FC7A0), CircleShape))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("دستیار آماده است", color = Color(0xFFD6CDBB), style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                            ThinkingOrb(diameter = 94.dp, active = false, onClick = { playThinkingOrbSound(context) })
+                        }
+                        Spacer(Modifier.height(17.dp))
                         HomeSpacesOrbit(onOpen = { index ->
                             when (index) {
                                 0 -> { showTravel = true }
@@ -1119,18 +1144,19 @@ fun NaeemApp(
                                 9 -> { showSettings = true }
                             }
                         })
-                        Spacer(Modifier.height(8.dp))
-                        Text("سلام " + userName.ifBlank { "دوست من" }, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(22.dp))
+                        Spacer(Modifier.height(12.dp))
                         OutlinedButton(
                             onClick = { showHub = true },
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.65f)),
-                            shape = RoundedCornerShape(18.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.42f)),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold)
                         ) {
                             Icon(Icons.Default.GridView, null, tint = Gold)
                             Spacer(Modifier.width(8.dp))
-                            Text("مرور فضاها", color = Gold)
+                            Text("مرور همه قابلیت‌ها", color = Gold)
+                            Spacer(Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowBack, null, tint = Gold, modifier = Modifier.size(17.dp))
                         }
                     }
                 }
@@ -1210,9 +1236,14 @@ fun NaeemApp(
                     items(messages) { msg ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = if (msg.fromUser) Arrangement.End else Arrangement.Start) {
                             Card(
-                                modifier = Modifier.fillMaxWidth(0.88f),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF30363E) else Panel)
+                                modifier = Modifier.fillMaxWidth(0.90f),
+                                shape = if (msg.fromUser) RoundedCornerShape(22.dp, 22.dp, 7.dp, 22.dp) else RoundedCornerShape(7.dp, 22.dp, 22.dp, 22.dp),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (msg.fromUser) Gold.copy(alpha = 0.22f) else Color(0xFF49443A).copy(alpha = 0.48f)
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF29251F) else Color(0xE9161716))
                             ) {
                                 Column(Modifier.padding(14.dp)) {
                                     Text(if (msg.fromUser) "شما" else "Supra AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
