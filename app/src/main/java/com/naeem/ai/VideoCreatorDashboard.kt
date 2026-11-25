@@ -229,7 +229,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                     }
                     Text(videoDisplayName(context, imageUri!!), color = Color.White, style = MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.weight(1f)) {
                             Text("تعویض عکس")
                         }
                         TextButton(onClick = { imageUri = null }) { Text("حذف") }
