@@ -167,7 +167,7 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v2", false)
+        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v3", false)
 
         setContent {
             val authScope = rememberCoroutineScope()
@@ -301,21 +301,21 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Supra AI", color = silver.copy(alpha = 0.95f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("by Naeem deh", color = muted, style = MaterialTheme.typography.labelMedium)
+                    Text("ایما", color = silver.copy(alpha = 0.95f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Ima by Naeem Dehghani", color = muted, style = MaterialTheme.typography.labelMedium)
                 }
             }
             Spacer(Modifier.height(26.dp))
             ThinkingOrb(diameter = 142.dp, active = true)
             Spacer(Modifier.height(24.dp))
             Text(
-                "این فقط یک هوش مصنوعی نیست؛ فراتر از هوش مصنوعی است",
+                "فقط صحبت کن؛ ایما می‌شنود، می‌فهمد و عمل می‌کند.",
                 color = silver, style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(14.dp))
             Text(
-                "Supra AI فقط به سؤال‌ها جواب نمی‌دهد؛ به نیازها و موضوعاتی که در گفت‌وگوهایت مطرح می‌کنی توجه می‌کند و کمک می‌کند هر موضوع در بخش مرتبط خودش جریان پیدا کند.",
+                "ایما، فراتر از هوش مصنوعی است. با فعال‌کردن قابلیت شنیدن، صدایت را دریافت می‌کند، حرف‌ها و نیازهایت را می‌فهمد و اطلاعات مرتبط را در بخش‌های مختلف برنامه ثبت و مدیریت می‌کند.",
                 color = muted, style = MaterialTheme.typography.bodyLarge,
                 lineHeight = 27.sp, textAlign = TextAlign.Center
             )
@@ -340,7 +340,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                "تجربه‌ای یکپارچه که گفت‌وگو را به اقدام و ثبت اطلاعات در بخش‌های مختلف برنامه پیوند می‌دهد.",
+                "تولید عکس و ویدیو، ساخت موسیقی و پادکست و ابزارهای تخصصی تولید محتوا؛ همراه با پیشنهاد موسیقی و پادکست متناسب با سلیقه تو.",
                 color = Color(0xFFDCE8FA), style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center, lineHeight = 23.sp
             )
@@ -350,7 +350,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
                 shape = RoundedCornerShape(17.dp)
             ) {
-                Text("ورود به Supra AI", fontWeight = FontWeight.Bold)
+                Text("ورود به ایما", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -877,12 +877,12 @@ fun NaeemApp(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_brain_mark),
-                                contentDescription = "نشان مغز هوشمند Supra AI",
+                                contentDescription = "نشان هوشمند ایما",
                                 modifier = Modifier.size(28.dp)
                             )
                             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Text("Supra AI", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
-                                Text("by Naeem deh", style = MaterialTheme.typography.labelSmall, color = Muted)
+                                Text("ایما", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                                Text("Ima by Naeem Dehghani", style = MaterialTheme.typography.labelSmall, color = Muted)
                             }
                         }
                     },
@@ -1052,7 +1052,7 @@ fun NaeemApp(
                         ThinkingOrb(diameter = 204.dp, active = true, onClick = { playThinkingOrbSound(context) })
                         Spacer(Modifier.height(25.dp))
                         Text(
-                            "SUPRA AI",
+                            "ایما",
                             color = Color(0xFFD5E6FF),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
@@ -1096,7 +1096,7 @@ fun NaeemApp(
                                 },
                                 color = Gold, fontWeight = FontWeight.SemiBold
                             )
-                            Text("گوی هوشمند Supra AI", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text("گوی هوشمند ایما", color = Muted, style = MaterialTheme.typography.labelSmall)
                             if (busy) {
                                 LinearProgressIndicator(
                                     Modifier.fillMaxWidth().padding(top = 5.dp),
@@ -1152,7 +1152,7 @@ fun NaeemApp(
                                 colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0x443D86C8) else Color(0x1AFFFFFF))
                             ) {
                                 Column(Modifier.padding(14.dp)) {
-                                    Text(if (msg.fromUser) "شما" else "Supra AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(if (msg.fromUser) "شما" else "ایما", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(5.dp))
                                     Text(msg.text, color = Color(0xFFE7ECF2), style = MaterialTheme.typography.bodyLarge)
                                     msg.image?.let { image ->
@@ -1422,7 +1422,7 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { showMemory = false },
                 containerColor = Panel,
-                title = { Text("حافظه Supra AI", color = Gold) },
+                title = { Text("حافظه ایما", color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -1708,7 +1708,7 @@ fun NaeemApp(
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                onClick = { backupExportLauncher.launch("SupraAI-Backup.json") },
+                                onClick = { backupExportLauncher.launch("Ima-Backup.json") },
                                 enabled = backupPassphrase.length >= 8,
                                 modifier = Modifier.weight(1f)
                             ) { Text("خروجی گرفتن", color = Gold) }
