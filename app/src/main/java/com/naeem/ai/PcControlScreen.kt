@@ -1,5 +1,8 @@
 package com.naeem.ai
 
+import android.util.Base64
+import org.json.JSONObject
+import kotlinx.coroutines.delay
 import android.app.DownloadManager
 import android.net.Uri
 import android.os.Environment
@@ -30,7 +33,17 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @Composable
-fun PcControlScreen(onClose: () -> Unit) {
+private data class PcPlannedAction(
+    val type: String,
+    val app: String = "",
+    val key: String = "",
+    val text: String = "",
+    val x: Float = 0f,
+    val y: Float = 0f,
+    val waitMs: Long = 0L
+)
+
+fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey: String) {
     var ip by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("8765") }
     var pin by remember { mutableStateOf("") }
@@ -42,7 +55,14 @@ fun PcControlScreen(onClose: () -> Unit) {
     var devices by remember { mutableStateOf<List<PcBridgeDevice>>(emptyList()) }
     var screen by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var textToType by remember { mutableStateOf("") }
+    var taskPrompt by remember { mutableStateOf("") }
+    var planSummary by remember { mutableStateOf("") }
+    var plannedActions by remember { mutableStateOf<List<PcPlannedAction>>(emptyList()) }
+    var planning by remember { mutableStateOf(false) }
+    var runningPlan by remember { mutableStateOf(false) }
+    var latestScreenBase64 by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val aiClient = remember { ChatClient() }
     val context = LocalContext.current
     val client = remember {
         PcBridgeClient(
@@ -52,7 +72,10 @@ fun PcControlScreen(onClose: () -> Unit) {
             },
             onScreen = { bytes ->
                 val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                if (decoded != null) screen = decoded.asImageBitmap()
+                if (decoded != null) {
+                    screen = decoded.asImageBitmap()
+                    latestScreenBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                }
             }
         )
     }
@@ -183,6 +206,153 @@ fun PcControlScreen(onClose: () -> Unit) {
                         Icon(Icons.Default.Stop, null)
                         Spacer(Modifier.width(7.dp))
                         Text("قطع اتصال")
+                    }
+                }
+            }
+        }
+
+        Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("دستور هوشمند به کامپیوتر", color = accent, style = MaterialTheme.typography.titleMedium)
+                Text("درخواستت را فارسی بنویس. دستیار با دیدن آخرین تصویر صفحه، مراحل پیشنهادی را می‌سازد؛ هیچ مرحله‌ای بدون تأیید تو اجرا نمی‌شود.", color = muted, style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = taskPrompt,
+                    onValueChange = { taskPrompt = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    label = { Text("چه کاری روی کامپیوتر انجام بدهم؟") },
+                    placeholder = { Text("مثلاً Blender را باز کن و یک کره در مرکز صحنه بساز…") },
+                    enabled = connected && !planning && !runningPlan
+                )
+                Button(
+                    onClick = {
+                        planning = true
+                        plannedActions = emptyList()
+                        planSummary = ""
+                        scope.launch {
+                            try {
+                                val systemPrompt = """
+تو دستیار کنترل کامپیوتر هستی. باید فقط یک JSON معتبر و بدون Markdown برگردانی.
+ساختار دقیق:
+{"summary":"خلاصه فارسی کار","actions":[{"type":"launch_app","app":"blender"},{"type":"wait","ms":8000},{"type":"key","key":"SHIFT+F4"},{"type":"type_text","text":"..."},{"type":"key","key":"ENTER"}]}
+فقط این actionها مجازند:
+- launch_app با app یکی از blender, freecad, krita, gimp, inkscape
+- wait با ms بین 200 و 15000
+- key با میانبر صفحه‌کلید مانند CTRL+S یا SHIFT+F5 یا ENTER
+- type_text با متن حداکثر 2000 نویسه
+- mouse_move با x و y بین 0 و 1
+- mouse_click
+حداکثر 15 action تولید کن. برای برنامه‌های طراحی، اگر لازم است از فرمان‌های داخلی و میانبرهای شناخته‌شده همان برنامه استفاده کن. از دستورهای سیستم‌عامل، PowerShell، cmd، حذف فایل، نصب برنامه، خاموش‌کردن، تغییر رجیستری یا دسترسی به اطلاعات خصوصی استفاده نکن. اگر تصویر صفحه نشان می‌دهد برنامه آماده نیست، ابتدا وضعیت را بررسی کن و مراحل لازم را پیشنهاد بده. اگر برای انجام کار اطلاعات کافی نداری، summary را با سؤال روشن‌کننده شروع کن و actions را خالی بگذار.
+درخواست کاربر: ${taskPrompt.trim()}
+""".trimIndent()
+                                val answer = aiClient.send(
+                                    baseUrl, model, apiKey, systemPrompt, latestScreenBase64
+                                )
+                                val jsonStart = answer.indexOf('{')
+                                val jsonEnd = answer.lastIndexOf('}')
+                                require(jsonStart >= 0 && jsonEnd > jsonStart) {
+                                    "پاسخ مدل در قالب JSON معتبر نبود؛ دوباره تحلیل کن."
+                                }
+                                val parsed = JSONObject(answer.substring(jsonStart, jsonEnd + 1))
+                                val actionArray = parsed.optJSONArray("actions")
+                                    ?: throw IllegalStateException("فهرست مراحل در پاسخ مدل وجود ندارد.")
+                                require(actionArray.length() <= 15) { "تعداد مراحل بیش از حد مجاز است." }
+                                val safeActions = buildList {
+                                    for (i in 0 until actionArray.length()) {
+                                        val item = actionArray.optJSONObject(i) ?: continue
+                                        when (item.optString("type")) {
+                                            "launch_app" -> {
+                                                val app = item.optString("app").lowercase()
+                                                require(app in setOf("blender", "freecad", "krita", "gimp", "inkscape")) { "برنامه پیشنهادی مجاز نیست." }
+                                                add(PcPlannedAction(type = "launch_app", app = app))
+                                            }
+                                            "wait" -> {
+                                                val ms = item.optLong("ms", 1000L).coerceIn(200L, 15000L)
+                                                add(PcPlannedAction(type = "wait", waitMs = ms))
+                                            }
+                                            "key" -> {
+                                                val key = item.optString("key").take(40)
+                                                require(key.isNotBlank() && key.matches(Regex("[A-Za-z0-9+_ ]+"))) { "میانبر صفحه‌کلید نامعتبر است." }
+                                                add(PcPlannedAction(type = "key", key = key))
+                                            }
+                                            "type_text" -> {
+                                                val text = item.optString("text").take(2000)
+                                                require(text.isNotBlank()) { "متن فرمان خالی است." }
+                                                add(PcPlannedAction(type = "type_text", text = text))
+                                            }
+                                            "mouse_move" -> {
+                                                val x = item.optDouble("x", -1.0)
+                                                val y = item.optDouble("y", -1.0)
+                                                require(x in 0.0..1.0 && y in 0.0..1.0) { "مختصات ماوس نامعتبر است." }
+                                                add(PcPlannedAction(type = "mouse_move", x = x.toFloat(), y = y.toFloat()))
+                                            }
+                                            "mouse_click" -> add(PcPlannedAction(type = "mouse_click"))
+                                            else -> throw IllegalStateException("مدل یک مرحله خارج از فهرست مجاز پیشنهاد داده است.")
+                                        }
+                                    }
+                                }
+                                planSummary = parsed.optString("summary", "مراحل پیشنهادی آماده شد.")
+                                plannedActions = safeActions
+                                status = if (safeActions.isEmpty()) "دستیار برای این درخواست هنوز فرمان اجرایی مطمئنی پیشنهاد نکرده است."
+                                    else "برنامه آماده بررسی است؛ برای اجرا باید آن را تأیید کنی."
+                            } catch (e: Exception) {
+                                status = e.message ?: "ساخت برنامه اجرایی ناموفق بود."
+                            } finally { planning = false }
+                        }
+                    },
+                    enabled = connected && !planning && !runningPlan && taskPrompt.isNotBlank() && apiKey.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (planning) "در حال بررسی تصویر و ساخت مراحل…" else "تحلیل درخواست با هوش مصنوعی")
+                }
+                if (planSummary.isNotBlank()) {
+                    Text(planSummary, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                    plannedActions.forEachIndexed { index, action ->
+                        val detail = when (action.type) {
+                            "launch_app" -> "باز کردن ${action.app}"
+                            "wait" -> "مکث ${action.waitMs / 1000.0} ثانیه"
+                            "key" -> "کلیدها: ${action.key}"
+                            "type_text" -> "تایپ: ${action.text.take(90)}"
+                            "mouse_move" -> "حرکت ماوس به ${action.x}, ${action.y}"
+                            else -> "کلیک ماوس"
+                        }
+                        Text("${index + 1}. $detail", color = muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (plannedActions.isNotEmpty()) {
+                        Text("فرمان‌ها پس از تأیید تو اجرا می‌شوند. متن‌هایی که در برنامه مقصد تایپ می‌شوند را پیش از اجرا مرور کن.", color = Color(0xFFFFD28A), style = MaterialTheme.typography.labelSmall)
+                        Button(
+                            onClick = {
+                                runningPlan = true
+                                scope.launch {
+                                    try {
+                                        plannedActions.forEachIndexed { index, action ->
+                                            status = "در حال اجرای مرحله ${index + 1} از ${plannedActions.size}…"
+                                            when (action.type) {
+                                                "launch_app" -> client.launchApp(action.app)
+                                                "wait" -> delay(action.waitMs)
+                                                "key" -> client.key(action.key)
+                                                "type_text" -> client.typeText(action.text)
+                                                "mouse_move" -> client.sendMouseMove(action.x, action.y)
+                                                "mouse_click" -> client.click()
+                                            }
+                                            if (action.type !in setOf("wait")) delay(350)
+                                        }
+                                        status = "مراحل اجرا شدند؛ تصویر زنده را بررسی کن و اگر لازم بود نتیجه را دوباره تحلیل کن."
+                                    } catch (e: Exception) {
+                                        status = e.message ?: "اجرای مراحل متوقف شد."
+                                    } finally { runningPlan = false }
+                                }
+                            },
+                            enabled = connected && !runningPlan,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (runningPlan) "در حال اجرا…" else "تأیید و اجرای مراحل")
+                        }
+                        OutlinedButton(
+                            onClick = { plannedActions = emptyList(); planSummary = "" },
+                            enabled = !runningPlan,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("لغو برنامه پیشنهادی") }
                     }
                 }
             }
