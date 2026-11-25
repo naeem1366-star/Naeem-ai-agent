@@ -96,7 +96,7 @@ public sealed class BridgeForm : Form
         _copyFingerprint.FlatStyle = FlatStyle.Flat;
         _copyFingerprint.Click += (_, _) => { Clipboard.SetText(_fingerprint); _statusLabel.Text = "اثر انگشت کپی شد."; };
         layout.Controls.Add(_copyFingerprint, 0, 5);
-        _ipLabel.Text = "نشانی شبکه: " + GetLocalIPv4() + "   |   درگاه: " + Port;
+        _ipLabel.Text = "نشانی شبکه: " + GetLocalIPv4ForDisplay() + "   |   درگاه: " + Port;
         _ipLabel.Dock = DockStyle.Fill;
         _ipLabel.TextAlign = ContentAlignment.MiddleRight;
         _ipLabel.ForeColor = Color.FromArgb(185, 198, 218);
@@ -393,6 +393,12 @@ public sealed class BridgeForm : Form
             (address.GetAddressBytes()[0] == 172 && address.GetAddressBytes()[1] >= 16 && address.GetAddressBytes()[1] <= 31));
         return (privateAddress ?? addresses.FirstOrDefault())?.ToString()
             ?? throw new InvalidOperationException("اتصال شبکه محلی پیدا نشد. ابتدا کامپیوتر را به Wi-Fi یا LAN وصل کن.");
+    }
+
+    private static string GetLocalIPv4ForDisplay()
+    {
+        try { return GetLocalIPv4(); }
+        catch { return "هنوز به شبکه محلی وصل نیست"; }
     }
 
     private const int INPUT_MOUSE = 0, INPUT_KEYBOARD = 1;
