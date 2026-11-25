@@ -39,7 +39,6 @@ public sealed class BridgeForm : Form
     private string _fingerprint = "";
     private volatile bool _controlEnabled;
     private int _connectedClients;
-    private int _paired;
     private int _pairAttempts;
     private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
 
@@ -151,8 +150,6 @@ public sealed class BridgeForm : Form
                     return Results.Json(new { error = "تعداد تلاش‌های جفت‌سازی بیش از حد مجاز است؛ برنامه کامپیوتر را دوباره اجرا کن." }, statusCode: 429);
                 if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(suppliedPin), Encoding.UTF8.GetBytes(_pin)))
                     return Results.Json(new { error = "کد جفت‌سازی اشتباه است." }, statusCode: 401);
-                if (Interlocked.CompareExchange(ref _paired, 1, 0) != 0)
-                    return Results.Json(new { error = "این کد قبلاً استفاده شده است؛ برنامه کامپیوتر را دوباره اجرا کن." }, statusCode: 409);
                 return Results.Json(new { token = _token, name = "Naeem AI Desktop", controlAllowed = _controlEnabled });
             });
             app.Map("/ws", HandleWebSocketAsync);
