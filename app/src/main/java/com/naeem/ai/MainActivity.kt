@@ -198,7 +198,7 @@ class MainActivity : FragmentActivity() {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
-                                appPrefs.edit().putBoolean("app_intro_completed_v2", true).apply()
+                                appPrefs.edit().putBoolean("app_intro_completed_v3", true).apply()
                                 introCompleted.value = true
                             }
                         )
@@ -285,6 +285,7 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
 
 @Composable
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
+    var page by remember { mutableIntStateOf(0) }
     val silver = Color(0xFFE8EDF5)
     val muted = Color(0xFFB9C5D5)
     Box(Modifier.fillMaxSize().background(Color.Transparent)) {
@@ -301,56 +302,72 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("ایما", color = silver.copy(alpha = 0.95f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Ima by Naeem Dehghani", color = muted, style = MaterialTheme.typography.labelMedium)
+                    Text("ایما", color = silver, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("by Naeem", color = muted, style = MaterialTheme.typography.labelMedium)
                 }
+            }
+            Spacer(Modifier.height(24.dp))
+            ThinkingOrb(diameter = 118.dp, active = true)
+            Spacer(Modifier.height(22.dp))
+            if (page == 0) {
+                Text(
+                    "فقط صحبت کن؛ ایما می‌فهمد و همراهت است.",
+                    color = silver, style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "با انتخاب میکروفون، حرف‌هایت را می‌شنود، منظورت را تشخیص می‌دهد و برای انجام کارها کمکت می‌کند.",
+                    color = muted, style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 28.sp, textAlign = TextAlign.Center
+                )
+            } else {
+                Text(
+                    "هر موضوع، در فضای خودش",
+                    color = silver, style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "ایما می‌تواند اطلاعات سفر، کار، تغذیه و برنامه‌های روزانه را به بخش مرتبط هدایت کند. ثبت یا تغییر موارد مهم با تأیید تو انجام می‌شود.",
+                    color = muted, style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 28.sp, textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "ساخت عکس و ویدیو، موسیقی و پادکست هم در دسترس توست.",
+                    color = Color(0xFFDCE8FA), style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center, lineHeight = 24.sp
+                )
             }
             Spacer(Modifier.height(26.dp))
-            ThinkingOrb(diameter = 142.dp, active = true)
-            Spacer(Modifier.height(24.dp))
-            Text(
-                "فقط صحبت کن؛ ایما می‌شنود، می‌فهمد و عمل می‌کند.",
-                color = silver, style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(14.dp))
-            Text(
-                "ایما، فراتر از هوش مصنوعی است. با فعال‌کردن قابلیت شنیدن، صدایت را دریافت می‌کند، حرف‌ها و نیازهایت را می‌فهمد و اطلاعات مرتبط را در بخش‌های مختلف برنامه ثبت و مدیریت می‌کند.",
-                color = muted, style = MaterialTheme.typography.bodyLarge,
-                lineHeight = 27.sp, textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(18.dp))
-            Surface(
-                color = Color(0xCC17263A), shape = RoundedCornerShape(22.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("یک گفت‌وگو، چندین کار هم‌زمان", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "مثلاً وقتی از برنامه سفر حرف می‌زنی، اطلاعات لازم می‌تواند به برنامه‌ریزی سفر کمک کند؛ وقتی از غذایی که خوردی می‌گویی، جزئیات آن می‌تواند در بخش تغذیه ثبت و برای بررسی کالری استفاده شود. موضوع‌های کاری، مالی و روزمره هم می‌توانند به فضای مرتبط هدایت شوند.",
-                        color = silver, style = MaterialTheme.typography.bodyMedium, lineHeight = 25.sp
-                    )
-                    Divider(color = Color(0x557D97BA))
-                    Text(
-                        "با فعال‌کردن میکروفون، صدایت به گفت‌وگو تبدیل می‌شود. دستیار از متن گفت‌وگو نیازها و اطلاعات مرتبط را تشخیص می‌دهد؛ مواردی که نیاز به تأیید داشته باشند با اجازه تو ثبت می‌شوند. میکروفون بدون انتخاب تو فعال نیست.",
-                        color = muted, style = MaterialTheme.typography.bodySmall, lineHeight = 22.sp
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                repeat(2) { index ->
+                    Box(
+                        Modifier.padding(horizontal = 4.dp).size(if (page == index) 9.dp else 7.dp)
+                            .background(if (page == index) Color(0xFFDCE8FA) else Color(0x667D97BA), CircleShape)
                     )
                 }
             }
-            Spacer(Modifier.height(20.dp))
-            Text(
-                "تولید عکس و ویدیو، ساخت موسیقی و پادکست و ابزارهای تخصصی تولید محتوا؛ همراه با پیشنهاد موسیقی و پادکست متناسب با سلیقه تو.",
-                color = Color(0xFFDCE8FA), style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center, lineHeight = 23.sp
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = onEnter, modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                shape = RoundedCornerShape(17.dp)
-            ) {
-                Text("ورود به ایما", fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(18.dp))
+            if (page == 0) {
+                Button(
+                    onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
+                    shape = RoundedCornerShape(17.dp)
+                ) { Text("ادامه", fontWeight = FontWeight.Bold) }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
+                        shape = RoundedCornerShape(17.dp)
+                    ) { Text("قبلی", color = silver) }
+                    Button(
+                        onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
+                        shape = RoundedCornerShape(17.dp)
+                    ) { Text("ورود به ایما", fontWeight = FontWeight.Bold) }
+                }
             }
         }
     }
@@ -882,7 +899,7 @@ fun NaeemApp(
                             )
                             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                                 Text("ایما", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
-                                Text("Ima by Naeem Dehghani", style = MaterialTheme.typography.labelSmall, color = Muted)
+                                Text("by Naeem", style = MaterialTheme.typography.labelSmall, color = Muted)
                             }
                         }
                     },
