@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: ["feature/pc-bridge-mvp", "feature/v2-foundation"]
+  pull_request:
+    branches: ["feature/v2-foundation"]
 
 permissions:
   contents: read
