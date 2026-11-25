@@ -10,7 +10,7 @@ migrations_dir = "migrations"
 
 [vars]
 SUPABASE_URL = "https://ifloyzpvgjgmneqgcggu.supabase.co"
-SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Vq7VtBwR8azcEKsIOmc-Q_aqO-fzSh"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Vq7VJtBwR8azcEKsIOmc-Q_aqO-fzSh"
 ADMIN_EMAILS = ""
 ALLOWED_ORIGINS = ""
 
