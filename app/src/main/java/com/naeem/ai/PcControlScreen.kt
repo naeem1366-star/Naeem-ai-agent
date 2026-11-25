@@ -53,6 +53,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
     var discovering by remember { mutableStateOf(false) }
     var connecting by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
+    var remoteControlAllowed by remember { mutableStateOf(false) }
     var devices by remember { mutableStateOf<List<PcBridgeDevice>>(emptyList()) }
     var screen by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var textToType by remember { mutableStateOf("") }
@@ -77,7 +78,8 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                     screen = decoded.asImageBitmap()
                     latestScreenBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
                 }
-            }
+            },
+            onControlPermission = { remoteControlAllowed = it }
         )
     }
     DisposableEffect(client) { onDispose { client.dispose() } }
@@ -203,7 +205,16 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                     Text(if (connecting) "در حال اتصال…" else "اتصال به کامپیوتر")
                 }
                 if (connected) {
-                    OutlinedButton(onClick = { client.disconnect(); connected = false; screen = null }, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                try { remoteControlAllowed = client.refreshControlPermission(ip.trim(), port.toInt()) }
+                                catch (e: Exception) { status = e.message ?: "بررسی مجوز کنترل ناموفق بود." }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("به‌روزرسانی اجازه کنترل از ویندوز") }
+                    OutlinedButton(onClick = { client.disconnect(); connected = false; remoteControlAllowed = false; screen = null }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Stop, null)
                         Spacer(Modifier.width(7.dp))
                         Text("قطع اتصال")
@@ -223,7 +234,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                     minLines = 2,
                     label = { Text("چه کاری روی کامپیوتر انجام بدهم؟") },
                     placeholder = { Text("مثلاً Blender را باز کن و یک کره در مرکز صحنه بساز…") },
-                    enabled = connected && !planning && !runningPlan
+                    enabled = connected && remoteControlAllowed && !planning && !runningPlan
                 )
                 Button(
                     onClick = {
@@ -344,7 +355,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                                     } finally { runningPlan = false }
                                 }
                             },
-                            enabled = connected && !runningPlan,
+                            enabled = connected && remoteControlAllowed && !runningPlan,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(if (runningPlan) "در حال اجرا…" else "تأیید و اجرای مراحل")
@@ -370,7 +381,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                         modifier = Modifier.fillMaxWidth().aspectRatio(frame.width.toFloat() / frame.height.toFloat())
                             .pointerInput(frame, connected) {
                                 detectTapGestures { point ->
-                                    if (connected) {
+                                    if (connected && remoteControlAllowed) {
                                         client.sendMouseMove(point.x / size.width, point.y / size.height)
                                         client.click()
                                     }
@@ -379,7 +390,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                             .pointerInput(frame, connected) {
                                 detectDragGestures { change, _ ->
                                     change.consume()
-                                    if (connected) client.sendMouseMove(change.position.x / size.width, change.position.y / size.height)
+                                    if (connected && remoteControlAllowed) client.sendMouseMove(change.position.x / size.width, change.position.y / size.height)
                                 }
                             },
                         contentScale = ContentScale.FillBounds
@@ -392,7 +403,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("CTRL+S" to "ذخیره", "CTRL+Z" to "بازگشت", "ENTER" to "Enter", "ESC" to "Esc").forEach { (key, label) ->
-                        OutlinedButton(onClick = { client.key(key) }, enabled = connected, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 3.dp)) {
+                        OutlinedButton(onClick = { client.key(key) }, enabled = connected && remoteControlAllowed, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 3.dp)) {
                             Text(label, color = accent, style = MaterialTheme.typography.labelSmall)
                         }
                     }
@@ -402,10 +413,10 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                     onValueChange = { textToType = it },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("متن برای تایپ در کامپیوتر") },
-                    enabled = connected,
+                    enabled = connected && remoteControlAllowed,
                     minLines = 2
                 )
-                Button(onClick = { client.typeText(textToType); textToType = "" }, enabled = connected && textToType.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { client.typeText(textToType); textToType = "" }, enabled = connected && remoteControlAllowed && textToType.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                     Text("ارسال متن به کامپیوتر")
                 }
                 Text("باز کردن نرم‌افزار", color = accent, style = MaterialTheme.typography.titleSmall)
@@ -420,7 +431,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                         "photoshop" to "Photoshop",
                         "krita" to "Krita"
                     ).forEach { (app, label) ->
-                        OutlinedButton(onClick = { client.launchApp(app) }, enabled = connected, contentPadding = PaddingValues(horizontal = 9.dp)) {
+                        OutlinedButton(onClick = { client.launchApp(app) }, enabled = connected && remoteControlAllowed, contentPadding = PaddingValues(horizontal = 9.dp)) {
                             Text(label, color = accent, style = MaterialTheme.typography.labelSmall)
                         }
                     }
@@ -429,6 +440,6 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
         }
 
         Text(status, color = if (connected) Color(0xFF9AD6B0) else muted, style = MaterialTheme.typography.bodySmall)
-        Text("امنیت: تصویر فقط پس از جفت‌سازی دریافت می‌شود. کنترل ماوس و صفحه‌کلید باید جداگانه از پنجره ویندوز فعال شود. این نسخه فقط برای شبکه محلی است.", color = muted, style = MaterialTheme.typography.labelSmall)
+        Text(if (connected && !remoteControlAllowed) "تصویر دریافت می‌شود، اما اجازه کنترل در ویندوز خاموش است. آن را روشن کن و وضعیت را به‌روزرسانی کن." else "امنیت: تصویر پس از جفت‌سازی دریافت می‌شود. کنترل از ویندوز به‌صورت جداگانه فعال می‌شود. این نسخه فقط برای شبکه محلی است.", color = muted, style = MaterialTheme.typography.labelSmall)
     }
 }
