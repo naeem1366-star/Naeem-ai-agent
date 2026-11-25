@@ -34,7 +34,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
     val scope = rememberCoroutineScope()
     val secureStore = remember(context) { SecureConfigStore(context) }
     var localKey by remember(baseUrl) { mutableStateOf(apiKey.ifBlank { secureStore.apiKeyFor(baseUrl) }) }
-    var keySaved by remember(baseUrl, localKey) { mutableStateOf(localKey.isNotBlank()) }
+    var keySaved by remember(baseUrl) { mutableStateOf(localKey.isNotBlank()) }
     val api = remember(baseUrl, localKey) { NetArzApiClient(baseUrl, localKey) }
     var models by remember { mutableStateOf<List<NetArzVideoModel>>(emptyList()) }
     var selected by remember { mutableStateOf<NetArzVideoModel?>(null) }
@@ -193,9 +193,6 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                                 group.forEach { v -> FilterChip(selected = size == v, onClick = { size = v }, enabled = !running, label = { Text(v) }) }
                             }
                         }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("9:16", "16:9").forEach { v -> FilterChip(selected = ratio == v, onClick = { ratio = v }, enabled = !running, label = { Text(v) }) }
                     }
                     if (model.audio) Text("خروجی این مدل همراه صداست.", color = Color(0xFF9BD2A9), style = MaterialTheme.typography.labelSmall)
                 }
