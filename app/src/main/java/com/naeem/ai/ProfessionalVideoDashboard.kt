@@ -81,7 +81,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
             runCatching {
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri, "w")?.use { it.write(bytes) }
-                        ?: error("محل ذخیره فایل باز نشد.")
+                        ?: throw IllegalStateException("محل ذخیره فایل باز نشد.")
                 }
             }.onSuccess { status = "ویدیو با موفقیت ذخیره شد." }
                 .onFailure { error = it.message ?: "ذخیره ویدیو ناموفق بود." }
