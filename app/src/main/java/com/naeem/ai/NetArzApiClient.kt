@@ -22,6 +22,16 @@ data class NetArzVideoJob(
     val error: String?
 )
 
+data class NetArzVideoModel(
+    val id: String,
+    val name: String,
+    val description: String,
+    val seconds: List<Int>,
+    val sizes: List<String>,
+    val imageInput: Boolean,
+    val audio: Boolean
+)
+
 data class NetArzMusicResult(
     val bytes: ByteArray,
     val format: String,
@@ -53,7 +63,7 @@ class NetArzApiClient(
 
     private fun request(path: String): Request.Builder {
         require(root.startsWith("https://", true)) { "آدرس API باید با https:// شروع شود." }
-        require(key.isNotBlank()) { "کلید API نت‌ارز در تنظیمات ثبت نشده است." }
+        require(key.isNotBlank()) { "لطفاً کلید API مربوطه را وارد کنید." }
         return Request.Builder().url(root + path)
             .header("Authorization", "Bearer $key")
             .header("Accept", "application/json")
@@ -77,6 +87,33 @@ class NetArzApiClient(
             if (!response.isSuccessful) throw IllegalStateException(errorMessage(response.code, body))
             val data = JSONObject(body).optJSONArray("data") ?: return@withContext emptyList()
             (0 until data.length()).mapNotNull { data.optJSONObject(it)?.optString("id")?.takeIf(String::isNotBlank) }.distinct()
+        }
+    }
+
+    suspend fun videoModelCatalog(): List<NetArzVideoModel> = withContext(Dispatchers.IO) {
+        val url = root + "/models?type=video"
+        val request = Request.Builder().url(url).header("Accept", "application/json").get().build()
+        http.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) throw IllegalStateException("دریافت فهرست مدل‌های ویدیو ناموفق بود (HTTP ${response.code}).")
+            val data = JSONObject(body).optJSONArray("data") ?: return@withContext emptyList()
+            (0 until data.length()).mapNotNull { index ->
+                val item = data.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val caps = item.optJSONObject("capabilities") ?: JSONObject()
+                fun strings(key: String) = caps.optJSONArray(key)?.let { array ->
+                    (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }
+                }.orEmpty()
+                NetArzVideoModel(
+                    id = id,
+                    name = item.optString("name").ifBlank { id.substringAfterLast('/') },
+                    description = item.optString("description"),
+                    seconds = strings("seconds").mapNotNull { it.toIntOrNull() },
+                    sizes = strings("sizes"),
+                    imageInput = caps.optBoolean("image_input", false),
+                    audio = caps.optBoolean("audio", false)
+                )
+            }
         }
     }
 
@@ -153,7 +190,7 @@ class NetArzApiClient(
             }
             delay(5000)
         }
-        throw IllegalStateException("پردازش بیش از ۲۵ دقیقه طول کشید. وضعیت کار را در پنل نت‌ارز بررسی کن.")
+        throw IllegalStateException("پردازش بیش از ۲۵ دقیقه طول کشید. وضعیت درخواست را از پشتیبانی پیگیری کن.")
     }
 
     private fun parseJob(json: JSONObject) = NetArzVideoJob(
