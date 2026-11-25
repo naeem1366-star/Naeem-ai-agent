@@ -190,32 +190,34 @@ fun FeatureHub(
     val champagne=SupraGlass.Silver
     val hubBg=SupraGlass.Night
     selectedEntry?.let { entry ->
-        AlertDialog(
-            onDismissRequest = { selectedEntry = null },
-            containerColor = SupraGlass.Glass,
-            titleContentColor = Color(0xFFE0E6EE),
-            textContentColor = Color(0xFFB8C2CE),
-            title = { Text(entry.title, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(entry.detail, style = MaterialTheme.typography.bodyMedium)
-                    Divider(color = Color(0xFF3B4551))
-                    Text("ارتباط با مغز هوشمند", color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold)
-                    Text(entry.aiRole, style = MaterialTheme.typography.bodySmall)
-                    Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(10.dp)) {
-                        Text(entry.aiStatus, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color(0xFFD4DCE6), style = MaterialTheme.typography.labelSmall)
+        CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+            AlertDialog(
+                onDismissRequest = { selectedEntry = null },
+                containerColor = Color(0xFF101B2B),
+                titleContentColor = Color(0xFFE0E6EE),
+                textContentColor = Color(0xFFB8C2CE),
+                title = { Text(entry.title, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.End) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.End) {
+                        Text(entry.detail, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                        Divider(color = Color(0xFF3B4551))
+                        Text("ارتباط با مغز هوشمند", color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                        Text(entry.aiRole, style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                        Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(10.dp)) {
+                            Text(entry.aiStatus, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color(0xFFD4DCE6), style = MaterialTheme.typography.labelSmall)
+                        }
                     }
+                },
+                confirmButton = {
+                    TextButton(onClick = { selectedEntry = null; entry.action() }) {
+                        Text("ورود به این بخش", color = Color(0xFFE0E6EE))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { selectedEntry = null }) { Text("بستن", color = Color(0xFF9BA7B5)) }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedEntry = null; entry.action() }) {
-                    Text("ورود به این بخش", color = Color(0xFFE0E6EE))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { selectedEntry = null }) { Text("بستن", color = Color(0xFF9BA7B5)) }
-            }
-        )
+            )
+        }
     }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)){
