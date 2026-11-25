@@ -317,8 +317,10 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             }
         } else {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.22f }, contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x3354A8FF), Color(0x22406FA6), Color(0x33101D35)))))
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                listOf(Color(0x88050B16), Color(0x33050B16), Color(0x99050B16))
+            )))
             Column(Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 26.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
