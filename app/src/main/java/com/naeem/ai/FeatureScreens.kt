@@ -68,109 +68,99 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
     data class OrbitItem(
         val icon: androidx.compose.ui.graphics.vector.ImageVector,
         val title: String,
+        val subtitle: String,
         val description: String,
         val color: Color
     )
+
     val items = listOf(
-        OrbitItem(Icons.Default.Luggage, "سفر", "مقصد، همراهان و برنامه سفر", Color(0xFF4EA6FF)),
-        OrbitItem(Icons.Default.Terrain, "طبیعت", "مسیرها و ماجراجویی در طبیعت", Color(0xFF54C99A)),
-        OrbitItem(Icons.Default.FitnessCenter, "ورزش", "تمرین‌ها و رکوردهای ورزشی", Color(0xFFFF875E)),
-        OrbitItem(Icons.Default.TrendingUp, "بازار", "رصد بازارها و تحلیل دارایی‌ها", Color(0xFFFFC45C)),
-        OrbitItem(Icons.Default.Psychology, "اتاق فکر", "ایده‌پردازی و حل مسئله", Color(0xFFB18AFF)),
-        OrbitItem(Icons.Default.Newspaper, "اخبار", "خبرهای مهم و رویدادها", Color(0xFF69C7E8)),
-        OrbitItem(Icons.Default.AccountBalanceWallet, "مالی", "درآمد، هزینه و گزارش مالی", Color(0xFF5DD6C0)),
-        OrbitItem(Icons.Default.EventNote, "روزنگار", "یادداشت‌ها و اتفاق‌های روزانه", Color(0xFFFF8DB5)),
-        OrbitItem(Icons.Default.MusicNote, "موسیقی", "کشف آهنگ و حال‌وهوای موسیقی", Color(0xFF9BAEFF)),
-        OrbitItem(Icons.Default.Settings, "تنظیمات", "اتصال‌ها و تنظیمات برنامه", Color(0xFFB5C0CC))
+        OrbitItem(Icons.Default.Luggage, "سفر", "برنامه‌ریزی سفر و همراهان", "مقصدها را بررسی کن، برنامه روزانه سفر را بچین، همراهان و هزینه‌ها را مدیریت کن و جزئیات مسیر را یک‌جا نگه دار.", Color(0xFF4EA6FF)),
+        OrbitItem(Icons.Default.Terrain, "طبیعت", "مسیرها و ماجراجویی در طبیعت", "برای طبیعت‌گردی و پیمایش آماده شو؛ مسیرها، نقاط مهم، اطلاعات سفر و تجربه‌های ثبت‌شده‌ات را در یک فضای اختصاصی دنبال کن.", Color(0xFF54C99A)),
+        OrbitItem(Icons.Default.FitnessCenter, "ورزش", "تمرین و پیشرفت بدنی", "فعالیت‌ها و تمرین‌هایت را ثبت کن، روند پیشرفت و رکوردها را ببین و برای رسیدن به هدف‌های ورزشی برنامه منظم‌تری بساز.", Color(0xFFFF875E)),
+        OrbitItem(Icons.Default.TrendingUp, "بازار", "رصد بازارها و دارایی‌ها", "قیمت‌ها و روند بازارهای مالی را دنبال کن، داده‌ها را کنار هم ببین و برای شناخت بهتر شرایط بازار از تحلیل و جمع‌بندی هوشمند کمک بگیر.", Color(0xFFFFC45C)),
+        OrbitItem(Icons.Default.Psychology, "اتاق فکر", "ایده‌پردازی و حل مسئله", "ایده‌های خام را وارد گفت‌وگو کن، از زاویه‌های مختلف بررسی‌شان کن، راه‌حل‌ها را مقایسه کن و قدم‌به‌قدم به یک طرح اجرایی برس.", Color(0xFFB18AFF)),
+        OrbitItem(Icons.Default.Newspaper, "اخبار", "خبرهای مهم و رویدادها", "موضوعات مهم را پیگیری کن، خبرها را با نگاه تحلیلی بخوان و برای درک بهتر اتفاق‌ها، زمینه و پیامدهای هر رویداد را بررسی کن.", Color(0xFF69C7E8)),
+        OrbitItem(Icons.Default.AccountBalanceWallet, "مالی", "مدیریت دخل‌وخرج", "درآمدها و هزینه‌ها را ثبت و دسته‌بندی کن، گزارش مالی بگیر و تصویر روشن‌تری از جریان پول و وضعیت بودجه‌ات داشته باش.", Color(0xFF5DD6C0)),
+        OrbitItem(Icons.Default.EventNote, "روزنگار", "یادداشت‌ها و اتفاق‌های روزانه", "یادداشت‌ها، کارها و اتفاق‌های مهم روز را ثبت کن؛ بعداً می‌توانی به آن‌ها برگردی و روند هفته‌ها و ماه‌هایت را مرور کنی.", Color(0xFFFF8DB5)),
+        OrbitItem(Icons.Default.MusicNote, "موسیقی", "کشف آهنگ و حال‌وهوای موسیقی", "موسیقی و هنرمندان تازه کشف کن، بر اساس حال‌وهوا جست‌وجو کن و درباره سبک‌ها، صداها و آثار موردعلاقه‌ات بیشتر بدان.", Color(0xFF9BAEFF)),
+        OrbitItem(Icons.Default.Settings, "تنظیمات", "اتصال‌ها و کنترل برنامه", "مدل هوش مصنوعی، صدا، دسترسی‌ها و اتصال به رایانه را مدیریت کن و تنظیمات و امنیت برنامه را مطابق نیازت تغییر بده.", Color(0xFFB5C0CC))
     )
+
     var rotation by remember { mutableFloatStateOf(0f) }
-    var selected by remember { mutableIntStateOf(-1) }
-    LaunchedEffect(selected) {
-        if (selected >= 0) {
-            kotlinx.coroutines.delay(2400)
-            selected = -1
-        }
-    }
+    var selected by remember { mutableIntStateOf(0) }
+
     Column(
-        Modifier.fillMaxWidth().height(148.dp),
+        Modifier.fillMaxWidth().height(282.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        androidx.compose.animation.AnimatedVisibility(
-            visible = selected >= 0,
-            enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)),
-            exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(520))
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val info = items.getOrNull(selected)
-            if (info != null) {
-                Surface(
-                    color = Color(0xE61B2635),
-                    shape = RoundedCornerShape(13.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, info.color.copy(alpha = .55f)),
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.padding(top = 1.dp, bottom = 3.dp)
-                ) {
-                    Column(
-                        Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(info.title, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-                        Text(info.description, color = Color(0xFFD3DCE8), style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
+            Text("فضاهای اختصاصی", color = Color(0xFFE7EDF7), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.weight(1f))
+            Text("برای چرخاندن، بکش", color = Color(0xFF91A2B8), style = MaterialTheme.typography.labelSmall)
         }
+
         BoxWithConstraints(
-            Modifier.fillMaxWidth().weight(1f)
+            Modifier.fillMaxWidth().height(166.dp)
                 .pointerInput(items.size) {
                     detectDragGestures { change, drag ->
                         change.consume()
                         rotation += drag.x / size.width.coerceAtLeast(1).toFloat() * 2f * PI.toFloat()
-                        selected = -1
                     }
                 },
             contentAlignment = Alignment.Center
         ) {
             val rx = maxWidth.value * 0.39f
-            val ry = 25f
+            val ry = 43f
             val nodes = items.indices.map { i ->
-                val a = i * (2f * PI.toFloat() / items.size) + rotation + PI.toFloat() / 2f
-                Triple(i, a, (sin(a) + 1f) / 2f)
+                val angle = i * (2f * PI.toFloat() / items.size) + rotation + PI.toFloat() / 2f
+                Triple(i, angle, (sin(angle) + 1f) / 2f)
             }.sortedBy { it.third }
+
             Canvas(Modifier.fillMaxSize()) {
-                val w = size.width * .80f
+                val w = size.width * .84f
                 val h = size.height * .48f
-                val topLeft = androidx.compose.ui.geometry.Offset((size.width-w)/2f, (size.height-h)/2f)
-                val ovalSize = androidx.compose.ui.geometry.Size(w,h)
+                val topLeft = androidx.compose.ui.geometry.Offset((size.width - w) / 2f, (size.height - h) / 2f)
+                val ovalSize = androidx.compose.ui.geometry.Size(w, h)
                 drawOval(
-                    brush = ComposeBrush.linearGradient(listOf(Color(0xFF26384D), Color(0xFF8AAFD8), Color(0xFF26384D))),
-                    topLeft = topLeft, size = ovalSize, style = Stroke(width = 1.dp.toPx())
+                    brush = ComposeBrush.linearGradient(
+                        listOf(Color(0xFF263B57), Color(0xFF8CBDEB), Color(0xFF263B57))
+                    ),
+                    topLeft = topLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 1.4.dp.toPx())
                 )
                 drawOval(
-                    color = Color(0xFF78B9FF).copy(alpha = .10f),
-                    topLeft = topLeft, size = ovalSize, style = Stroke(width = 5.dp.toPx())
+                    color = Color(0xFF72B9FF).copy(alpha = .13f),
+                    topLeft = topLeft,
+                    size = ovalSize,
+                    style = Stroke(width = 7.dp.toPx())
                 )
             }
-            nodes.forEach { (i, angle, depth) ->
-                val item = items[i]
-                val isSelected = i == selected
-                val diameter = 24f + depth * 8f + if (isSelected) 5f else 0f
-                val scale = .76f + depth * .28f + if (isSelected) .13f else 0f
+
+            nodes.forEach { (index, angle, depth) ->
+                val item = items[index]
+                val isSelected = index == selected
+                val diameter = 43f + depth * 15f + if (isSelected) 9f else 0f
+                val scale = .78f + depth * .22f + if (isSelected) .10f else 0f
+
                 Box(
-                    modifier = Modifier.offset(x = (cos(angle)*rx).dp, y = (sin(angle)*ry).dp)
+                    modifier = Modifier
+                        .offset(x = (cos(angle) * rx).dp, y = (sin(angle) * ry).dp)
                         .size(diameter.dp)
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
-                            alpha = .62f + depth * .38f
-                            cameraDistance = 28f * density
+                            alpha = .72f + depth * .28f
+                            cameraDistance = 32f * density
                         }
                         .clickable {
-                            if (selected == i) {
-                                onOpen(i)
-                            } else {
-                                selected = i
-                                rotation = -i * (2f * PI.toFloat() / items.size)
+                            if (selected == index) onOpen(index)
+                            else {
+                                selected = index
+                                rotation = -index * (2f * PI.toFloat() / items.size)
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -178,42 +168,79 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         shape = CircleShape,
-                        color = item.color.copy(alpha = .18f),
+                        color = item.color.copy(alpha = .28f),
                         border = androidx.compose.foundation.BorderStroke(
-                            width = if (isSelected) 1.8.dp else 1.dp,
+                            width = if (isSelected) 2.dp else 1.dp,
                             brush = ComposeBrush.linearGradient(
-                                listOf(Color.White.copy(alpha = .95f), item.color.copy(alpha = .8f), Color(0xFF182333))
+                                listOf(Color.White.copy(alpha = .98f), item.color.copy(alpha = .9f), Color(0xFF111A29))
                             )
                         ),
-                        shadowElevation = (5f + depth * 10f + if (isSelected) 7f else 0f).dp
+                        shadowElevation = (8f + depth * 13f + if (isSelected) 12f else 0f).dp
                     ) {
                         Box(
                             Modifier.fillMaxSize().background(
                                 ComposeBrush.radialGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = .96f),
+                                        Color.White.copy(alpha = .98f),
                                         item.color.copy(alpha = .98f),
-                                        Color(0xFF26364B),
-                                        Color(0xFF101722)
-                                    ),
-                                    center = androidx.compose.ui.geometry.Offset(.34f, .25f),
-                                    radius = diameter * 1.35f
+                                        item.color.copy(alpha = .72f),
+                                        Color(0xFF172438),
+                                        Color(0xFF080D16)
+                                    )
                                 )
                             ),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
-                                Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 4.dp)
-                                    .size((diameter * .18f).dp)
-                                    .background(Color.White.copy(alpha = .72f), CircleShape)
+                                Modifier.align(Alignment.TopStart)
+                                    .padding(start = 9.dp, top = 7.dp)
+                                    .size((diameter * .17f).dp)
+                                    .background(Color.White.copy(alpha = .82f), CircleShape)
                             )
                             Icon(
-                                item.icon, contentDescription = item.title,
+                                item.icon,
+                                contentDescription = item.title,
                                 tint = Color.White,
                                 modifier = Modifier.size((diameter * .43f).dp)
                             )
                         }
                     }
+                }
+            }
+        }
+
+        val info = items[selected]
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            color = Color(0xD91A2637),
+            shape = RoundedCornerShape(17.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, info.color.copy(alpha = .52f)),
+            shadowElevation = 9.dp
+        ) {
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    Modifier.size(34.dp).background(info.color.copy(alpha = .18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(info.icon, contentDescription = null, tint = info.color, modifier = Modifier.size(19.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(info.title, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.width(7.dp))
+                        Text("· " + info.subtitle, color = info.color, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Text(
+                        info.description,
+                        color = Color(0xFFD0D9E5),
+                        style = MaterialTheme.typography.labelSmall,
+                        lineHeight = 16.sp,
+                        maxLines = 4
+                    )
                 }
             }
         }
