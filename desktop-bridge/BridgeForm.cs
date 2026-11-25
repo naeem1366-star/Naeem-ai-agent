@@ -324,7 +324,7 @@ public sealed class BridgeForm : Form
         var names = chord.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var keys = names.Select(name => name.ToUpperInvariant() switch {
             "CTRL" => Keys.ControlKey, "ALT" => Keys.Menu, "SHIFT" => Keys.ShiftKey,
-            "WIN" => Keys.LWin, "ENTER" => Keys.Return, "ESC" => Keys.Escape,
+            "WIN" => Keys.LWin, "ENTER" => Keys.Enter, "ESC" => Keys.Escape,
             _ => Enum.TryParse<Keys>(name, true, out var key) ? key : Keys.None
         }).Where(key => key != Keys.None).ToArray();
         if (keys.Length == 0) return;
