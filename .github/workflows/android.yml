@@ -34,5 +34,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NaeemAI_v2.0-alpha10
-          path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha07.apk
+          path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha10.apk
           if-no-files-found: error
