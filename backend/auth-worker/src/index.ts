@@ -1,13 +1,12 @@
 interface Env {
   DB: D1Database;
-  GHASEDAK_API_KEY: string;
-  GHASEDAK_TEMPLATE_NAME: string;
-  AUTH_SECRET: string;
+  SUPABASE_URL: string;
+  SUPABASE_PUBLISHABLE_KEY: string;
   ALLOWED_ORIGINS?: string;
   GISOO_MANAGEMENT_KEY?: string;
   GISOO_BASE_URL?: string;
   KEY_ENCRYPTION_SECRET?: string;
-  ADMIN_PHONES?: string;
+  ADMIN_EMAILS?: string;
   DEFAULT_KEY_LIMIT_USD?: string;
   ASSETS?: Fetcher;
 }
@@ -35,195 +34,54 @@ function cors(request: Request, env: Env): Headers {
   return headers;
 }
 
-function normalizeIranPhone(input: unknown): string | null {
-  if (typeof input !== "string") return null;
-  let value = input.replace(/[\s()-]/g, "");
-  if (value.startsWith("+98")) value = "0" + value.slice(3);
-  else if (value.startsWith("0098")) value = "0" + value.slice(4);
-  else if (value.startsWith("98") && value.length === 12) value = "0" + value.slice(2);
-  return /^09\d{9}$/.test(value) ? value : null;
-}
-
-function randomCode(): string {
-  const bytes = new Uint32Array(1);
-  crypto.getRandomValues(bytes);
-  return String(bytes[0] % 1_000_000).padStart(6, "0");
-}
-
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
 }
 
-async function hmac(value: string, secret: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
-  return base64Url(new Uint8Array(signature));
-}
+type SupabaseIdentity = { id: string; email: string };
 
-async function issueToken(userId: string, phone: string, secret: string): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64Url(encoder.encode(JSON.stringify({ alg: "HS256", typ: "JWT" })));
-  const payload = base64Url(encoder.encode(JSON.stringify({ sub: userId, phone, iat: now, exp: now + 60 * 60 * 24 * 30 })));
-  const body = header + "." + payload;
-  return body + "." + await hmac(body, secret);
-}
-
-async function verifyToken(token: string, secret: string): Promise<{ sub: string; phone: string } | null> {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const expected = await hmac(parts[0] + "." + parts[1], secret);
-  if (expected !== parts[2]) return null;
-  try {
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-    if (!payload.sub || !payload.phone || payload.exp < Math.floor(Date.now() / 1000)) return null;
-    return { sub: payload.sub, phone: payload.phone };
-  } catch {
-    return null;
-  }
-}
-
-async function rateLimit(db: D1Database, key: string, windowSeconds: number, max: number): Promise<boolean> {
-  const now = Math.floor(Date.now() / 1000);
-  const start = now - windowSeconds;
-  await db.prepare(`
-    INSERT INTO rate_limits (bucket_key, window_start, hit_count)
-    VALUES (?, ?, 1)
-    ON CONFLICT(bucket_key) DO UPDATE SET
-      hit_count = CASE WHEN rate_limits.window_start < ? THEN 1 ELSE rate_limits.hit_count + 1 END,
-      window_start = CASE WHEN rate_limits.window_start < ? THEN excluded.window_start ELSE rate_limits.window_start END
-  `).bind(key, now, start, start).run();
-  const row = await db.prepare("SELECT hit_count FROM rate_limits WHERE bucket_key = ?").bind(key).first<{hit_count:number}>();
-  return (row?.hit_count ?? max + 1) <= max;
-}
-
-async function sendGhasedakOtp(env: Env, phone: string, code: string): Promise<void> {
-  const response = await fetch("https://gateway.ghasedak.me/rest/api/v1/WebService/SendOtpWithParams", {
-    method: "POST",
-    headers: { "ApiKey": env.GHASEDAK_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      receptors: [phone],
-      templateName: env.GHASEDAK_TEMPLATE_NAME,
-      param1: code
-    })
-  });
-  const body = await response.json() as { IsSuccess?: boolean; StatusCode?: number; Message?: string };
-  if (!response.ok || body.IsSuccess === false || (body.StatusCode !== undefined && body.StatusCode !== 200)) {
-    throw new Error("SMS_PROVIDER_REJECTED");
-  }
-}
-
-async function requestOtp(request: Request, env: Env): Promise<Response> {
-  const body = await request.json().catch(() => null) as Json | null;
-  const phone = normalizeIranPhone(body?.phone);
-  if (!phone) return json({ error: "INVALID_PHONE", message: "شماره موبایل معتبر ایران را وارد کنید." }, 400);
-
-  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-  if (!(await rateLimit(env.DB, "ip:" + ip, 3600, 10))) {
-    return json({ error: "RATE_LIMITED", message: "تعداد درخواست‌ها بیش از حد مجاز است." }, 429);
-  }
-  if (!(await rateLimit(env.DB, "phone:" + phone, 86400, 5))) {
-    return json({ error: "RATE_LIMITED", message: "برای این شماره فعلاً امکان درخواست کد جدید وجود ندارد." }, 429);
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const recent = await env.DB.prepare(
-    "SELECT created_at FROM otp_challenges WHERE phone = ? ORDER BY created_at DESC LIMIT 1"
-  ).bind(phone).first<{created_at:number}>();
-  if (recent && now - recent.created_at < 60) {
-    return json({ error: "WAIT_BEFORE_RETRY", retryAfter: 60 - (now - recent.created_at) }, 429);
-  }
-
-  const code = randomCode();
-  const challengeId = crypto.randomUUID();
-  const codeHash = await hmac(phone + ":" + challengeId + ":" + code, env.AUTH_SECRET);
-  await env.DB.prepare(
-    "INSERT INTO otp_challenges (id, phone, code_hash, expires_at, attempts, consumed_at, created_at, request_ip) VALUES (?, ?, ?, ?, 0, NULL, ?, ?)"
-  ).bind(challengeId, phone, codeHash, now + 300, now, ip).run();
-
-  try {
-    await sendGhasedakOtp(env, phone, code);
-  } catch {
-    await env.DB.prepare("DELETE FROM otp_challenges WHERE id = ?").bind(challengeId).run();
-    return json({ error: "SMS_SEND_FAILED", message: "ارسال کد انجام نشد. کمی بعد دوباره تلاش کنید." }, 502);
-  }
-
-  return json({ success: true, expiresIn: 300, retryAfter: 60 });
-}
-
-async function verifyOtp(request: Request, env: Env): Promise<Response> {
-  const body = await request.json().catch(() => null) as Json | null;
-  const phone = normalizeIranPhone(body?.phone);
-  const code = typeof body?.code === "string" ? body.code.trim() : "";
-  if (!phone || !/^\d{6}$/.test(code)) {
-    return json({ error: "INVALID_INPUT", message: "شماره موبایل یا کد تأیید معتبر نیست." }, 400);
-  }
-
-  const challenge = await env.DB.prepare(
-    "SELECT id, code_hash, expires_at, attempts FROM otp_challenges WHERE phone = ? AND consumed_at IS NULL ORDER BY created_at DESC LIMIT 1"
-  ).bind(phone).first<{id:string;code_hash:string;expires_at:number;attempts:number}>();
-
-  const now = Math.floor(Date.now() / 1000);
-  if (!challenge || challenge.expires_at < now || challenge.attempts >= 5) {
-    return json({ error: "OTP_EXPIRED", message: "کد منقضی شده است. کد جدید دریافت کنید." }, 400);
-  }
-
-  const submittedHash = await hmac(phone + ":" + challenge.id + ":" + code, env.AUTH_SECRET);
-  if (submittedHash !== challenge.code_hash) {
-    await env.DB.prepare("UPDATE otp_challenges SET attempts = attempts + 1 WHERE id = ? AND consumed_at IS NULL")
-      .bind(challenge.id).run();
-    return json({ error: "WRONG_CODE", message: "کد واردشده صحیح نیست." }, 400);
-  }
-
-  const consumed = await env.DB.prepare(
-    "UPDATE otp_challenges SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL AND expires_at >= ? AND attempts < 5"
-  ).bind(now, challenge.id, now).run();
-  if ((consumed.meta?.changes ?? 0) !== 1) {
-    return json({ error: "OTP_ALREADY_USED", message: "این کد قبلاً استفاده شده یا منقضی شده است." }, 409);
-  }
-
-  const existing = await env.DB.prepare("SELECT id FROM users WHERE phone = ?").bind(phone).first<{id:string}>();
-  const userId = existing?.id || crypto.randomUUID();
-  await env.DB.prepare(`
-    INSERT INTO users (id, phone, created_at, last_login_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(phone) DO UPDATE SET last_login_at = excluded.last_login_at
-  `).bind(userId, phone, now, now).run();
-
-  if (env.GISOO_MANAGEMENT_KEY && env.KEY_ENCRYPTION_SECRET) await provisionProviderKey(env, userId, phone).catch(() => undefined);
-  const token = await issueToken(userId, phone, env.AUTH_SECRET);
-  return json({ success: true, token, tokenType: "Bearer", expiresIn: 2592000, user: { id: userId, phone } });
-}
-
-async function me(request: Request, env: Env): Promise<Response> {
+async function supabaseIdentity(request: Request, env: Env): Promise<SupabaseIdentity | null> {
   const authorization = request.headers.get("Authorization") || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  const user = await verifyToken(token, env.AUTH_SECRET);
-  if (!user) return json({ error: "UNAUTHORIZED" }, 401);
-  return json({ user });
+  if (!token || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return null;
+  try {
+    const response = await fetch(env.SUPABASE_URL.replace(/\\/+$/, "") + "/auth/v1/user", {
+      headers: { "apikey": env.SUPABASE_PUBLISHABLE_KEY, "Authorization": "Bearer " + token, "Accept": "application/json" },
+      signal: AbortSignal.timeout(12000)
+    });
+    if (!response.ok) return null;
+    const user = await response.json() as any;
+    if (typeof user?.id !== "string" || typeof user?.email !== "string" || !user.email.includes("@")) return null;
+    return { id: user.id, email: user.email.toLowerCase() };
+  } catch { return null; }
 }
 
-
-type AuthUser = { id: string; phone: string; status: string };
+type AuthUser = { id: string; phone: string; email: string; status: string };
 
 async function authenticatedUser(request: Request, env: Env): Promise<AuthUser | null> {
-  const authorization = request.headers.get("Authorization") || "";
-  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  const claims = await verifyToken(token, env.AUTH_SECRET);
-  if (!claims) return null;
-  return await env.DB.prepare("SELECT id, phone, status FROM users WHERE id = ?").bind(claims.sub).first<AuthUser>();
+  const identity = await supabaseIdentity(request, env);
+  if (!identity) return null;
+  const now = Math.floor(Date.now() / 1000);
+  const internalMarker = "supabase:" + identity.id;
+  await env.DB.prepare("INSERT INTO users (id, phone, email, created_at, last_login_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET email = excluded.email, last_login_at = excluded.last_login_at")
+    .bind(identity.id, internalMarker, identity.email, now, now).run();
+  return await env.DB.prepare("SELECT id, phone, email, status FROM users WHERE id = ?").bind(identity.id).first<AuthUser>();
 }
 
 async function adminUser(request: Request, env: Env): Promise<AuthUser | null> {
   const user = await authenticatedUser(request, env);
   if (!user || user.status !== "active") return null;
-  const allowed = (env.ADMIN_PHONES || "").split(",").map(normalizeIranPhone).filter(Boolean);
-  return allowed.includes(user.phone) ? user : null;
+  const allowed = (env.ADMIN_EMAILS || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes(user.email.toLowerCase()) ? user : null;
 }
 
+async function me(request: Request, env: Env): Promise<Response> {
+  const user = await authenticatedUser(request, env);
+  if (!user || user.status !== "active") return json({ error: "UNAUTHORIZED" }, 401);
+  return json({ user: { id: user.id, email: user.email } });
+}
 async function encryptProviderSecret(secret: string, master: string): Promise<{ cipher: string; iv: string }> {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(master));
   const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt"]);
@@ -244,7 +102,7 @@ async function gisooRequest(env: Env, method: string, path: string, body?: unkno
   return data;
 }
 
-async function provisionProviderKey(env: Env, userId: string, phone: string): Promise<void> {
+async function provisionProviderKey(env: Env, userId: string, email: string): Promise<void> {
   if (!env.GISOO_MANAGEMENT_KEY || !env.KEY_ENCRYPTION_SECRET) return;
   const existing = await env.DB.prepare("SELECT user_id FROM provider_accounts WHERE user_id = ?").bind(userId).first();
   if (existing) return;
@@ -253,9 +111,9 @@ async function provisionProviderKey(env: Env, userId: string, phone: string): Pr
   let project: any;
   try {
     project = await gisooRequest(env, "POST", "/projects", {
-      name: "Naeem AI " + phone.slice(-4), external_id: externalId,
+      name: "Naeem AI " + email.split("@")[0].slice(-12), external_id: externalId,
       description: "Naeem AI customer account",
-      metadata: { product: "naeem_ai", user_id: userId },
+      metadata: { product: "naeem_ai", user_id: userId, email },
       key: { name: "naeem-main", spend_limit_usd: limit, expires_in_days: 365 }
     }, "naeem-signup-" + userId);
   } catch (error) {
@@ -304,7 +162,7 @@ async function adminUsers(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim().slice(0, 40);
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 50)));
-  const rows = await env.DB.prepare("SELECT u.id, u.phone, u.status, u.wallet_balance_toman, u.created_at, p.project_id, p.key_id, p.key_masked, p.status AS provider_status FROM users u LEFT JOIN provider_accounts p ON p.user_id = u.id WHERE (? = '' OR u.phone LIKE ? OR u.id = ?) ORDER BY u.created_at DESC LIMIT ?")
+  const rows = await env.DB.prepare("SELECT u.id, u.email, u.status, u.wallet_balance_toman, u.created_at, p.project_id, p.key_id, p.key_masked, p.status AS provider_status FROM users u LEFT JOIN provider_accounts p ON p.user_id = u.id WHERE (? = '' OR u.email LIKE ? OR u.id = ?) ORDER BY u.created_at DESC LIMIT ?")
     .bind(q, "%" + q + "%", q, limit).all();
   return json({ users: rows.results || [] });
 }
@@ -337,10 +195,10 @@ async function adminSetUserStatus(request: Request, env: Env, userId: string): P
 async function adminProvisionUser(request: Request, env: Env, userId: string): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   if (!env.GISOO_MANAGEMENT_KEY || !env.KEY_ENCRYPTION_SECRET) return json({ error: "GISOO_NOT_CONFIGURED" }, 503);
-  const user = await env.DB.prepare("SELECT id, phone FROM users WHERE id = ?").bind(userId).first<any>();
+  const user = await env.DB.prepare("SELECT id, email FROM users WHERE id = ?").bind(userId).first<any>();
   if (!user) return json({ error: "USER_NOT_FOUND" }, 404);
   try {
-    await provisionProviderKey(env, user.id, user.phone);
+    await provisionProviderKey(env, user.id, user.email);
     const row = await env.DB.prepare("SELECT project_id, key_id, key_masked, status FROM provider_accounts WHERE user_id = ?").bind(userId).first<any>();
     return json({ success: true, provider: row });
   } catch { return json({ error: "PROVISION_FAILED" }, 502); }
@@ -380,8 +238,7 @@ export default {
       if (request.method === "POST" && provisionMatch) return withHeaders(await adminProvisionUser(request, env, provisionMatch[1]), headers);
       const limitMatch = url.pathname.match(/^\/v1\/admin\/users\/([^/]+)\/key-limit$/);
       if (request.method === "PATCH" && limitMatch) return withHeaders(await adminProviderLimit(request, env, limitMatch[1]), headers);
-      if (request.method === "POST" && url.pathname === "/v1/auth/otp/request") return withHeaders(await requestOtp(request, env), headers);
-      if (request.method === "POST" && url.pathname === "/v1/auth/otp/verify") return withHeaders(await verifyOtp(request, env), headers);
+      if (request.method === "POST" && (url.pathname === "/v1/auth/otp/request" || url.pathname === "/v1/auth/otp/verify")) return withHeaders(json({ error: "PHONE_AUTH_RETIRED", message: "ورود با شماره موبایل غیرفعال شده است؛ از ورود ایمیل و رمز عبور استفاده کنید." }, 410), headers);
       if (request.method === "GET" && url.pathname === "/v1/me") return withHeaders(await me(request, env), headers);
       return json({ error: "NOT_FOUND" }, 404, headers);
     } catch {
