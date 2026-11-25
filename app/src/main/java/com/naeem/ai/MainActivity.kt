@@ -244,9 +244,7 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
     var style by remember { mutableStateOf("صمیمی و طبیعی") }
     val silver = Color(0xFFE0E5EC)
     Box(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF08152F), Color(0xFF142D70)))
-        ),
+        Modifier.fillMaxSize().background(Color.Transparent),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -326,7 +324,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         3 -> spaces.drop(6).take(6)
         else -> spaces.drop(12)
     }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF07101D), Color(0xFF102744), Color(0xFF172E55))))) {
+    Box(Modifier.fillMaxSize().background(Color.Transparent)) {
         Image(
             painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
             modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.22f }, contentScale = ContentScale.Crop
@@ -407,16 +405,16 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
     }
 }
 
-private val Ink = Color(0xFF080A0D)
-private val Panel = Color(0xFF171615)
-private val Gold = Color(0xFFD4D9E0)
-private val Muted = Color(0xFF929BA6)
+private val Ink = SupraGlass.Night
+private val Panel = SupraGlass.Glass
+private val Gold = SupraGlass.Ice
+private val Muted = SupraGlass.Muted
 
 
 @Composable
 private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(modifier = modifier.height(112.dp).clickable { onClick() }, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF202329)), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.19f), Color(0xFF202329)))).padding(13.dp)) {
+    Card(modifier = modifier.height(112.dp).clickable { onClick() }, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.19f), SupraGlass.Glass))).padding(13.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Box(Modifier.size(36.dp).background(accent.copy(alpha = 0.18f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
@@ -902,7 +900,7 @@ fun NaeemApp(
         typography = naeemTypography(),
         colorScheme = darkColorScheme(
             primary = Gold, onPrimary = Ink, background = Ink, onBackground = Color(0xFFE7ECF2),
-            surface = Panel, onSurface = Color(0xFFE7ECF2), surfaceVariant = Color(0xFF292C33),
+            surface = Panel, onSurface = Color(0xFFE7ECF2), surfaceVariant = SupraGlass.Glass,
             onSurfaceVariant = Color(0xFFBFC6D0), secondary = Color(0xFFBFC6D0)
         )
     ) {
@@ -914,7 +912,7 @@ fun NaeemApp(
                 Surface(
                     modifier = Modifier.fillMaxSize().safeDrawingPadding(),
                     shape = RoundedCornerShape(0.dp),
-                    color = Ink
+                    color = Color.Transparent
                 ) {
                     VideoCreatorDashboard(onClose = { showVideoDevelopment = false }, initialPrompt = prompt)
                 }
@@ -963,7 +961,7 @@ fun NaeemApp(
             },
             bottomBar = {
                 Surface(
-                    color = Color(0xF2141412),
+                    color = Color(0xCC10243B),
                     tonalElevation = 0.dp,
                     shape = RoundedCornerShape(25.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.18f)),
@@ -1045,7 +1043,7 @@ fun NaeemApp(
                                 maxLines = 4, shape = RoundedCornerShape(22.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
-                                    focusedContainerColor = Panel, unfocusedContainerColor = Panel
+                                    focusedContainerColor = Color(0x16FFFFFF), unfocusedContainerColor = Color(0x10FFFFFF)
                                 )
                             )
                             IconButton(
@@ -1126,11 +1124,11 @@ fun NaeemApp(
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                         shape = RoundedCornerShape(26.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xCC111D30))
+                        colors = CardDefaults.cardColors(containerColor = Color(0x2B9CCBFF))
                     ) {
                         Column(
                             Modifier.fillMaxWidth()
-                                .background(Brush.verticalGradient(listOf(Color(0xCC1A2B43), Color(0xCC101A2B))))
+                                .background(Brush.verticalGradient(listOf(Color(0x22D7E9FF), Color(0x0C8CC4FF))))
                                 .padding(horizontal = 18.dp, vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -1160,7 +1158,7 @@ fun NaeemApp(
                 pendingAssistantAction?.let { action ->
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF30363E)),
+                        colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass),
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1200,7 +1198,7 @@ fun NaeemApp(
                                     if (msg.fromUser) Gold.copy(alpha = 0.22f) else Color(0xFF49443A).copy(alpha = 0.48f)
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                                colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0xFF29251F) else Color(0xE9161716))
+                                colors = CardDefaults.cardColors(containerColor = if (msg.fromUser) Color(0x443D86C8) else Color(0x1AFFFFFF))
                             ) {
                                 Column(Modifier.padding(14.dp)) {
                                     Text(if (msg.fromUser) "شما" else "Supra AI", color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
@@ -1256,7 +1254,7 @@ fun NaeemApp(
 
         if (showPcControl) {
             Dialog(onDismissRequest = { showPcControl = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     PcControlScreen(
                         onClose = { showPcControl = false },
                         baseUrl = baseUrl,
@@ -1270,7 +1268,7 @@ fun NaeemApp(
         if (showHub) {
             Dialog(onDismissRequest = { showHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Box(Modifier.fillMaxSize()) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("hub") { FeatureHub(
                         onClose = { showHub = false },
                         onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
@@ -1303,35 +1301,35 @@ fun NaeemApp(
         }
         if (showJournal) {
             Dialog(onDismissRequest = { showJournal = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("journal") { DailyJournalDashboard(onClose = { showJournal = false }) }
                 }
             }
         }
         if (showNews) {
             Dialog(onDismissRequest = { showNews = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("discover") { NewsDashboard(onClose = { showNews = false }) }
                 }
             }
         }
         if (showMedication) {
             Dialog(onDismissRequest = { showMedication = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("health") { MedicationReminderDashboard(onClose = { showMedication = false }) }
                 }
             }
         }
         if (showPlanner) {
             Dialog(onDismissRequest = { showPlanner = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("wrapped") { WeeklyPlannerDashboard(onClose = { showPlanner = false }) }
                 }
             }
         }
         if (showThinkRoom) {
             Dialog(onDismissRequest = { showThinkRoom = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ThinkRoomScreen(
                         onClose = { showThinkRoom = false },
                         baseUrl = baseUrl,
@@ -1343,7 +1341,7 @@ fun NaeemApp(
         }
         if (showFutureGateway) {
             Dialog(onDismissRequest = { showFutureGateway = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     FutureGatewayScreen(
                         onClose = { showFutureGateway = false },
                         baseUrl = baseUrl,
@@ -1355,77 +1353,77 @@ fun NaeemApp(
         }
         if (showTravel) {
             Dialog(onDismissRequest = { showTravel = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("travel") { TravelDashboard(onClose = { showTravel = false }) }
                 }
             }
         }
         if (showTrail) {
             Dialog(onDismissRequest = { showTrail = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("trail") { TrailNavigationDashboard(onClose = { showTrail = false }) }
                 }
             }
         }
         if (showWrapped) {
             Dialog(onDismissRequest = { showWrapped = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("wrapped") { MonthlyWrappedDashboard(onClose = { showWrapped = false }) }
                 }
             }
         }
         if (showMarkets) {
             Dialog(onDismissRequest = { showMarkets = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("markets") { MarketsDashboard(onClose = { showMarkets = false }) }
                 }
             }
         }
         if (showSports) {
             Dialog(onDismissRequest = { showSports = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("sports") { SportsDashboard(onClose = { showSports = false }) }
                 }
             }
         }
         if (showHealth) {
             Dialog(onDismissRequest = { showHealth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("health") { HealthDashboard(onClose = { showHealth = false }) }
                 }
             }
         }
         if (showGames) {
             Dialog(onDismissRequest = { showGames = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("games") { GamesHub(onClose = { showGames = false }) }
                 }
             }
         }
         if (showDiscover) {
             Dialog(onDismissRequest = { showDiscover = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("discover") { DiscoverDashboard(onClose = { showDiscover = false }, onAskAi = { question -> showDiscover = false; prompt = question }) }
                 }
             }
         }
         if (showPodcast) {
             Dialog(onDismissRequest = { showPodcast = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("music") { PodcastDashboard(onClose = { showPodcast = false }) }
                 }
             }
         }
         if (showProfessionalVideo) {
             Dialog(onDismissRequest = { showProfessionalVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, baseUrl = baseUrl, apiKey = apiKey)
                 }
             }
         }
         if (showVideoCreator) {
             Dialog(onDismissRequest = { showVideoCreator = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     SupraStudioDashboard(
                         onClose = { showVideoCreator = false },
                         onExternalActivityStarted = onExternalActivityStarted,
@@ -1436,14 +1434,14 @@ fun NaeemApp(
         }
         if (showMusic) {
             Dialog(onDismissRequest = { showMusic = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }) }
                 }
             }
         }
         if (showSocialAnalytics) {
             Dialog(onDismissRequest = { showSocialAnalytics = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("social") {
                         SocialAnalyticsDashboard(
                             onClose = { showSocialAnalytics = false },
@@ -1456,7 +1454,7 @@ fun NaeemApp(
 
         if (showFinance) {
             Dialog(onDismissRequest = { showFinance = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color.Transparent) {
                     ModuleScreenBackdrop("finance") {
                         FinanceDashboard(
                             entries = ledgerEntries,
@@ -1507,7 +1505,7 @@ fun NaeemApp(
                         LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             gridItems(albumImages) { item ->
                                 val bitmap = remember(item.file.absolutePath) { BitmapFactory.decodeFile(item.file.absolutePath)?.asImageBitmap() }
-                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF292C33))) {
+                                Card(colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass)) {
                                     Column {
                                         bitmap?.let { Image(bitmap = it, contentDescription = item.prompt, modifier = Modifier.fillMaxWidth().height(120.dp), contentScale = ContentScale.Crop) }
                                         Text(item.prompt, color = Color.White, maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
@@ -1560,7 +1558,7 @@ fun NaeemApp(
                                 verticalArrangement = Arrangement.spacedBy(7.dp)
                             ) {
                                 items(visibleThreads, key = { it.id }) { thread ->
-                                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF292C33))) {
+                                    Card(colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass)) {
                                         Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                             Text(thread.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2)
                                             Text(thread.messages.size.toString() + " پیام" + if (thread.id == activeConversationId) " • گفت‌وگوی فعلی" else "", color = Muted, style = MaterialTheme.typography.labelSmall)
@@ -1993,7 +1991,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
                     drawRoundRect(Color(0xFFBFD2FF), Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), style = Stroke(2.dp.toPx()))
                 }
             }
-            Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF171C25)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
+            Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
