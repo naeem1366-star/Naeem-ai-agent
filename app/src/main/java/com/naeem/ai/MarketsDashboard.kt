@@ -40,9 +40,9 @@ private data class MarketQuote(
     val stale: Boolean
 )
 
-private val MarketInk = Color(0xFF0A0C10)
-private val MarketPanel = Color(0xFF1B1F25)
-private val MarketAccent = Color(0xFFD4D9E0)
+private val MarketInk = Color.Transparent
+private val MarketPanel = SupraGlass.Glass
+private val MarketAccent = SupraGlass.Ice
 
 @Composable
 fun MarketsDashboard(onClose: () -> Unit) {
@@ -134,7 +134,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
         else -> unit
     }
 
-    Surface(Modifier.fillMaxSize(), color = MarketInk.copy(alpha = 0.84f)) {
+    Surface(Modifier.fillMaxSize(), color = MarketInk) {
         Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onClose) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
