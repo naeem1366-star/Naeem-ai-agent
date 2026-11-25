@@ -1,10 +1,8 @@
 package com.naeem.ai
 
 import android.util.Base64
-import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.google.zxing.integration.android.IntentIntegrator
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 import android.app.DownloadManager
@@ -71,9 +69,9 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
     val scope = rememberCoroutineScope()
     val aiClient = remember { ChatClient() }
     val context = LocalContext.current
-    val qrScanner = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val raw = result.data?.getStringExtra("SCAN_RESULT")
-        if (result.resultCode == Activity.RESULT_OK && !raw.isNullOrBlank()) {
+    val qrScanner = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val raw = result.contents
+        if (!raw.isNullOrBlank()) {
             runCatching {
                 val payload = JSONObject(raw)
                 require(payload.optString("type") == "naeem_ai_pc_pair") { "این کد مربوط به اتصال کامپیوتر نیست." }
@@ -208,19 +206,12 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                 Text("۲. جفت‌سازی امن", color = accent, style = MaterialTheme.typography.titleMedium)
                 OutlinedButton(
                     onClick = {
-                        val activity = context as? Activity
-                        if (activity == null) {
-                            status = "دوربین در این صفحه در دسترس نیست."
-                        } else {
-                            qrScanner.launch(
-                                IntentIntegrator(activity)
-                                    .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-                                    .setPrompt("کد اتصال نمایش‌داده‌شده روی کامپیوتر را اسکن کن")
-                                    .setBeepEnabled(false)
-                                    .setOrientationLocked(false)
-                                    .createScanIntent()
-                            )
-                        }
+                        val options = ScanOptions()
+                            .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            .setPrompt("کد اتصال نمایش‌داده‌شده روی کامپیوتر را اسکن کن")
+                            .setBeepEnabled(false)
+                            .setOrientationLocked(false)
+                        qrScanner.launch(options)
                     },
                     enabled = !connecting && !connected,
                     modifier = Modifier.fillMaxWidth()
