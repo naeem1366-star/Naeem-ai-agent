@@ -1,36 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-
-    <!-- Keep the complete brain mark comfortably inside the launcher safe area. -->
-    <group
-        android:scaleX="0.78"
-        android:scaleY="0.78"
-        android:pivotX="54"
-        android:pivotY="54">
-    <!-- Soft silver halo -->
-    <path
-        android:pathData="M52,18 C41,13 29,20 29,32 C18,35 16,47 22,54 C15,64 21,76 30,78 C33,89 44,92 53,85 M52,37 H68 V27 H79 M52,52 H86 M52,67 H68 V80 H79"
-        android:strokeColor="#559AAABD"
-        android:strokeWidth="11"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000"/>
-
-    <!-- Brain outline and connected circuit branches -->
-    <path
-        android:pathData="M52,18 C41,13 29,20 29,32 C18,35 16,47 22,54 C15,64 21,76 30,78 C33,89 44,92 53,85 M52,37 H68 V27 H79 M52,52 H86 M52,67 H68 V80 H79"
-        android:strokeColor="#D7DDE5"
-        android:strokeWidth="4.2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000"/>
-
-    <!-- Silver circuit terminals -->
-    <path android:pathData="M79,23 A4,4 0,1 0,79.1 23 M86,48 A4,4 0,1 0,86.1 48 M79,80 A4,4 0,1 0,79.1 80"
-        android:fillColor="#E7ECF2"/>
-    </group>
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#E8EBF0" android:pathData="M83.4,54.0 66.8,53.9 61.0,48.4 57.1,46.3 53.5,45.4 50.5,45.4 47.7,46.0 45.6,46.9 42.6,48.7 13.1,74.0 30.7,74.0 32.1,73.6 34.8,71.7 52.4,55.5 55.4,54.1 59.0,53.9 66.2,54.0 63.8,55.2 43.4,74.0 66.5,74.0 58.9,67.0 83.3,66.7 Z" />
+    <path android:fillColor="#E8EBF0" android:pathData="M23.8,33.8 12.7,40.6 11.4,41.8 10.3,43.5 10.0,44.8 10.0,72.3 23.8,60.4 Z" />
+    <path android:fillColor="#E8EBF0" android:pathData="M97.9,33.9 86.1,41.7 86.1,73.9 96.3,64.0 97.7,61.8 97.9,60.8 Z" />
 </vector>

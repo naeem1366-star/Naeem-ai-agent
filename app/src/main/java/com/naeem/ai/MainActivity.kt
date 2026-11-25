@@ -292,9 +292,17 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         if (page == -1) {
             Image(
                 painter = painterResource(R.drawable.ima_splash),
-                contentDescription = "تو زندگی کن؛ ایما حواسش هست",
+                contentDescription = "نشان ایما",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
+            )
+            Text(
+                "تو زندگی کن؛ ایما حواسش هست.",
+                modifier = Modifier.align(Alignment.Center).offset(y = 155.dp),
+                color = silver,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
             )
             Surface(
                 onClick = { page = 0 },
