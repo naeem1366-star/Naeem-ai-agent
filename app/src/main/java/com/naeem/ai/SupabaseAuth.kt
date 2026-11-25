@@ -1,6 +1,7 @@
 package com.naeem.ai
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.Dispatchers
@@ -26,12 +27,17 @@ class SupabaseAuthClient(context: Context) {
     private val http = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS).callTimeout(30, TimeUnit.SECONDS).build()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
-    private val preferences = EncryptedSharedPreferences.create(
-        context, "supabase_auth_session",
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    // Avoid a launch crash if Android Keystore is unavailable on a device.
+    private val preferences: SharedPreferences = runCatching {
+        EncryptedSharedPreferences.create(
+            context, "supabase_auth_session",
+            MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }.getOrElse {
+        context.getSharedPreferences("supabase_auth_session_fallback", Context.MODE_PRIVATE)
+    }
 
     suspend fun signIn(email: String, password: String): SupabaseAuthResult = withContext(Dispatchers.IO) {
         val data = post("/auth/v1/token?grant_type=password", JSONObject().put("email", email.trim()).put("password", password))

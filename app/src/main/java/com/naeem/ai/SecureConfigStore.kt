@@ -1,6 +1,7 @@
 package com.naeem.ai
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
@@ -9,13 +10,19 @@ class SecureConfigStore(context: Context) {
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    private val prefs = EncryptedSharedPreferences.create(
-        context,
-        "naeem_ai_secure",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    // Keystore can fail on some devices after OS migration or vendor-specific errors.
+    // Keep startup available instead of crashing before the first screen.
+    private val prefs: SharedPreferences = runCatching {
+        EncryptedSharedPreferences.create(
+            context,
+            "naeem_ai_secure",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }.getOrElse {
+        context.getSharedPreferences("naeem_ai_secure_fallback", Context.MODE_PRIVATE)
+    }
 
     fun save(baseUrl: String, model: String, apiKey: String) {
         val normalized = baseUrl.trim().trimEnd('/')
