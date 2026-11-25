@@ -324,7 +324,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                             "launch_app" -> "باز کردن ${action.app}"
                             "wait" -> "مکث ${action.waitMs / 1000.0} ثانیه"
                             "key" -> "کلیدها: ${action.key}"
-                            "type_text" -> "تایپ: ${action.text.take(90)}"
+                            "type_text" -> "متن کامل فرمان برای تایپ:\n${action.text}"
                             "mouse_move" -> "حرکت ماوس به ${action.x}, ${action.y}"
                             else -> "کلیک ماوس"
                         }
