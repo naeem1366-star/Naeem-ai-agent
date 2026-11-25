@@ -49,7 +49,7 @@ private data class StudioTrack(
 private data class StudioAlbum(val id:String,val name:String,val tracks:List<StudioTrack>)
 
 private class MusicStudioStore(context:Context) {
-    private val prefs=context.getSharedPreferences("supra_music_studio",Context.MODE_PRIVATE)
+    private val prefs=context.getSharedPreferences("ima_music_studio",Context.MODE_PRIVATE)
     fun clientId()=prefs.getString("jamendo_client_id","").orEmpty()
     fun saveClientId(value:String){prefs.edit().putString("jamendo_client_id",value.trim()).apply()}
     fun load():List<StudioAlbum>{
@@ -187,7 +187,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
     Column(Modifier.fillMaxSize().background(Color.Transparent).navigationBarsPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text("SUPRA MUSIC STUDIO",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                Text("IMA MUSIC STUDIO",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("موسیقی و میز دی‌جی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                 Text("جست‌وجو، میکس خودکار و آلبوم‌های شخصی",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.bodySmall)
             }
@@ -522,7 +522,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                     }.onSuccess{result->
                         generated=result
                         config.saveModelFor("music",model)
-                        val file=java.io.File(context.cacheDir,"supra_music_${System.currentTimeMillis()}.${result.format}")
+                        val file=java.io.File(context.cacheDir,"ima_music_${System.currentTimeMillis()}.${result.format}")
                         withContext(Dispatchers.IO){file.writeBytes(result.bytes)}
                         tempFile=file
                         status="ساخت موسیقی کامل شد • ${result.bytes.size/1024} KB • ${result.format.uppercase()}"
@@ -559,7 +559,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                         },modifier=Modifier.weight(1f)){Icon(Icons.Default.PlayArrow,null);Text("پخش")}
                         OutlinedButton(onClick={stopPreview()},modifier=Modifier.weight(1f)){Icon(Icons.Default.Stop,null);Text("توقف")}
                     }
-                    Button(onClick={saveLauncher.launch("Supra-Music-${System.currentTimeMillis()}.${result.format}")},modifier=Modifier.fillMaxWidth()){
+                    Button(onClick={saveLauncher.launch("Ima-Music-${System.currentTimeMillis()}.${result.format}")},modifier=Modifier.fillMaxWidth()){
                         Icon(Icons.Default.Download,null);Text("ذخیره فایل ${result.format.uppercase()}")
                     }
                     if(result.requestId.isNotBlank())Text("شناسه درخواست: ${result.requestId}",color=Color(0xFF8D96A4),style=MaterialTheme.typography.labelSmall)
