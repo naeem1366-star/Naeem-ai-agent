@@ -219,7 +219,6 @@ fun FeatureHub(
             )
         }
     }
-    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
     var centerIndex by remember { mutableIntStateOf(0) }
     LaunchedEffect(query, filtered.size) { centerIndex = 0 }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
