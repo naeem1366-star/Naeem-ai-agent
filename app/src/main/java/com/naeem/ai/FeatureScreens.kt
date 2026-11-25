@@ -185,9 +185,9 @@ fun FeatureHub(
         return
     }
     val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
-    val gold=Color(0xFFD4D9E0)
-    val champagne=Color(0xFFE8ECF0)
-    val hubBg=Color(0xFF090B0E)
+    val gold=SupraGlass.Ice
+    val champagne=SupraGlass.Silver
+    val hubBg=SupraGlass.Night
     selectedEntry?.let { entry ->
         AlertDialog(
             onDismissRequest = { selectedEntry = null },
@@ -216,7 +216,7 @@ fun FeatureHub(
             }
         )
     }
-    Column(Modifier.fillMaxSize().background(hubBg.copy(alpha=0.84f)).padding(horizontal=18.dp, vertical=14.dp)){
+    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -230,7 +230,7 @@ fun FeatureHub(
             modifier = Modifier.fillMaxWidth(),
             color = SupraGlass.Glass,
             shape = RoundedCornerShape(18.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF46515F))
+            border = androidx.compose.foundation.BorderStroke(1.dp, SupraGlass.Edge)
         ) {
             Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 Icon(Icons.Default.Hub, null, tint = Color(0xFFE0E6EE), modifier = Modifier.size(27.dp))
@@ -246,8 +246,8 @@ fun FeatureHub(
             shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},
             leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
             colors=OutlinedTextFieldDefaults.colors(
-                focusedBorderColor=gold,unfocusedBorderColor=Color(0xFF454D58),
-                focusedContainerColor=Color(0xFF191D22),unfocusedContainerColor=Color(0xFF191D22),
+                focusedBorderColor=gold,unfocusedBorderColor=SupraGlass.Edge,
+                focusedContainerColor=Color(0x16FFFFFF),unfocusedContainerColor=Color(0x16FFFFFF),
                 cursorColor=gold
             )
         )
@@ -270,20 +270,20 @@ fun FeatureHub(
             ) {
                 items(filtered) { entry ->
                     val palette = listOf(
-                        Color(0xFF345B86), Color(0xFF69518C), Color(0xFF39766F),
-                        Color(0xFF8B6544), Color(0xFF8A4F68), Color(0xFF536A85)
+                        Color(0xFF6EAFF0), Color(0xFF8CC4FF), Color(0xFF4F91D2),
+                        Color(0xFFB9D8FF), Color(0xFF76AEE5), Color(0xFF5E9BD8)
                     )
                     val accent = palette[(entries.indexOf(entry).coerceAtLeast(0)) % palette.size]
                     Surface(
                         modifier = Modifier.fillMaxWidth().height(142.dp).clickable { selectedEntry = entry },
                         shape = RoundedCornerShape(22.dp),
-                        color = Color(0xFF171E2A),
+                        color = SupraGlass.Glass,
                         border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.62f)),
                         shadowElevation = 7.dp
                     ) {
                         Column(
                             Modifier.fillMaxSize().background(
-                                ComposeBrush.linearGradient(listOf(accent.copy(alpha = 0.34f), Color(0xFF151B26), Color(0xFF10151E)))
+                                ComposeBrush.linearGradient(listOf(accent.copy(alpha = 0.34f), Color(0x228CC4FF), Color(0x0C8CC4FF)))
                             ).padding(13.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -327,7 +327,7 @@ internal class HStore(c:Context){
 
 private val HBg=Color.Transparent
 private val HPanel=SupraGlass.Glass
-private val HMint=Color(0xFF9AD6B0)
+private val HMint=SupraGlass.Ice
 private val HMuted=Color(0xFF9AA3AE)
 @Composable private fun HCard(content:@Composable ColumnScope.()->Unit){
  Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(22.dp),elevation=CardDefaults.cardElevation(defaultElevation=3.dp)){
@@ -335,7 +335,7 @@ private val HMuted=Color(0xFF9AA3AE)
  }
 }
 @Composable private fun HInput(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier){
- OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(15.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=HMint,unfocusedBorderColor=Color(0xFF454D58),focusedContainerColor=Color(0xFF171B21),unfocusedContainerColor=Color(0xFF171B21),focusedLabelColor=HMint,cursorColor=HMint))
+ OutlinedTextField(value,change,modifier=modifier,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(15.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=HMint,unfocusedBorderColor=SupraGlass.Edge,focusedContainerColor=Color(0xFF171B21),unfocusedContainerColor=Color(0xFF171B21),focusedLabelColor=HMint,cursorColor=HMint))
 }
 @Composable private fun HMetric(title:String,value:String,sub:String,modifier:Modifier){
  val icon=when(title){"BMI"->Icons.Default.Favorite;"کالری پایه"->Icons.Default.LocalFireDepartment;"هدف کالری"->Icons.Default.Flag;else->Icons.Default.Restaurant}
@@ -482,7 +482,7 @@ private fun PeriodTrackerCard(context: Context) {
    IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=HMint)}
   }
   Card(colors=CardDefaults.cardColors(containerColor=HPanel),shape=RoundedCornerShape(24.dp),modifier=Modifier.fillMaxWidth()){
-   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0xFF293C34),Color(0xFF1B2823),Color(0xFF202B27)))).padding(17.dp)){
+   Box(Modifier.fillMaxWidth().background(ComposeBrush.linearGradient(listOf(Color(0x223F8DDA),Color(0x122B5C91),Color(0x1A17395B)))).padding(17.dp)){
     Row(verticalAlignment=Alignment.CenterVertically){
      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
       Text("HEALTH SPACE",color=HMint,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -569,7 +569,7 @@ private fun PeriodTrackerCard(context: Context) {
         return
     }
     Column(Modifier.fillMaxSize().background(
-        ComposeBrush.verticalGradient(listOf(Color(0xFF10131B), Color(0xFF090B10), Color(0xFF171321)))
+        ComposeBrush.verticalGradient(listOf(SupraGlass.Night, SupraGlass.Deep, Color(0xFF102744)))
     ).padding(horizontal = 18.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -648,7 +648,7 @@ private fun PeriodTrackerCard(context: Context) {
     content: @Composable () -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(
-        ComposeBrush.verticalGradient(listOf(Color(0xFF10131B), Color(0xFF090B10)))
+        ComposeBrush.verticalGradient(listOf(SupraGlass.Night, SupraGlass.Deep))
     ).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = accent) }
@@ -686,13 +686,13 @@ private fun PeriodTrackerCard(context: Context) {
   Row(Modifier.fillMaxWidth().background(SupraGlass.Glass).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("GAME STUDIO",color=SupraGlass.Ice,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("حدس بزن، زمان را مدیریت کن و امتیاز بگیر",color=SupraGlass.Ice,style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Color.White)}}
   LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    item{Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(26.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
-    Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=Color(0xFF303741),shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
+    Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("دور " + round,color=Color(0xFFD4D9E0),fontWeight=FontWeight.Bold);Text("پانتومیم تیمی",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)};Surface(color=SupraGlass.Glass,shape=CircleShape){Text("⏱",modifier=Modifier.padding(12.dp),color=Color.White)}}
     Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){listOf("ترکیبی","سینما","سخت").forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=SupraGlass.Ice,selectedLabelColor=Color.White,containerColor=SupraGlass.Glass,labelColor=Color.White))}}
     Box(Modifier.fillMaxWidth().background(Color.Transparent,RoundedCornerShape(22.dp)).padding(vertical=25.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Text("کلمهٔ مخصوص اجرا",color=Color(0xFFD4D9E0));Text(if(showWord)word else "برای نمایش کلمه بزن",color=Color.White,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black);Text(String.format(Locale.US,"%02d:%02d",seconds/60,seconds%60),color=if(seconds<=10)Color(0xFFFF817D) else Color(0xFFD4D9E0),style=MaterialTheme.typography.displayMedium,fontWeight=FontWeight.Black);Text(if(seconds==0)"زمان تمام شد!" else "زمان باقی‌مانده",color=SupraGlass.Ice,style=MaterialTheme.typography.labelSmall)}}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={if(!showWord){word=decks[category].orEmpty().random();showWord=true};running=!running},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SupraGlass.Ice),shape=RoundedCornerShape(14.dp)){Icon(if(running)Icons.Default.Pause else Icons.Default.PlayArrow,null);Text(if(running)"مکث" else "شروع زمان‌سنج")};OutlinedButton(onClick={next()},modifier=Modifier.weight(1f),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.SkipNext,null);Text("کلمه بعدی")}}
     Button(onClick={if(team==1)score1++ else score2++;next()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFD4D9E0),contentColor=Color(0xFF171B21)),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CheckCircle,null);Text("حدس درست بود! +۱")}
    }}}
-   item{Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)Color(0xFF303741) else SupraGlass.Glass),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFFD4D9E0),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=SupraGlass.Ice,style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
+   item{Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("جدول امتیاز",color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){listOf(Triple(team1,score1,1),Triple(team2,score2,2)).forEach{entry->Card(Modifier.weight(1f).clickable{team=entry.third},colors=CardDefaults.cardColors(containerColor=if(team==entry.third)SupraGlass.Glass else SupraGlass.Glass),shape=RoundedCornerShape(16.dp)){Column(Modifier.padding(12.dp)){Text(if(entry.third==1)"تیم اول" else "تیم دوم",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall);Text(entry.first,color=Color.White,fontWeight=FontWeight.Bold);Text(entry.second.toString(),color=Color(0xFFD4D9E0),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Black);Text("انتخاب نوبت",color=SupraGlass.Ice,style=MaterialTheme.typography.labelSmall)}}}};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={team=if(team==1)2 else 1;next()},modifier=Modifier.weight(1f)){Text("تعویض نوبت تیم")};TextButton(onClick={score1=0;score2=0;round=1;seconds=60;running=false;showWord=false;word="برای شروع، کلمه را دریافت کن"}){Text("شروع مجدد",color=Color(0xFFFFA7A0))}}}}}
   }
  }
 }
@@ -750,15 +750,15 @@ private fun PeriodTrackerCard(context: Context) {
   if(count==0){phase="end";note="شهروندها برنده شدند؛ مافیا حذف شد."}
   else if(count>=remaining.size-count){phase="end";note="مافیا برنده شد؛ تعدادش به شهروندها رسید."}
  }
- Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF17182A)),shape=RoundedCornerShape(24.dp)){
+ Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(24.dp)){
   Column(Modifier.fillMaxWidth().padding(17.dp),verticalArrangement=Arrangement.spacedBy(11.dp)){
    Row(verticalAlignment=Alignment.CenterVertically){
-    Box(Modifier.size(44.dp).background(ComposeBrush.linearGradient(listOf(Color(0xFF6546A8),Color(0xFF24294C))),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text("♟",color=Color.White,style=MaterialTheme.typography.headlineMedium)}
+    Box(Modifier.size(44.dp).background(ComposeBrush.linearGradient(listOf(Color(0xFF4F91D2),Color(0xFF152E4A))),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text("♟",color=Color.White,style=MaterialTheme.typography.headlineMedium)}
     Spacer(Modifier.width(10.dp))
-    Column(Modifier.weight(1f)){Text("مافیا",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black);Text("بازی گروهی با نقش مخفی",color=Color(0xFFB99AFF),style=MaterialTheme.typography.labelSmall)}
-    Text(if(phase=="setup")"شروع بازی" else "دور $round",color=Color(0xFFD9D0FF),style=MaterialTheme.typography.labelSmall)
+    Column(Modifier.weight(1f)){Text("مافیا",color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black);Text("بازی گروهی با نقش مخفی",color=SupraGlass.Ice,style=MaterialTheme.typography.labelSmall)}
+    Text(if(phase=="setup")"شروع بازی" else "دور $round",color=SupraGlass.Ice,style=MaterialTheme.typography.labelSmall)
    }
-   Text(note,color=Color(0xFFCFD0E0),style=MaterialTheme.typography.bodySmall)
+   Text(note,color=SupraGlass.Muted,style=MaterialTheme.typography.bodySmall)
    when(phase){
     "setup"->{
      OutlinedTextField(namesText,{namesText=it},modifier=Modifier.fillMaxWidth(),minLines=2,label={Text("نام بازیکن‌ها")},supportingText={Text("حداقل ۵ نفر؛ نام‌ها را با ویرگول جدا کن.")})
@@ -766,33 +766,33 @@ private fun PeriodTrackerCard(context: Context) {
       val list=namesText.split(",", "،", "\n").map{it.trim()}.filter{it.isNotBlank()}.distinct()
       if(list.size<5)note="برای شروع حداقل ۵ بازیکن لازم است."
       else{names=list;alive=list;roles=list.shuffled().mapIndexed{i,n->n to if(i==0)"مافیا" else "شهروند"}.toMap();index=0;phase="deal";note="نقش‌ها ساخته شد. هر نفر جداگانه نقش خودش را ببیند."}
-     },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("ساخت بازی و تقسیم نقش‌ها")}
+     },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=SupraGlass.Ice)){Text("ساخت بازی و تقسیم نقش‌ها")}
     }
     "deal"->{
      Text("گوشی دست "+names[index]+" است",color=Color.White,fontWeight=FontWeight.Bold)
      var shown by remember(index){mutableStateOf(false)}
-     Box(Modifier.fillMaxWidth().height(88.dp).background(Color(0xFF24213D),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Text(if(shown)roles[names[index]].orEmpty() else "نقش مخفی",color=Color(0xFFE4D8FF),style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)}
-     Button(onClick={shown=!shown},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF51417D))){Text(if(shown)"پنهان کردن نقش" else "نمایش نقش من")}
-     Button(onClick={if(index<names.lastIndex)index++ else{phase="night";round=1;note="شب شد؛ گرداننده هدف مافیا را وارد کند."}},enabled=shown,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text(if(index<names.lastIndex)"تحویل گوشی به نفر بعد" else "پایان تقسیم نقش‌ها")}
+     Box(Modifier.fillMaxWidth().height(88.dp).background(Color(0x223D86C8),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center){Text(if(shown)roles[names[index]].orEmpty() else "نقش مخفی",color=SupraGlass.Silver,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)}
+     Button(onClick={shown=!shown},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF5D9DD8))){Text(if(shown)"پنهان کردن نقش" else "نمایش نقش من")}
+     Button(onClick={if(index<names.lastIndex)index++ else{phase="night";round=1;note="شب شد؛ گرداننده هدف مافیا را وارد کند."}},enabled=shown,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=SupraGlass.Ice)){Text(if(index<names.lastIndex)"تحویل گوشی به نفر بعد" else "پایان تقسیم نقش‌ها")}
     }
     "night"->{
      Text("شب؛ هدف مافیا",color=Color.White,fontWeight=FontWeight.Bold)
      OutlinedTextField(target,{target=it},modifier=Modifier.fillMaxWidth(),label={Text("نام بازیکن هدف")},singleLine=true)
-     Button(onClick={if(target in alive&&target!=mafia){val rest=alive-target;alive=rest;note=target+" در شب حذف شد.";target="";resolve(rest);if(phase!="end")phase="day"}else note="نام یک بازیکن زنده و غیرمافیا را دقیق وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("اعلام صبح")}
+     Button(onClick={if(target in alive&&target!=mafia){val rest=alive-target;alive=rest;note=target+" در شب حذف شد.";target="";resolve(rest);if(phase!="end")phase="day"}else note="نام یک بازیکن زنده و غیرمافیا را دقیق وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=SupraGlass.Ice)){Text("اعلام صبح")}
     }
     "day"->{
      Text("روز؛ گفت‌وگو و رأی‌گیری",color=Color.White,fontWeight=FontWeight.Bold)
      Text("پس از بحث گروهی، نام کسی را که بیشترین رأی را گرفته وارد کن.",color=Color(0xFFB9BBD0),style=MaterialTheme.typography.bodySmall)
      OutlinedTextField(target,{target=it},modifier=Modifier.fillMaxWidth(),label={Text("نام بازیکن منتخب")},singleLine=true)
-     Button(onClick={if(target in alive){val out=target;val rest=alive-out;alive=rest;note=out+" با رأی گروه حذف شد؛ نقش: "+roles[out];target="";resolve(rest);if(phase!="end"){phase="night";round++}}else note="نام یک بازیکن زنده را دقیق وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("ثبت رأی و شروع شب")}
+     Button(onClick={if(target in alive){val out=target;val rest=alive-out;alive=rest;note=out+" با رأی گروه حذف شد؛ نقش: "+roles[out];target="";resolve(rest);if(phase!="end"){phase="night";round++}}else note="نام یک بازیکن زنده را دقیق وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=SupraGlass.Ice)){Text("ثبت رأی و شروع شب")}
     }
     "end"->{
-     Text(note,color=Color(0xFFE4D8FF),fontWeight=FontWeight.Bold)
+     Text(note,color=SupraGlass.Silver,fontWeight=FontWeight.Bold)
      Text("نقش مافیا: "+(mafia ?: "—"),color=Color.White)
-     Button(onClick={phase="setup";names=emptyList();roles=emptyMap();alive=emptyList();target="";note="نام بازیکن‌ها را وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF7656C5))){Text("بازی جدید")}
+     Button(onClick={phase="setup";names=emptyList();roles=emptyMap();alive=emptyList();target="";note="نام بازیکن‌ها را وارد کن."},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=SupraGlass.Ice)){Text("بازی جدید")}
     }
    }
-   if(phase=="night"||phase=="day"){Divider(color=Color(0xFF393653));Text("بازیکنان باقی‌مانده: "+alive.joinToString("، "),color=Color(0xFFD9D0FF),style=MaterialTheme.typography.bodySmall)}
+   if(phase=="night"||phase=="day"){Divider(color=SupraGlass.Edge);Text("بازیکنان باقی‌مانده: "+alive.joinToString("، "),color=SupraGlass.Ice,style=MaterialTheme.typography.bodySmall)}
   }
  }
 }
@@ -861,7 +861,7 @@ private class TrackSearch{
    }else failed=true
   }catch(_:Exception){failed=true}
  }
- Box(Modifier.width(112.dp).height(164.dp).background(Color(0xFF303741),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){
+ Box(Modifier.width(112.dp).height(164.dp).background(SupraGlass.Glass,RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){
   if(bitmap!=null) Image(bitmap!!,contentDescription="پوستر فیلم $title",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
   else Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)){
    Icon(Icons.Default.Movie,null,tint=Color(0xFFD4D9E0),modifier=Modifier.size(32.dp))
@@ -873,7 +873,7 @@ private class TrackSearch{
  val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
  DisposableEffect(Unit){onDispose{player?.runCatching{stop()};player?.runCatching{release()}}}
- Column(Modifier.fillMaxSize().background(FB.copy(alpha=0.84f)).padding(16.dp)){
+ Column(Modifier.fillMaxSize().background(Color.Transparent).padding(16.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(if(standalone)"موسیقی" else "سینما",color=FG,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(if(standalone)"جست‌وجو کن، گوش بده و هنرمندهای تازه پیدا کن" else "پوسترها، فیلم‌ها و پیشنهاد تماشا",color=FM)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=FG)}}
   if(!standalone) Row{listOf("فیلم امروز","جست‌وجوی فیلم").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}}
   if(tab=="فیلم امروز"){
@@ -964,7 +964,7 @@ private fun FeatureMapTree(
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Color(0xFF090B0E)).padding(horizontal = 18.dp, vertical = 14.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal = 18.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("NAEEM AI  /  LIVE FEATURE TREE", color = muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
@@ -975,7 +975,7 @@ private fun FeatureMapTree(
         }
         Spacer(Modifier.height(12.dp))
         Surface(
-            color = Color(0xFF202630),
+            color = SupraGlass.Glass,
             shape = RoundedCornerShape(14.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B4654)),
             modifier = Modifier.fillMaxWidth()
@@ -1073,7 +1073,7 @@ fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
     var posts by remember { mutableStateOf("") }
     val platforms = listOf("Instagram", "TikTok", "YouTube", "Telegram", "LinkedIn", "X", "سایر")
     Column(
-        Modifier.fillMaxSize().background(FB.copy(alpha=0.84f)).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
