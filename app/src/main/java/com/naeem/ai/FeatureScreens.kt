@@ -220,88 +220,93 @@ fun FeatureHub(
         }
     }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+    var centerIndex by remember { mutableIntStateOf(0) }
+    LaunchedEffect(query, filtered.size) { centerIndex = 0 }
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f), horizontalAlignment=Alignment.End){
                 Text("IMA  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("هر فضا را با انتخاب آیکون خودش باز کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall, textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                Text("حلقه را بچرخان و فضای موردنظرت را انتخاب کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
             }
             IconButton(onClick={showFeatureMap=true}){Icon(Icons.Default.AccountTree,null,tint=gold)}
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
         }
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = SupraGlass.Glass,
-            shape = RoundedCornerShape(18.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, SupraGlass.Edge)
-        ) {
-            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp), horizontalAlignment = Alignment.End) {
-                    Text("مغز هوشمند ایما", color = Color(0xFFE0E6EE), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
-                    Text("وقتی خودت گفتگو یا میکروفون را فعال می‌کنی، حرف‌هایت را می‌فهمد، موضوع را تشخیص می‌دهد و اطلاعات را به بخش مرتبط می‌فرستد؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", color = Color(0xFFADB7C4), style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+        Surface(modifier=Modifier.fillMaxWidth(),color=SupraGlass.Glass,shape=RoundedCornerShape(18.dp),
+            border=androidx.compose.foundation.BorderStroke(1.dp,SupraGlass.Edge)){
+            Row(Modifier.padding(13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(11.dp)){
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp),horizontalAlignment=Alignment.End){
+                    Text("مغز هوشمند ایما",color=Color(0xFFE0E6EE),fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                    Text("وقتی گفتگو یا میکروفون را فعال می‌کنی، ایما موضوع را تشخیص می‌دهد و اطلاعات را به فضای مرتبط هدایت می‌کند؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.",color=Color(0xFFADB7C4),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
                 }
-                Icon(Icons.Default.Hub, null, tint = Color(0xFFE0E6EE), modifier = Modifier.size(27.dp))
+                Icon(Icons.Default.Hub,null,tint=Color(0xFFE0E6EE),modifier=Modifier.size(27.dp))
             }
         }
-        Spacer(Modifier.height(16.dp))
-        OutlinedTextField(
-            query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true, textStyle=androidx.compose.ui.text.TextStyle(textAlign=androidx.compose.ui.text.style.TextAlign.End),
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,
+            textStyle=androidx.compose.ui.text.TextStyle(textAlign=androidx.compose.ui.text.style.TextAlign.End),
             shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},
             leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
-            colors=OutlinedTextFieldDefaults.colors(
-                focusedBorderColor=gold,unfocusedBorderColor=SupraGlass.Edge,
-                focusedContainerColor=Color(0x16FFFFFF),unfocusedContainerColor=Color(0x16FFFFFF),
-                cursorColor=gold
-            )
-        )
-        Spacer(Modifier.height(18.dp))
+            colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=gold,unfocusedBorderColor=SupraGlass.Edge,
+                focusedContainerColor=Color(0x16FFFFFF),unfocusedContainerColor=Color(0x16FFFFFF),cursorColor=gold))
+        Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-            Text(if(query.isBlank()) "گالری قابلیت‌ها" else "نتایج جست‌وجو",color=champagne,fontWeight=FontWeight.SemiBold)
+            Text(if(query.isBlank()) "حلقه‌ی فضاهای ایما" else "نتایج جست‌وجو",color=champagne,fontWeight=FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
-            Text(if(query.isBlank()) "←  کشیدن برای مرور  →" else "${filtered.size} مورد",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
+            Text(if(query.isBlank()) "برای چرخش بکش" else "${filtered.size} مورد",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(4.dp))
         if(filtered.isEmpty()){
-            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize().weight(1f),
-                contentPadding = PaddingValues(bottom = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filtered) { entry ->
-                    val palette = listOf(
-                        Color(0xFF6EAFF0), Color(0xFF8CC4FF), Color(0xFF4F91D2),
-                        Color(0xFFB9D8FF), Color(0xFF76AEE5), Color(0xFF5E9BD8)
-                    )
-                    val accent = palette[(entries.indexOf(entry).coerceAtLeast(0)) % palette.size]
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().height(142.dp).clickable { selectedEntry = entry },
-                        shape = RoundedCornerShape(22.dp),
-                        color = SupraGlass.Glass,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.62f)),
-                        shadowElevation = 7.dp
-                    ) {
-                        Column(
-                            Modifier.fillMaxSize().background(
-                                ComposeBrush.linearGradient(listOf(accent.copy(alpha = 0.34f), Color(0x228CC4FF), Color(0x0C8CC4FF)))
-                            ).padding(13.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Surface(shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.38f)) {
-                                Box(Modifier.size(43.dp), contentAlignment = Alignment.Center) {
-                                    Icon(entry.icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                                }
+            Box(Modifier.fillMaxWidth().weight(1f),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
+        }else{
+            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).pointerInput(filtered.size){
+                detectDragGestures(onDragEnd={orbitRotation=0f},onDragCancel={orbitRotation=0f}){change,dragAmount->
+                    change.consume()
+                    orbitRotation+=dragAmount.x
+                    if(kotlin.math.abs(orbitRotation)>=38f){
+                        val direction=if(orbitRotation<0f)1 else -1
+                        centerIndex=(centerIndex+direction+filtered.size)%filtered.size
+                        orbitRotation=0f
+                    }
+                }
+            },contentAlignment=Alignment.Center){
+                val visibleOffsets=(-2..2).distinctBy{(centerIndex+it+filtered.size)%filtered.size}
+                visibleOffsets.forEach{offset->
+                    val itemIndex=(centerIndex+offset+filtered.size)%filtered.size
+                    val entry=filtered[itemIndex]
+                    val depth=kotlin.math.abs(offset)
+                    val scale=when(depth){0->1f;1->0.82f;else->0.66f}
+                    val accent=listOf(Color(0xFF6EAFF0),Color(0xFF8CC4FF),Color(0xFF4F91D2),Color(0xFFB9D8FF),Color(0xFF76AEE5),Color(0xFF5E9BD8))[entries.indexOf(entry).coerceAtLeast(0)%6]
+                    Surface(onClick={if(offset==0)entry.action()else centerIndex=itemIndex},
+                        modifier=Modifier.offset(x=(offset*106).dp,y=(depth*13).dp).width(174.dp).height(194.dp)
+                            .graphicsLayer{
+                                scaleX=scale;scaleY=scale;rotationY=offset*-25f
+                                translationZ=(3-depth)*22f
+                                alpha=if(depth==2)0.66f else if(depth==1)0.88f else 1f
+                            },
+                        shape=RoundedCornerShape(26.dp),color=SupraGlass.Glass,
+                        border=androidx.compose.foundation.BorderStroke(if(offset==0)1.5.dp else 1.dp,accent.copy(alpha=if(offset==0)0.88f else 0.42f)),
+                        shadowElevation=if(offset==0)20.dp else 7.dp){
+                        Column(Modifier.fillMaxSize().background(ComposeBrush.linearGradient(listOf(accent.copy(alpha=if(offset==0)0.34f else 0.18f),Color(0x228CC4FF),Color(0x0C8CC4FF)))).padding(15.dp),
+                            verticalArrangement=Arrangement.SpaceBetween,horizontalAlignment=Alignment.CenterHorizontally){
+                            Box(Modifier.size(if(offset==0)66.dp else 48.dp).background(accent.copy(alpha=0.24f),CircleShape),contentAlignment=Alignment.Center){
+                                Icon(entry.icon,null,tint=Color.White,modifier=Modifier.size(if(offset==0)34.dp else 25.dp))
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(3.dp), horizontalAlignment = Alignment.End) {
-                                Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
-                                Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 1, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                            Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)){
+                                Text(entry.title,color=Color.White,fontWeight=FontWeight.Bold,maxLines=1,style=MaterialTheme.typography.titleMedium)
+                                Text(entry.subtitle,color=Color(0xFFBAC5D3),maxLines=2,style=MaterialTheme.typography.labelSmall,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
                             }
+                            if(offset==0)Text("برای ورود لمس کن",color=gold,style=MaterialTheme.typography.labelSmall)
                         }
                     }
+                }
+            }
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
+                TextButton(onClick={selectedEntry=filtered[centerIndex.coerceIn(0,filtered.lastIndex)]}){
+                    Icon(Icons.Default.Info,null,tint=gold,modifier=Modifier.size(17.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("جزئیات فضای انتخاب‌شده",color=gold)
                 }
             }
         }
