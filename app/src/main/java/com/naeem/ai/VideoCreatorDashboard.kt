@@ -97,13 +97,10 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     val recentAttempts = attempts.filter { it > System.currentTimeMillis() - VIDEO_WEEK_MS }
     val remainingAttempts = (VIDEO_WEEKLY_LIMIT - recentAttempts.size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
 
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            imageUri = uri
-        }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        // GetContent uses the system media chooser and grants temporary read access.
+        // The selected image is consumed immediately and is not persisted by this screen.
+        imageUri = uri
     }
     val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -214,7 +211,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
 
         Text("۱. عکس مرجع", color = Color.White, fontWeight = FontWeight.Bold)
         if (imageUri == null) {
-            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.ImageIcon, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("انتخاب عکس از گوشی")
