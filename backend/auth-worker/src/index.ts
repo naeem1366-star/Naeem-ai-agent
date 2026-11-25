@@ -67,7 +67,11 @@ async function authenticatedUser(request: Request, env: Env): Promise<AuthUser |
   const internalMarker = "supabase:" + identity.id;
   await env.DB.prepare("INSERT INTO users (id, phone, email, created_at, last_login_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET email = excluded.email, last_login_at = excluded.last_login_at")
     .bind(identity.id, internalMarker, identity.email, now, now).run();
-  return await env.DB.prepare("SELECT id, phone, email, status FROM users WHERE id = ?").bind(identity.id).first<AuthUser>();
+  const account = await env.DB.prepare("SELECT id, phone, email, status FROM users WHERE id = ?").bind(identity.id).first<AuthUser>();
+  if (account?.status === "active" && env.GISOO_MANAGEMENT_KEY && env.KEY_ENCRYPTION_SECRET) {
+    await provisionProviderKey(env, identity.id, identity.email).catch(() => undefined);
+  }
+  return account;
 }
 
 async function adminUser(request: Request, env: Env): Promise<AuthUser | null> {
