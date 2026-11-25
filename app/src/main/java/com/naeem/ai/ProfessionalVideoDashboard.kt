@@ -45,6 +45,8 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
     var ratio by remember { mutableStateOf("9:16") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var imageData by remember { mutableStateOf<String?>(null) }
+    var videoUri by remember { mutableStateOf<Uri?>(null) }
+    var videoData by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
@@ -75,6 +77,18 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                 runCatching { NetArzApiClient.imageAsBase64(context, uri) }
                     .onSuccess { imageData = it; error = "" }
                     .onFailure { imageData = null; error = it.message ?: "خواندن تصویر ناموفق بود." }
+            }
+        }
+    }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            videoUri = uri
+            videoData = null
+            error = ""
+            scope.launch {
+                runCatching { NetArzApiClient.mediaAsBase64(context, uri, 50L * 1024L * 1024L, "خواندن ویدیوی مرجع ناموفق بود.", "حجم ویدیوی مرجع بیشتر از ۵۰ مگابایت است.") }
+                    .onSuccess { videoData = it; error = "" }
+                    .onFailure { videoData = null; error = it.message ?: "خواندن ویدیوی مرجع ناموفق بود." }
             }
         }
     }
@@ -166,6 +180,15 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
             OutlinedTextField(prompt, { prompt = it.take(4000) }, modifier = Modifier.fillMaxWidth(), minLines = 4, placeholder = { Text("صحنه، سوژه، حرکت دوربین، نور و سبک ویدیو را توضیح بده…") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = silver, unfocusedBorderColor = Color(0xFF46515F)))
             Text("${prompt.length}/4000 نویسه", color = muted, style = MaterialTheme.typography.labelSmall)
 
+            if (model.videoInput) {
+                Text("ویدیوی ورودی / مرجع", color = Color.White, fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = { videoPicker.launch("video/*") }, enabled = !running, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.VideoLibrary, null); Spacer(Modifier.width(7.dp))
+                    Text(if (videoUri == null) "انتخاب ویدیوی مرجع" else "تعویض ویدیوی مرجع")
+                }
+                if (videoUri != null) TextButton(onClick = { videoUri = null; videoData = null }) { Text("حذف ویدیو") }
+                Text("ویدیوی انتخاب‌شده به‌عنوان ورودی مدل ارسال می‌شود؛ حداکثر حجم فعلی ۵۰ مگابایت است.", color = muted, style = MaterialTheme.typography.labelSmall)
+            }
             if (model.imageInput) {
                 Text("تصویر ورودی", color = Color.White, fontWeight = FontWeight.Bold)
                 OutlinedButton(onClick = { imagePicker.launch("image/*") }, enabled = !running, modifier = Modifier.fillMaxWidth()) {
@@ -200,7 +223,8 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                 enabled = !running && keySaved && localKey.isNotBlank() && prompt.isNotBlank() &&
                     (model.seconds.isEmpty() || seconds in model.seconds) &&
                     (model.sizes.isEmpty() || size in model.sizes) &&
-                    (!model.imageInput || imageData != null),
+                    (!model.imageInput || imageData != null) &&
+                    (!model.videoInput || videoData != null),
                 modifier = Modifier.fillMaxWidth().height(51.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF111722))
             ) { Text("بررسی نهایی و شروع تولید") }
@@ -235,6 +259,8 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                                 prompt = ""
                                 imageUri = null
                                 imageData = null
+                                videoUri = null
+                                videoData = null
                                 error = ""
                                 showModelPicker = false
                             },
@@ -250,6 +276,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                                 Text(
                                     buildList {
                                         if (item.imageInput) add("ورودی تصویر")
+                                        if (item.videoInput) add("ورودی ویدیو")
                                         if (item.audio) add("همراه صدا")
                                         if (item.seconds.isNotEmpty()) add(item.seconds.joinToString("، ") + " ثانیه")
                                     }.joinToString(" • ").ifBlank { "ساخت ویدیو از متن" },
@@ -275,7 +302,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                     confirm = false; running = true; progress = 0; error = ""; resultBytes = null; status = "در حال ارسال درخواست…"
                     scope.launch {
                         try {
-                            val job = api.createVideo(model.id, prompt, seconds, size, imageData)
+                            val job = api.createVideo(model.id, prompt, seconds, size, imageData, videoData)
                             status = "درخواست پذیرفته شد؛ هزینه اعلام‌شده: ${job.estimatedUsd.ifBlank { "اعلام نشده" }} دلار."
                             val bytes = api.waitForVideo(job.id) { update ->
                                 withContext(Dispatchers.Main) {
