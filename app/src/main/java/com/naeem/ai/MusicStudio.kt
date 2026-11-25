@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -183,7 +184,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
     }
     DisposableEffect(Unit){onDispose{mixJob?.cancel();runCatching{activePlayer?.release()}}}
 
-    Column(Modifier.fillMaxSize().background(Color(0xFF111318)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(Modifier.fillMaxSize().background(Color(0xFF111318)).navigationBarsPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("SUPRA MUSIC STUDIO",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -205,7 +206,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
         }
         if(message.isNotBlank()) Text(message,color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
         when(tab){
-            "ساخت موسیقی"-> MusicCreationPanel(onMessage={message=it})
+            "ساخت موسیقی"-> MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),onMessage={message=it})
             "کشف آهنگ"->{
                 OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("نام آهنگ، خواننده یا سبک")})
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
@@ -304,12 +305,13 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
 
 
 @Composable
-private fun MusicCreationPanel(onMessage:(String)->Unit){
+private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Unit){
     val context=LocalContext.current
     val config=remember(context){SecureConfigStore(context)}
     val baseUrl=config.baseUrl()
-    val apiKey=config.apiKeyFor(baseUrl).ifBlank{config.apiKey()}
-    val api=remember(baseUrl,apiKey){NetArzApiClient(baseUrl,apiKey)}
+    var musicApiKey by remember{mutableStateOf(config.apiKeyFor(baseUrl).ifBlank{config.apiKey()})}
+    var keySaved by remember{mutableStateOf(musicApiKey.isNotBlank())}
+    val api=remember(baseUrl,musicApiKey){NetArzApiClient(baseUrl,musicApiKey)}
     val scope=rememberCoroutineScope()
     var model by remember{mutableStateOf(config.modelFor("music").ifBlank{"lyria-3.5"})}
     var models by remember{mutableStateOf(listOf("lyria-3.5","lyria-3-pro-preview","lyria-3-clip-preview","openrouter/google/lyria-3-pro-preview","openrouter/google/lyria-3-clip-preview","eleven-music-v1","eleven-sound-effects-v3","eleven-sound-effects-v2"))}
@@ -350,7 +352,7 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
     }
     DisposableEffect(Unit){onDispose{stopPreview()}}
     LaunchedEffect(baseUrl,apiKey){
-        if(apiKey.isNotBlank()){
+        if(musicApiKey.isNotBlank()){
             modelsLoading=true
             runCatching{api.musicModels()}.onSuccess{found->if(found.isNotEmpty())models=found}
                 .onFailure{status="فهرست مدل‌ها دریافت نشد؛ از مدل‌های پیش‌فرض استفاده می‌شود."}
@@ -358,7 +360,7 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
         }
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(modifier.verticalScroll(rememberScrollState()).padding(bottom=28.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630)),shape=RoundedCornerShape(16.dp)){
             Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Row(verticalAlignment=Alignment.CenterVertically){
@@ -367,9 +369,37 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
                     Text("استودیوی ساخت موسیقی هوش مصنوعی",color=Color.White,fontWeight=FontWeight.Bold)
                 }
                 Text("ساخت موسیقی و جلوه صوتی با API پولی نت‌ارز؛ مستقل از ویدیوساز رایگان.",color=Color(0xFFB9C2CE),style=MaterialTheme.typography.bodySmall)
-                Text(if(apiKey.isBlank())"اتصال API تنظیم نشده؛ ابتدا کلید و آدرس سرور را در تنظیمات وارد کن." else "اتصال API شناسایی شد • کلید فقط به‌صورت امن از تنظیمات خوانده می‌شود.",color=if(apiKey.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
+                Text(if(musicApiKey.isBlank())"کلید API وارد نشده است؛ آن را در کادر زیر وارد و ذخیره کن." else "کلید API ذخیره شده و به‌صورت امن نگهداری می‌شود.",color=if(apiKey.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
             }
         }
+        Text("اتصال سرویس ساخت موسیقی",color=Color.White,fontWeight=FontWeight.Bold)
+        OutlinedTextField(
+            value=musicApiKey,
+            onValueChange={musicApiKey=it;keySaved=false},
+            modifier=Modifier.fillMaxWidth(),
+            singleLine=true,
+            label={Text("کلید API نت‌ارز")},
+            placeholder={Text("کلید API را اینجا وارد کن")},
+            visualTransformation=PasswordVisualTransformation(),
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Ascii)
+        )
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically){
+            Button(
+                onClick={
+                    if(musicApiKey.isBlank()) status="ابتدا کلید API را وارد کن."
+                    else{
+                        config.rememberApiKey(baseUrl,musicApiKey)
+                        keySaved=true
+                        status="کلید API به‌صورت امن ذخیره شد."
+                    }
+                },
+                enabled=musicApiKey.isNotBlank(),
+                modifier=Modifier.weight(1f)
+            ){Icon(Icons.Default.Save,null);Spacer(Modifier.width(6.dp));Text("ذخیره کلید")}
+            Text(if(keySaved)"ذخیره شده" else "ذخیره نشده",color=if(keySaved)Color(0xFFB9E5C9) else Color(0xFFFFD28A),style=MaterialTheme.typography.labelSmall)
+        }
+        Text("نشانی سرور از تنظیمات اصلی برنامه خوانده می‌شود؛ فقط کلید مربوط به همان سرویس را اینجا وارد کن.",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.bodySmall)
+
         Text("۱. مدل تولید",color=Color.White,fontWeight=FontWeight.Bold)
         Box{
             OutlinedButton(onClick={modelMenu=true},modifier=Modifier.fillMaxWidth()){
@@ -462,7 +492,7 @@ private fun MusicCreationPanel(onMessage:(String)->Unit){
                     generating=false
                 }
             },
-            enabled=!generating&&apiKey.isNotBlank()&&extraPrompt.length+lyrics.length<3900,
+            enabled=!generating&&musicApiKey.isNotBlank()&&keySaved&&extraPrompt.length+lyrics.length<3900,
             modifier=Modifier.fillMaxWidth()
         ){
             if(generating){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp));Text("در حال ساخت…")}
