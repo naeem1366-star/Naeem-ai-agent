@@ -40,6 +40,7 @@ public sealed class BridgeForm : Form
     private volatile bool _controlEnabled;
     private int _connectedClients;
     private int _paired;
+    private int _pairAttempts;
     private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
 
     public BridgeForm()
@@ -146,6 +147,8 @@ public sealed class BridgeForm : Form
                 var suppliedPin = document.RootElement.TryGetProperty("pin", out var pinElement) ? pinElement.GetString() ?? "" : "";
                 if (DateTimeOffset.UtcNow - _startedAt > TimeSpan.FromMinutes(15))
                     return Results.Json(new { error = "زمان کد جفت‌سازی تمام شده است؛ برنامه کامپیوتر را دوباره اجرا کن." }, statusCode: 410);
+                if (Interlocked.Increment(ref _pairAttempts) > 5)
+                    return Results.Json(new { error = "تعداد تلاش‌های جفت‌سازی بیش از حد مجاز است؛ برنامه کامپیوتر را دوباره اجرا کن." }, statusCode: 429);
                 if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(suppliedPin), Encoding.UTF8.GetBytes(_pin)))
                     return Results.Json(new { error = "کد جفت‌سازی اشتباه است." }, statusCode: 401);
                 if (Interlocked.CompareExchange(ref _paired, 1, 0) != 0)
@@ -381,10 +384,15 @@ public sealed class BridgeForm : Form
 
     private static string GetLocalIPv4()
     {
-        foreach (var address in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
-            if (address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address))
-                return address.ToString();
-        return "IP را از تنظیمات شبکه ویندوز بررسی کن";
+        var addresses = Dns.GetHostEntry(Dns.GetHostName()).AddressList
+            .Where(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address))
+            .ToArray();
+        var privateAddress = addresses.FirstOrDefault(address =>
+            address.ToString().StartsWith("10.") ||
+            address.ToString().StartsWith("192.168.") ||
+            (address.GetAddressBytes()[0] == 172 && address.GetAddressBytes()[1] >= 16 && address.GetAddressBytes()[1] <= 31));
+        return (privateAddress ?? addresses.FirstOrDefault())?.ToString()
+            ?? throw new InvalidOperationException("اتصال شبکه محلی پیدا نشد. ابتدا کامپیوتر را به Wi-Fi یا LAN وصل کن.");
     }
 
     private const int INPUT_MOUSE = 0, INPUT_KEYBOARD = 1;
