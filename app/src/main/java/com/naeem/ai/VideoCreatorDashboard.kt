@@ -141,7 +141,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
 
     Column(
         Modifier.fillMaxSize().background(Color.Transparent)
-            .verticalScroll(rememberScrollState()).padding(18.dp),
+            .verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(start = 18.dp, top = 18.dp, end = 18.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
