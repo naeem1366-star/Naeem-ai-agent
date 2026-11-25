@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: ["feature/v2-foundation"]
 
+concurrency:
+  group: desktop-bridge-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
