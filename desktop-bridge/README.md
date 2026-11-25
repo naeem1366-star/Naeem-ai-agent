@@ -4,7 +4,7 @@ Windows companion for the Naeem AI Android app.
 
 ## Current alpha capabilities
 - Local HTTPS server hosted on the Windows PC (no cloud server).
-- One-time six-digit pairing code and per-session random token.
+- Six-digit pairing code (15-minute validity, five-attempt limit) and per-session random token.
 - Certificate fingerprint pinning support for the Android client.
 - UDP discovery on the same Wi-Fi/LAN.
 - JPEG screen streaming to the paired phone.
