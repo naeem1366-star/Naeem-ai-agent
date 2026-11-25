@@ -87,14 +87,17 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val mime = context.contentResolver.getType(uri).orEmpty()
-            if (!mime.startsWith("video/")) {
+            val name = videoDisplayName(context, uri)
+            val isVideo = mime.startsWith("video/") || name.endsWith(".mp4", true) ||
+                name.endsWith(".mov", true) || name.endsWith(".m4v", true) || name.endsWith(".webm", true)
+            if (!isVideo) {
                 Toast.makeText(context, "این فایل ویدیو نیست؛ لطفاً فایل MP4 یا ویدیویی انتخاب کن.", Toast.LENGTH_LONG).show()
             } else {
                 runCatching {
                     context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 outputUri = uri
-                outputName = videoDisplayName(context, uri)
+                outputName = name
             }
         }
     }
