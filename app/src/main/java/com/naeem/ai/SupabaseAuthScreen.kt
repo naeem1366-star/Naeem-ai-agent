@@ -37,7 +37,7 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
             SupraGlassPanel(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp), radius = 28.dp) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 22.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("SUPRA", color = Color(0xFFE8EDF5), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
+            Text("ایما", color = Color(0xFFE8EDF5), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 0.sp)
             Text(when (mode) { "signup" -> "ساخت حساب کاربری"; "recovery" -> "بازیابی رمز عبور"; else -> "ورود به حساب" },
                 color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("با ایمیل و رمز عبور وارد فضای شخصی خودت شو", color = Color(0xFFB9C5D5), fontSize = 13.sp)
