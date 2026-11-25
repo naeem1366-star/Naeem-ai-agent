@@ -29,11 +29,13 @@ data class PcBridgeDevice(val name: String, val ip: String, val port: Int, val f
 
 class PcBridgeClient(
     private val onStatus: (String) -> Unit,
-    private val onScreen: (ByteArray) -> Unit
+    private val onScreen: (ByteArray) -> Unit,
+    private val onControlPermission: (Boolean) -> Unit
 ) {
     @Volatile private var socket: WebSocket? = null
     @Volatile private var http: OkHttpClient? = null
     @Volatile private var connected = false
+    @Volatile private var controlAllowed = false
     @Volatile private var pairedToken: String? = null
     @Volatile private var pairedHost: String? = null
     @Volatile private var pairedFingerprint: String? = null
@@ -138,13 +140,19 @@ class PcBridgeClient(
         }
 
         val client = http ?: throw IllegalStateException("سرویس اتصال آماده نیست.")
+        val healthRequest = Request.Builder().url("https://$ip:$port/health").get().build()
+        controlAllowed = client.newCall(healthRequest).execute().use { response ->
+            if (!response.isSuccessful) throw IllegalStateException("خواندن وضعیت کامپیوتر ناموفق بود.")
+            JSONObject(response.body?.string().orEmpty()).optBoolean("controlAllowed", false)
+        }
+        onControlPermission(controlAllowed)
         val wsRequest = Request.Builder().url("wss://$ip:$port/ws?token=$token").build()
         val opened = CountDownLatch(1)
         val failure = AtomicReference<String?>(null)
         socket = client.newWebSocket(wsRequest, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 connected = true
-                onStatus("گوشی به کامپیوتر وصل شد؛ دریافت تصویر صفحه فعال است.")
+                onStatus(if (controlAllowed) "گوشی وصل شد؛ تصویر زنده و کنترل کامپیوتر فعال است." else "تصویر زنده وصل شد؛ برای کنترل، اجازه را در پنجره ویندوز روشن و وضعیت را به‌روزرسانی کن.")
                 opened.countDown()
             }
 
@@ -176,6 +184,18 @@ class PcBridgeClient(
             )
         }
         failure.get()?.let { throw IllegalStateException(it) }
+    }
+
+    suspend fun refreshControlPermission(ip: String, port: Int): Boolean = withContext(Dispatchers.IO) {
+        val client = http ?: throw IllegalStateException("ابتدا به کامپیوتر وصل شو.")
+        val request = Request.Builder().url("https://$ip:$port/health").get().build()
+        controlAllowed = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IllegalStateException("خواندن وضعیت کنترل ناموفق بود.")
+            JSONObject(response.body?.string().orEmpty()).optBoolean("controlAllowed", false)
+        }
+        onControlPermission(controlAllowed)
+        onStatus(if (controlAllowed) "اجازه کنترل از ویندوز فعال است." else "اجازه کنترل هنوز در ویندوز خاموش است.")
+        controlAllowed
     }
 
     fun sendMouseMove(x: Float, y: Float) =
