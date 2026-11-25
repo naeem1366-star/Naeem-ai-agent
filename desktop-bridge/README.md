@@ -8,7 +8,8 @@ Windows companion for the Naeem AI Android app.
 - Certificate fingerprint pinning support for the Android client.
 - UDP discovery on the same Wi-Fi/LAN.
 - JPEG screen streaming to the paired phone.
-- Optional mouse, click, keyboard, text-entry and allow-listed app-launch commands.
+- Optional mouse, click, keyboard, text-entry and allow-listed app-launch commands (Blender, FreeCAD, Krita, GIMP, Inkscape, 3ds Max and Photoshop).
+- Android-side vision planning: the configured AI provider can inspect the latest desktop frame and propose a bounded action plan; the user must review and approve the plan before execution.
 - Remote control is OFF by default and must be enabled on the PC.
 
 ## Pairing
@@ -27,4 +28,4 @@ Use .NET 8 SDK on Windows:
 dotnet publish .\NaeemAIDesktopBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-The GitHub Actions workflow packages a Windows installer. This is an early LAN-only bridge; it does not yet run an AI model locally or modify project files in design applications.
+The GitHub Actions workflow packages a Windows installer. This alpha is LAN-only. AI planning currently uses the AI provider already configured in the Android app; a local on-PC model runtime and deterministic Blender/FreeCAD project adapters are not included yet. The planner controls visible UI through approved input actions; it is not a verified CAD automation engine.
