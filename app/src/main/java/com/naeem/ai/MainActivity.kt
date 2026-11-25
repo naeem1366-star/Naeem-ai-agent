@@ -1281,7 +1281,7 @@ fun NaeemApp(
                     } else tutorialStep++
                 }
             )
-        } else FloatingTutorialButton(onClick = { tutorialStep = 0 })
+        }
 
         if (showPcControl) {
             Dialog(onDismissRequest = { showPcControl = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -1999,39 +1999,6 @@ private val guidedTourItems = listOf(
     GuidedTourItem("تأیید و گزارش", "اطلاعاتت را مرور کن", "پیش از عملیات مهم، جزئیات را بررسی و تأیید کن. از «روایت هفته و ماه» جمع‌بندی داده‌های ثبت‌شده را ببین؛ دکمه راهنما هم همیشه برای مرور دوباره در دسترس است.")
 )
 
-@Composable
-private fun FloatingTutorialButton(onClick: () -> Unit) {
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        Surface(
-            onClick = onClick,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 104.dp, end = 12.dp)
-                .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
-                .pointerInput(Unit) {
-                    detectDragGestures { change, amount ->
-                        change.consume()
-                        dragOffset = Offset(dragOffset.x + amount.x, dragOffset.y + amount.y)
-                    }
-                },
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xEE202A3A),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CB9F4).copy(alpha = 0.85f)),
-            shadowElevation = 12.dp
-        ) {
-            Row(
-                Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Icon(Icons.Default.DragIndicator, contentDescription = "برای جابه‌جایی بکش", tint = Color(0xFF9CB9F4), modifier = Modifier.size(17.dp))
-                Icon(Icons.Default.HelpOutline, contentDescription = null, tint = Color(0xFFDCE3ED), modifier = Modifier.size(18.dp))
-                Text("راهنما", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
 
 @Composable
 private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> Unit, onNext: () -> Unit) {
