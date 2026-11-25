@@ -235,11 +235,11 @@ fun FeatureHub(
             border = androidx.compose.foundation.BorderStroke(1.dp, SupraGlass.Edge)
         ) {
             Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-                Icon(Icons.Default.Hub, null, tint = Color(0xFFE0E6EE), modifier = Modifier.size(27.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp), horizontalAlignment = Alignment.End) {
-                    Text("مغز هوشمند ایما", color = Color(0xFFE0E6EE), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                    Text("وقتی خودت گفتگو یا میکروفون را فعال می‌کنی، حرف‌هایت را می‌فهمد، موضوع را تشخیص می‌دهد و اطلاعات را به بخش مرتبط می‌فرستد؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", color = Color(0xFFADB7C4), style = MaterialTheme.typography.bodySmall)
+                    Text("مغز هوشمند ایما", color = Color(0xFFE0E6EE), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                    Text("وقتی خودت گفتگو یا میکروفون را فعال می‌کنی، حرف‌هایت را می‌فهمد، موضوع را تشخیص می‌دهد و اطلاعات را به بخش مرتبط می‌فرستد؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", color = Color(0xFFADB7C4), style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                 }
+                Icon(Icons.Default.Hub, null, tint = Color(0xFFE0E6EE), modifier = Modifier.size(27.dp))
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -295,8 +295,8 @@ fun FeatureHub(
                                 }
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(3.dp), horizontalAlignment = Alignment.End) {
-                                Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall)
-                                Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 1, style = MaterialTheme.typography.labelSmall)
+                                Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                                Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 1, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                             }
                         }
                     }
