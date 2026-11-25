@@ -502,6 +502,7 @@ public sealed class BridgeForm : Form
         _certificateKey.Dispose();
     }
 
+    // Prefer the active Wi-Fi route so QR pairing uses the phone hotspot's reachable address.
     private static string GetLocalIPv4()
     {
         var candidates = NetworkInterface.GetAllNetworkInterfaces()
