@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.launch
@@ -166,7 +167,7 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        introCompleted.value = appPrefs.getBoolean("app_intro_completed", false)
+        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v2", false)
 
         setContent {
             val authScope = rememberCoroutineScope()
@@ -197,7 +198,7 @@ class MainActivity : FragmentActivity() {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
-                                appPrefs.edit().putBoolean("app_intro_completed", true).apply()
+                                appPrefs.edit().putBoolean("app_intro_completed_v2", true).apply()
                                 introCompleted.value = true
                             }
                         )
