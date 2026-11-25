@@ -1,0 +1,50 @@
+name: Windows Desktop Bridge
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/pc-bridge-mvp", "feature/v2-foundation"]
+  pull_request:
+    branches: ["feature/v2-foundation"]
+
+concurrency:
+  group: desktop-bridge-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Publish self-contained Windows app
+        run: dotnet publish desktop-bridge/NaeemAIDesktopBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o desktop-bridge/publish
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Build Windows installer
+        shell: cmd
+        run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" desktop-bridge\installer\NaeemAIDesktopBridge.iss'
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: NaeemAI-DesktopBridge-Setup-alpha1
+          path: desktop-bridge/installer-output/NaeemAI-DesktopBridge-Setup-alpha1.exe
+          if-no-files-found: error
+      - name: Publish Windows installer download
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pc-bridge-mvp'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-bridge-alpha1
+          name: Naeem AI Desktop Bridge alpha1
+          prerelease: true
+          overwrite_files: true
+          files: desktop-bridge/installer-output/NaeemAI-DesktopBridge-Setup-alpha1.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

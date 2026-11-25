@@ -2,14 +2,16 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "feature/v2-foundation"]
+    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp"]
+  pull_request:
+    branches: ["feature/v2-foundation"]
 
 concurrency:
   group: android-apk-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -29,10 +31,21 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
       - name: Name versioned APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/NaeemAI_v2.0-alpha10.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NaeemAI_v2.0-alpha10
-          path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha10.apk
+          name: NaeemAI_v2.0-alpha11
+          path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
           if-no-files-found: error
+      - name: Publish Android APK download
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pc-bridge-mvp'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-bridge-alpha1
+          name: Naeem AI Desktop Bridge alpha1
+          prerelease: true
+          overwrite_files: true
+          files: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
