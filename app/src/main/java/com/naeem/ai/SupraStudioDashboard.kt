@@ -189,7 +189,7 @@ fun SupraStudioDashboard(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF090D13))
+        Modifier.fillMaxSize().background(Color.Transparent)
             .verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -226,7 +226,7 @@ fun SupraStudioDashboard(
                 } else {
                     Box(
                         Modifier.fillMaxWidth().height(205.dp)
-                            .background(Color(0xFF080B10), RoundedCornerShape(14.dp)),
+                            .background(SupraGlass.Glass, RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
