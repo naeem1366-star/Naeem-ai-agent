@@ -59,6 +59,30 @@ private fun readVideoAttempts(context: Context): List<Long> {
     return raw.split(",").mapNotNull { it.toLongOrNull() }.filter { it > cutoff }
 }
 
+private fun decodeVideoReferenceBitmap(context: Context, uri: Uri): Bitmap? {
+    return try {
+        val resolver = context.contentResolver
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        val maxDimension = 1440
+        var sampleSize = 1
+        while (bounds.outWidth / sampleSize > maxDimension || bounds.outHeight / sampleSize > maxDimension) {
+            sampleSize *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.RGB_565
+        }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+    } catch (_: OutOfMemoryError) {
+        null
+    } catch (_: Exception) {
+        null
+    }
+}
+
 @Composable
 fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     val context = LocalContext.current
@@ -93,14 +117,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
 
     val imageBitmap by produceState<Bitmap?>(initialValue = null, imageUri) {
         value = imageUri?.let { uri ->
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        val options = BitmapFactory.Options().apply { inSampleSize = 3 }
-                        BitmapFactory.decodeStream(stream, null, options)
-                    }
-                }.getOrNull()
-            }
+            withContext(Dispatchers.IO) { decodeVideoReferenceBitmap(context, uri) }
         }
     }
 
@@ -130,7 +147,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             runCatching {
-                context.startActivity(Intent.createChooser(shareIntent, "ارسال عکس و توضیح به سرویس ویدیو"))
+                context.startActivity(Intent.createChooser(shareIntent, "عکس و توضیح ویدیو"))
             }.onFailure {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL))) }
                     .onFailure { Toast.makeText(context, "بازکردن سرویس ممکن نشد.", Toast.LENGTH_SHORT).show() }
@@ -170,7 +187,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         Surface(color = Color(0xFF17251F), shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF477A5B))) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("ویدیوساز رایگان — مستقل از API حرفه‌ای", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
-                Text("این بخش هیچ اعتباری از نت‌ارز یا کلید API حرفه‌ای مصرف نمی‌کند. ساخت نهایی از طریق PixVerse انجام می‌شود؛ هر محدودیت یا هزینه احتمالی حساب PixVerse جدا از Supra است.", color = Color(0xFFD0DBD2), style = MaterialTheme.typography.bodySmall)
+                Text("این بخش هیچ اعتباری از نت‌ارز یا کلید API حرفه‌ای مصرف نمی‌کند. فرایند ساخت ویدیو از مسیر رایگان انجام می‌شود و ممکن است محدودیت کیفیت یا زمان داشته باشد.", color = Color(0xFFD0DBD2), style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -256,7 +273,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                     FilterChip(selected = quality == "540p", onClick = { quality = "540p" }, label = { Text("540p") })
                 }
                 Text("نسبت تصویر پیشنهادی: 9:16  •  مدت پیشنهادی: ۵ ثانیه", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                Text("توجه: پلن رایگان PixVerse در حال حاضر ممکن است به 540p محدود باشد؛ انتخاب 720p در Supra تضمین نمی‌کند سرویس بیرونی آن را رایگان ارائه کند.", color = Color(0xFFE5C58E), style = MaterialTheme.typography.labelSmall)
+                Text("توجه: کیفیت نهایی به محدودیت‌های مسیر ساخت بستگی دارد.", color = Color(0xFFE5C58E), style = MaterialTheme.typography.labelSmall)
             }
         }
 
@@ -269,13 +286,13 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         ) {
             Icon(Icons.Default.OpenInNew, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("شروع ساخت در PixVerse")
+            Text("شروع ساخت ویدیو")
         }
-        Text("اگر گزینه PixVerse در پنجره اشتراک‌گذاری نبود، عکس را در وب‌سایت بارگذاری و متن کپی‌شده را در کادر Prompt جای‌گذاری کن.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.labelSmall)
+        Text("پس از آماده‌شدن ویدیو، فایل نهایی را در بخش پایین انتخاب کن.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.labelSmall)
 
         Divider(color = Color(0xFF343C48))
         Text("۴. واردکردن ویدیوی نهایی", color = Color.White, fontWeight = FontWeight.Bold)
-        Text("پس از ساخت و دانلود MP4 از PixVerse، آن را اینجا انتخاب کن تا فایل خروجی در Supra ثبت شود.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+        Text("پس از دریافت فایل MP4، آن را اینجا انتخاب کن تا خروجی در Supra ثبت شود.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { outputPicker.launch(arrayOf("video/mp4", "video/*")) }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.UploadFile, contentDescription = null)
             Spacer(Modifier.width(8.dp))
