@@ -351,7 +351,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
         }
     }
     DisposableEffect(Unit){onDispose{stopPreview()}}
-    LaunchedEffect(baseUrl,apiKey){
+    LaunchedEffect(baseUrl,musicApiKey){
         if(musicApiKey.isNotBlank()){
             modelsLoading=true
             runCatching{api.musicModels()}.onSuccess{found->if(found.isNotEmpty())models=found}
@@ -369,7 +369,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                     Text("استودیوی ساخت موسیقی هوش مصنوعی",color=Color.White,fontWeight=FontWeight.Bold)
                 }
                 Text("ساخت موسیقی و جلوه صوتی با API پولی نت‌ارز؛ مستقل از ویدیوساز رایگان.",color=Color(0xFFB9C2CE),style=MaterialTheme.typography.bodySmall)
-                Text(if(musicApiKey.isBlank())"کلید API وارد نشده است؛ آن را در کادر زیر وارد و ذخیره کن." else "کلید API ذخیره شده و به‌صورت امن نگهداری می‌شود.",color=if(apiKey.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
+                Text(if(musicApiKey.isBlank())"کلید API وارد نشده است؛ آن را در کادر زیر وارد و ذخیره کن." else "کلید API ذخیره شده و به‌صورت امن نگهداری می‌شود.",color=if(musicApiKey.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
             }
         }
         Text("اتصال سرویس ساخت موسیقی",color=Color.White,fontWeight=FontWeight.Bold)
