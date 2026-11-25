@@ -73,7 +73,7 @@ fun HomeSpacesOrbit(onOpen: () -> Unit) {
         Icons.Default.MusicNote to "موسیقی", Icons.Default.Settings to "تنظیمات"
     )
     var rotation by remember { mutableFloatStateOf(0f) }
-    var selected by remember { mutableIntStateOf(0) }
+    var selected by remember { mutableIntStateOf(-1) }
     BoxWithConstraints(
         Modifier.fillMaxWidth().height(116.dp)
             .pointerInput(items.size) {
@@ -99,14 +99,15 @@ fun HomeSpacesOrbit(onOpen: () -> Unit) {
             )
         }
         nodes.forEach { (i, angle, depth) ->
-            val d = 28f + depth * 12f
+            val isSelected = i == selected
+            val d = 25f + depth * 10f + if (isSelected) 5f else 0f
             Surface(
                 modifier = Modifier.offset(x = (cos(angle)*rx).dp, y = (sin(angle)*ry).dp)
                     .size(d.dp).graphicsLayer {
-                        val sc = .72f + depth*.38f
+                        val sc = .68f + depth*.34f + if (isSelected) .16f else 0f
                         scaleX=sc; scaleY=sc; alpha=.45f + depth*.55f
                         cameraDistance=24f*density
-                    }.clickable { selected=i; onOpen() },
+                    }.clickable { if (selected == i) onOpen() else { selected=i; rotation = -i * (2f * PI.toFloat() / items.size) } },
                 shape = CircleShape,
                 color = Color(0xFF18263A),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9DBCE5).copy(alpha=.35f+depth*.5f)),
