@@ -39,24 +39,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val PIXVERSE_URL = "https://app.pixverse.ai/"
-private const val VIDEO_WEEKLY_LIMIT = 3
-private const val VIDEO_WEEK_MS = 7L * 24L * 60L * 60L * 1000L
-private const val VIDEO_PREFS = "supra_free_video_quota"
-private const val VIDEO_ATTEMPTS_KEY = "attempt_timestamps"
-
 private fun videoDisplayName(context: Context, uri: Uri): String {
     return runCatching {
         context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
         }
     }.getOrNull()?.takeIf { it.isNotBlank() } ?: "فایل انتخاب‌شده"
-}
-
-private fun readVideoAttempts(context: Context): List<Long> {
-    val raw = context.getSharedPreferences(VIDEO_PREFS, Context.MODE_PRIVATE)
-        .getString(VIDEO_ATTEMPTS_KEY, "") ?: ""
-    val cutoff = System.currentTimeMillis() - VIDEO_WEEK_MS
-    return raw.split(",").mapNotNull { it.toLongOrNull() }.filter { it > cutoff }
 }
 
 private fun decodeVideoReferenceBitmap(context: Context, uri: Uri): Bitmap? {
@@ -86,16 +74,10 @@ private fun decodeVideoReferenceBitmap(context: Context, uri: Uri): Bitmap? {
 @Composable
 fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences(VIDEO_PREFS, Context.MODE_PRIVATE) }
     var prompt by remember { mutableStateOf(initialPrompt) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var outputUri by remember { mutableStateOf<Uri?>(null) }
     var outputName by remember { mutableStateOf("") }
-    var quality by remember { mutableStateOf("720p") }
-    var attempts by remember { mutableStateOf(readVideoAttempts(context)) }
-
-    val recentAttempts = attempts.filter { it > System.currentTimeMillis() - VIDEO_WEEK_MS }
-    val remainingAttempts = (VIDEO_WEEKLY_LIMIT - recentAttempts.size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         // GetContent uses the system media chooser and grants temporary read access.
@@ -104,11 +86,16 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     }
     val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val mime = context.contentResolver.getType(uri).orEmpty()
+            if (!mime.startsWith("video/")) {
+                Toast.makeText(context, "این فایل ویدیو نیست؛ لطفاً فایل MP4 یا ویدیویی انتخاب کن.", Toast.LENGTH_LONG).show()
+            } else {
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                outputUri = uri
+                outputName = videoDisplayName(context, uri)
             }
-            outputUri = uri
-            outputName = videoDisplayName(context, uri)
         }
     }
 
@@ -118,40 +105,24 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         }
     }
 
-    fun saveAttemptAndLaunch() {
-        val now = System.currentTimeMillis()
-        val recent = readVideoAttempts(context).toMutableList()
-        if (recent.size >= VIDEO_WEEKLY_LIMIT) {
-            attempts = recent
-            Toast.makeText(context, "سهمیه هفتگی تمام شده؛ بعد از گذشت ۷ روز دوباره آزاد می‌شود.", Toast.LENGTH_LONG).show()
+    fun openVideoService() {
+        if (prompt.isBlank() && imageUri == null) {
+            Toast.makeText(context, "اول توضیح ویدیو یا عکس مرجع را وارد کن.", Toast.LENGTH_SHORT).show()
             return
         }
-        recent.add(now)
-        prefs.edit().putString(VIDEO_ATTEMPTS_KEY, recent.joinToString(",")).apply()
-        attempts = recent
-
         if (prompt.isNotBlank()) {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("Supra video prompt", prompt.trim()))
         }
-
-        if (imageUri != null) {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/*"
-                putExtra(Intent.EXTRA_STREAM, imageUri)
-                putExtra(Intent.EXTRA_TEXT, prompt.trim())
-                clipData = ClipData.newUri(context.contentResolver, "Supra reference image", imageUri!!)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            runCatching {
-                context.startActivity(Intent.createChooser(shareIntent, "عکس و توضیح ویدیو"))
-            }.onFailure {
-                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL))) }
-                    .onFailure { Toast.makeText(context, "بازکردن سرویس ممکن نشد.", Toast.LENGTH_SHORT).show() }
-            }
-        } else {
-            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL))) }
-                .onFailure { Toast.makeText(context, "مرورگر در دسترس نیست.", Toast.LENGTH_SHORT).show() }
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL)))
+            Toast.makeText(
+                context,
+                if (imageUri != null) "توضیح کپی شد؛ عکس مرجع را در صفحه سرویس بارگذاری کن." else "توضیح ویدیو کپی شد؛ آن را در صفحه سرویس وارد کن.",
+                Toast.LENGTH_LONG
+            ).show()
+        }.onFailure {
+            Toast.makeText(context, "بازکردن صفحه ساخت ویدیو ممکن نشد.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -176,36 +147,15 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
             }
             Column(Modifier.weight(1f)) {
                 Text("استودیو ساخت ویدیو", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                Text("ویدیوساز رایگان؛ بدون مصرف اعتبار API", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+                Text("اتصال به سرویس ساخت ویدیو", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.Default.MovieCreation, contentDescription = null, tint = Color(0xFFD4D9E0), modifier = Modifier.size(27.dp))
         }
 
         Surface(color = Color(0xFF17251F), shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF477A5B))) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("ویدیوساز رایگان — مستقل از API حرفه‌ای", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
-                Text("این بخش از اعتبار API حرفه‌ای استفاده نمی‌کند. فرایند ساخت ویدیو ممکن است محدودیت کیفیت یا زمان داشته باشد.", color = Color(0xFFD0DBD2), style = MaterialTheme.typography.bodySmall)
-            }
-        }
-
-        Surface(
-            color = Color(0xFF17251F),
-            shape = RoundedCornerShape(17.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF365C48))
-        ) {
-            Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("سهمیه این دستگاه", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.weight(1f))
-                    Text("$remainingAttempts از $VIDEO_WEEKLY_LIMIT تلاش باقی‌مانده", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
-                }
-                LinearProgressIndicator(
-                    progress = remainingAttempts.toFloat() / VIDEO_WEEKLY_LIMIT,
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF8BC6A0),
-                    trackColor = Color(0xFF34463C)
-                )
-                Text("۳ بار شروع فرایند در هر بازه ۷ روزه. این شمارنده فقط روی همین گوشی ذخیره می‌شود و سهمیه سرویس را کنترل نمی‌کند.", color = Color(0xFFB8C3D1), style = MaterialTheme.typography.labelSmall)
+                Text("ساخت ویدیو در سرویس بیرونی انجام می‌شود", color = Color(0xFFB9E5C9), fontWeight = FontWeight.Bold)
+                Text("این صفحه به‌تنهایی ویدیو تولید نمی‌کند. توضیحت کپی می‌شود و صفحه سرویس باز خواهد شد؛ عکس مرجع را آنجا بارگذاری کن و پس از ساخت، فایل MP4 را از بخش پایین وارد کن.", color = Color(0xFFD0DBD2), style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -261,35 +211,28 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
             Text("کپی توضیح حرکت")
         }
 
-        Text("۳. تنظیمات خروجی", color = Color.White, fontWeight = FontWeight.Bold)
-        Surface(color = Color(0xFF171C24), shape = RoundedCornerShape(15.dp)) {
-            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("کیفیت پیش‌فرض", color = Color(0xFFB8C3D1), style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = quality == "720p", onClick = { quality = "720p" }, label = { Text("720p") })
-                    FilterChip(selected = quality == "540p", onClick = { quality = "540p" }, label = { Text("540p") })
-                }
-                Text("نسبت تصویر پیشنهادی: 9:16  •  مدت پیشنهادی: ۵ ثانیه", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                Text("توجه: کیفیت نهایی به محدودیت‌های مسیر ساخت بستگی دارد.", color = Color(0xFFE5C58E), style = MaterialTheme.typography.labelSmall)
-            }
-        }
+        Text("۳. ساخت و دریافت ویدیو", color = Color.White, fontWeight = FontWeight.Bold)
+        Text(
+            "با زدن دکمه، صفحه سرویس باز می‌شود. توضیح ویدیو در حافظه کپی شده و عکس انتخابی را باید در همان صفحه بارگذاری کنی. بعد از دانلود MP4، آن را در مرحله بعد وارد کن.",
+            color = Color(0xFFB8C3D1), style = MaterialTheme.typography.bodySmall
+        )
 
         Button(
-            onClick = { saveAttemptAndLaunch() },
-            enabled = remainingAttempts > 0 && (imageUri != null || prompt.isNotBlank()),
+            onClick = { openVideoService() },
+            enabled = imageUri != null || prompt.isNotBlank(),
             modifier = Modifier.fillMaxWidth().height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4D9E0), contentColor = Color(0xFF10151C)),
             shape = RoundedCornerShape(13.dp)
         ) {
             Icon(Icons.Default.OpenInNew, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("شروع ساخت ویدیو")
+            Text("باز کردن سرویس ساخت ویدیو")
         }
-        Text("پس از آماده‌شدن ویدیو، فایل نهایی را در بخش پایین انتخاب کن.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.labelSmall)
+        Text("ساخت واقعی و دریافت MP4 در سرویس بیرونی انجام می‌شود؛ این برنامه فایل عکس را به‌عنوان ویدیو ثبت نمی‌کند.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.labelSmall)
 
         Divider(color = Color(0xFF343C48))
         Text("۴. واردکردن ویدیوی نهایی", color = Color.White, fontWeight = FontWeight.Bold)
-        Text("پس از دریافت فایل MP4، آن را اینجا انتخاب کن تا خروجی در Supra ثبت شود.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
+        Text("فقط فایل ویدیویی انتخاب می‌شود؛ عکس یا تصویر ثابت به‌عنوان ویدیو پذیرفته نخواهد شد.", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { outputPicker.launch(arrayOf("video/mp4", "video/*")) }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.UploadFile, contentDescription = null)
             Spacer(Modifier.width(8.dp))
