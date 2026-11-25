@@ -221,6 +221,7 @@ class MainActivity : FragmentActivity() {
         introCompleted.value = appPrefs.getBoolean("app_intro_completed", false)
 
         setContent {
+            val authScope = rememberCoroutineScope()
             LaunchedEffect(Unit) {
                 authSession.value = withContext(Dispatchers.IO) { auth.restoreSession() }
                 authReady.value = true
@@ -270,7 +271,13 @@ class MainActivity : FragmentActivity() {
                         NaeemApp(
                             store,
                             onExternalActivityStarted = {},
-                            onExternalActivityReturned = {}
+                            onExternalActivityReturned = {},
+                            onSignOut = {
+                                authScope.launch {
+                                    auth.signOut()
+                                    authSession.value = null
+                                }
+                            }
                         )
                     }
                 }
@@ -476,7 +483,8 @@ private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose
 fun NaeemApp(
     store: SecureConfigStore,
     onExternalActivityStarted: () -> Unit,
-    onExternalActivityReturned: () -> Unit
+    onExternalActivityReturned: () -> Unit,
+    onSignOut: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
@@ -1823,7 +1831,12 @@ fun NaeemApp(
                         showSettings = false
                     }) { Text("ذخیره", color = Gold) }
                 },
-                dismissButton = { TextButton(onClick = { showSettings = false }) { Text("انصراف") } }
+                dismissButton = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { showSettings = false; onSignOut() }) { Text("خروج از حساب", color = Color(0xFFFFA6A0)) }
+                        TextButton(onClick = { showSettings = false }) { Text("انصراف") }
+                    }
+                }
             )
         }
     }
