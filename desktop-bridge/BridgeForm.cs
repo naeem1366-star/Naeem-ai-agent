@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace NaeemAIDesktopBridge;
 
@@ -38,6 +39,8 @@ public sealed class BridgeForm : Form
     private string _fingerprint = "";
     private volatile bool _controlEnabled;
     private int _connectedClients;
+    private int _paired;
+    private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
 
     public BridgeForm()
     {
@@ -130,8 +133,9 @@ public sealed class BridgeForm : Form
         {
             var builder = WebApplication.CreateBuilder();
             builder.Logging.ClearProviders();
+            var localAddress = IPAddress.Parse(GetLocalIPv4());
             builder.WebHost.ConfigureKestrel(options =>
-                options.Listen(IPAddress.Any, Port, listen => listen.UseHttps(_certificate)));
+                options.Listen(localAddress, Port, listen => listen.UseHttps(_certificate)));
             var app = builder.Build();
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
@@ -140,8 +144,12 @@ public sealed class BridgeForm : Form
             {
                 using var document = await JsonDocument.ParseAsync(context.Request.Body);
                 var suppliedPin = document.RootElement.TryGetProperty("pin", out var pinElement) ? pinElement.GetString() ?? "" : "";
+                if (DateTimeOffset.UtcNow - _startedAt > TimeSpan.FromMinutes(15))
+                    return Results.Json(new { error = "زمان کد جفت‌سازی تمام شده است؛ برنامه کامپیوتر را دوباره اجرا کن." }, statusCode: 410);
                 if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(suppliedPin), Encoding.UTF8.GetBytes(_pin)))
                     return Results.Json(new { error = "کد جفت‌سازی اشتباه است." }, statusCode: 401);
+                if (Interlocked.CompareExchange(ref _paired, 1, 0) != 0)
+                    return Results.Json(new { error = "این کد قبلاً استفاده شده است؛ برنامه کامپیوتر را دوباره اجرا کن." }, statusCode: 409);
                 return Results.Json(new { token = _token, name = "Naeem AI Desktop", controlAllowed = _controlEnabled });
             });
             app.Map("/ws", HandleWebSocketAsync);
@@ -186,8 +194,9 @@ public sealed class BridgeForm : Form
         if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(suppliedToken), Encoding.UTF8.GetBytes(_token)))
         { context.Response.StatusCode = 401; return; }
 
+        if (Interlocked.CompareExchange(ref _connectedClients, 1, 0) != 0)
+        { context.Response.StatusCode = 409; return; }
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
-        Interlocked.Increment(ref _connectedClients);
         UpdateStatus();
         var incoming = new ConcurrentQueue<string>();
         using var receiverCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
@@ -312,7 +321,8 @@ public sealed class BridgeForm : Form
         var names = chord.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var keys = names.Select(name => name.ToUpperInvariant() switch {
             "CTRL" => Keys.ControlKey, "ALT" => Keys.Menu, "SHIFT" => Keys.ShiftKey,
-            "WIN" => Keys.LWin, _ => Enum.TryParse<Keys>(name, true, out var key) ? key : Keys.None
+            "WIN" => Keys.LWin, "ENTER" => Keys.Return, "ESC" => Keys.Escape,
+            _ => Enum.TryParse<Keys>(name, true, out var key) ? key : Keys.None
         }).Where(key => key != Keys.None).ToArray();
         if (keys.Length == 0) return;
         var inputs = new List<INPUT>();
