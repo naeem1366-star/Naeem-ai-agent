@@ -66,188 +66,74 @@ private val FM=Color(0xFFA8ADB8)
 
 @Composable
 fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
-    data class OrbitItem(
+    data class SpaceItem(
         val icon: androidx.compose.ui.graphics.vector.ImageVector,
         val title: String,
         val subtitle: String,
-        val description: String,
         val color: Color
     )
 
     val items = listOf(
-        OrbitItem(Icons.Default.Luggage, "سفر", "برنامه‌ریزی سفر و همراهان", "مقصدها را بررسی کن، برنامه روزانه سفر را بچین، همراهان و هزینه‌ها را مدیریت کن و جزئیات مسیر را یک‌جا نگه دار.", Color(0xFF8EA8C8)),
-        OrbitItem(Icons.Default.Terrain, "طبیعت", "مسیرها و ماجراجویی در طبیعت", "برای طبیعت‌گردی و پیمایش آماده شو؛ مسیرها، نقاط مهم، اطلاعات سفر و تجربه‌های ثبت‌شده‌ات را در یک فضای اختصاصی دنبال کن.", Color(0xFF7FAE98)),
-        OrbitItem(Icons.Default.FitnessCenter, "ورزش", "تمرین و پیشرفت بدنی", "فعالیت‌ها و تمرین‌هایت را ثبت کن، روند پیشرفت و رکوردها را ببین و برای رسیدن به هدف‌های ورزشی برنامه منظم‌تری بساز.", Color(0xFFC58E78)),
-        OrbitItem(Icons.Default.TrendingUp, "بازار", "رصد بازارها و دارایی‌ها", "قیمت‌ها و روند بازارهای مالی را دنبال کن، داده‌ها را کنار هم ببین و برای شناخت بهتر شرایط بازار از تحلیل و جمع‌بندی هوشمند کمک بگیر.", Color(0xFFC5A66F)),
-        OrbitItem(Icons.Default.Psychology, "اتاق فکر", "ایده‌پردازی و حل مسئله", "ایده‌های خام را وارد گفت‌وگو کن، از زاویه‌های مختلف بررسی‌شان کن، راه‌حل‌ها را مقایسه کن و قدم‌به‌قدم به یک طرح اجرایی برس.", Color(0xFFA997C8)),
-        OrbitItem(Icons.Default.Newspaper, "اخبار", "خبرهای مهم و رویدادها", "موضوعات مهم را پیگیری کن، خبرها را با نگاه تحلیلی بخوان و برای درک بهتر اتفاق‌ها، زمینه و پیامدهای هر رویداد را بررسی کن.", Color(0xFF82AEB8)),
-        OrbitItem(Icons.Default.AccountBalanceWallet, "مالی", "مدیریت دخل‌وخرج", "درآمدها و هزینه‌ها را ثبت و دسته‌بندی کن، گزارش مالی بگیر و تصویر روشن‌تری از جریان پول و وضعیت بودجه‌ات داشته باش.", Color(0xFF78B5A8)),
-        OrbitItem(Icons.Default.EventNote, "روزنگار", "یادداشت‌ها و اتفاق‌های روزانه", "یادداشت‌ها، کارها و اتفاق‌های مهم روز را ثبت کن؛ بعداً می‌توانی به آن‌ها برگردی و روند هفته‌ها و ماه‌هایت را مرور کنی.", Color(0xFFC18FA4)),
-        OrbitItem(Icons.Default.MusicNote, "موسیقی", "کشف آهنگ و حال‌وهوای موسیقی", "موسیقی و هنرمندان تازه کشف کن، بر اساس حال‌وهوا جست‌وجو کن و درباره سبک‌ها، صداها و آثار موردعلاقه‌ات بیشتر بدان.", Color(0xFF929FC7)),
-        OrbitItem(Icons.Default.Settings, "تنظیمات", "اتصال‌ها و کنترل برنامه", "مدل هوش مصنوعی، صدا، دسترسی‌ها و اتصال به رایانه را مدیریت کن و تنظیمات و امنیت برنامه را مطابق نیازت تغییر بده.", Color(0xFFB6B0A4))
+        SpaceItem(Icons.Default.Luggage, "سفر", "برنامه‌ریزی و همراهان", Color(0xFFC9B58F)),
+        SpaceItem(Icons.Default.Terrain, "طبیعت", "مسیر و ماجراجویی", Color(0xFF91B7A0)),
+        SpaceItem(Icons.Default.FitnessCenter, "ورزش", "تمرین و پیشرفت", Color(0xFFC58E78)),
+        SpaceItem(Icons.Default.TrendingUp, "بازار", "رصد دارایی‌ها", Color(0xFFC5A66F)),
+        SpaceItem(Icons.Default.Psychology, "اتاق فکر", "ایده و تحلیل", Color(0xFFA997C8)),
+        SpaceItem(Icons.Default.Newspaper, "اخبار", "خبر و رویداد", Color(0xFF82AEB8)),
+        SpaceItem(Icons.Default.AccountBalanceWallet, "مالی", "دخل‌وخرج", Color(0xFF78B5A8)),
+        SpaceItem(Icons.Default.EventNote, "روزنگار", "یادداشت روزانه", Color(0xFFC18FA4)),
+        SpaceItem(Icons.Default.MusicNote, "موسیقی", "کشف و شنیدن", Color(0xFF929FC7)),
+        SpaceItem(Icons.Default.Settings, "تنظیمات", "کنترل برنامه", Color(0xFFB6B0A4))
     )
 
-    var rotation by remember { mutableFloatStateOf(0f) }
-    var selected by remember { mutableIntStateOf(0) }
-
     Column(
-        Modifier.fillMaxWidth().height(282.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        Modifier.fillMaxWidth().height(194.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 2.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("فضاهای اختصاصی", color = Color(0xFFE7EDF7), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("فضاهای اختصاصی", color = Color(0xFFE9E2D5), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.weight(1f))
-            Text("برای چرخاندن، بکش", color = Color(0xFF91A2B8), style = MaterialTheme.typography.labelSmall)
+            Text("انتخاب سریع", color = Color(0xFF928B80), style = MaterialTheme.typography.labelSmall)
         }
 
-        BoxWithConstraints(
-            Modifier.fillMaxWidth().height(166.dp)
-                .pointerInput(items.size) {
-                    detectDragGestures { change, drag ->
-                        change.consume()
-                        rotation += drag.x / size.width.coerceAtLeast(1).toFloat() * 2f * PI.toFloat()
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            val rx = maxWidth.value * 0.39f
-            val ry = 43f
-            val nodes = items.indices.map { i ->
-                val angle = i * (2f * PI.toFloat() / items.size) + rotation + PI.toFloat() / 2f
-                Triple(i, angle, (sin(angle) + 1f) / 2f)
-            }.sortedBy { it.third }
-
-            Canvas(Modifier.fillMaxSize()) {
-                val w = size.width * .84f
-                val h = size.height * .48f
-                val topLeft = androidx.compose.ui.geometry.Offset((size.width - w) / 2f, (size.height - h) / 2f)
-                val ovalSize = androidx.compose.ui.geometry.Size(w, h)
-                drawOval(
-                    brush = ComposeBrush.linearGradient(
-                        listOf(Color(0xFF5B5040), Color(0xFFD8C49C), Color(0xFF5B5040))
-                    ),
-                    topLeft = topLeft,
-                    size = ovalSize,
-                    style = Stroke(width = 1.4.dp.toPx())
-                )
-                drawOval(
-                    color = Color(0xFFD8C49C).copy(alpha = .10f),
-                    topLeft = topLeft,
-                    size = ovalSize,
-                    style = Stroke(width = 7.dp.toPx())
-                )
-            }
-
-            nodes.forEach { (index, angle, depth) ->
-                val item = items[index]
-                val isSelected = index == selected
-                val diameter = 43f + depth * 15f + if (isSelected) 9f else 0f
-                val scale = .78f + depth * .22f + if (isSelected) .10f else 0f
-
-                Box(
-                    modifier = Modifier
-                        .offset(x = (cos(angle) * rx).dp, y = (sin(angle) * ry).dp)
-                        .size(diameter.dp)
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            alpha = .72f + depth * .28f
-                            cameraDistance = 32f * density
-                        }
-                        .clickable {
-                            if (selected == index) onOpen(index)
-                            else {
-                                selected = index
-                                rotation = -index * (2f * PI.toFloat() / items.size)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
+        listOf(items.take(5), items.drop(5)).forEachIndexed { rowIndex, rowItems ->
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowItems.forEachIndexed { itemIndex, item ->
+                    val index = rowIndex * 5 + itemIndex
                     Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        shape = CircleShape,
-                        color = item.color.copy(alpha = .28f),
-                        border = androidx.compose.foundation.BorderStroke(
-                            width = if (isSelected) 2.dp else 1.dp,
-                            brush = ComposeBrush.linearGradient(
-                                listOf(Color.White.copy(alpha = .98f), item.color.copy(alpha = .9f), Color(0xFF111A29))
-                            )
-                        ),
-                        shadowElevation = (8f + depth * 13f + if (isSelected) 12f else 0f).dp
+                        onClick = { onOpen(index) },
+                        modifier = Modifier.width(106.dp).height(77.dp),
+                        shape = RoundedCornerShape(17.dp),
+                        color = Color(0xE91A1917),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, item.color.copy(alpha = 0.30f)),
+                        shadowElevation = 5.dp
                     ) {
-                        Box(
-                            Modifier.fillMaxSize().background(
-                                ComposeBrush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = .98f),
-                                        item.color.copy(alpha = .98f),
-                                        item.color.copy(alpha = .72f),
-                                        Color(0xFF29251F),
-                                        Color(0xFF080D16)
-                                    )
-                                )
-                            ),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Box(
-                                Modifier.align(Alignment.TopStart)
-                                    .padding(start = 9.dp, top = 7.dp)
-                                    .size((diameter * .17f).dp)
-                                    .background(Color.White.copy(alpha = .82f), CircleShape)
-                            )
-                            Icon(
-                                item.icon,
-                                contentDescription = item.title,
-                                tint = Color.White,
-                                modifier = Modifier.size((diameter * .43f).dp)
-                            )
+                                Modifier.size(31.dp).background(item.color.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(item.icon, contentDescription = item.title, tint = item.color, modifier = Modifier.size(18.dp))
+                            }
+                            Text(item.title, color = Color(0xFFF1EEE8), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                            Text(item.subtitle, color = Color(0xFF9F9A91), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                         }
                     }
-                }
-            }
-        }
-
-        val info = items[selected]
-        Surface(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            color = Color(0xE8171715),
-            shape = RoundedCornerShape(17.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, info.color.copy(alpha = .52f)),
-            shadowElevation = 9.dp
-        ) {
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    Modifier.size(34.dp).background(info.color.copy(alpha = .18f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(info.icon, contentDescription = null, tint = info.color, modifier = Modifier.size(19.dp))
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(info.title, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.width(7.dp))
-                        Text("· " + info.subtitle, color = info.color, style = MaterialTheme.typography.labelSmall)
-                    }
-                    Text(
-                        info.description,
-                        color = Color(0xFFD0D9E5),
-                        style = MaterialTheme.typography.labelSmall,
-                        lineHeight = 16.sp,
-                        maxLines = 4
-                    )
                 }
             }
         }
     }
 }
-
 @Composable
 fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
