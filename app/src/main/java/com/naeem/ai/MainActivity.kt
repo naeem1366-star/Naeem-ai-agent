@@ -167,7 +167,7 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v3", false)
+        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v4", false)
 
         setContent {
             val authScope = rememberCoroutineScope()
@@ -198,7 +198,7 @@ class MainActivity : FragmentActivity() {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
-                                appPrefs.edit().putBoolean("app_intro_completed_v3", true).apply()
+                                appPrefs.edit().putBoolean("app_intro_completed_v4", true).apply()
                                 introCompleted.value = true
                             }
                         )
