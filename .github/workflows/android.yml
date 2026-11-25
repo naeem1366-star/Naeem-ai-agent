@@ -2,7 +2,7 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "feature/v2-foundation"]
+    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp"]
 
 concurrency:
   group: android-apk-${{ github.ref }}
@@ -29,10 +29,10 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
       - name: Name versioned APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/NaeemAI_v2.0-alpha10.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NaeemAI_v2.0-alpha10
-          path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha10.apk
+          name: NaeemAI_v2.0-alpha11
+          path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
           if-no-files-found: error
