@@ -183,7 +183,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
             if (model.videoInput) {
                 Text("ویدیوی ورودی / مرجع", color = Color.White, fontWeight = FontWeight.Bold)
                 OutlinedButton(onClick = { videoPicker.launch("video/*") }, enabled = !running, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.VideoLibrary, null); Spacer(Modifier.width(7.dp))
+                    Icon(Icons.Default.CloudDownload, null); Spacer(Modifier.width(7.dp))
                     Text(if (videoUri == null) "انتخاب ویدیوی مرجع" else "تعویض ویدیوی مرجع")
                 }
                 if (videoUri != null) TextButton(onClick = { videoUri = null; videoData = null }) { Text("حذف ویدیو") }
