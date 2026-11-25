@@ -110,10 +110,10 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
     }
     DisposableEffect(client) { onDispose { client.dispose() } }
 
-    val background = Color(0xFF101827)
-    val panel = Color(0xFF202A3A)
-    val accent = Color(0xFFD4D9E0)
-    val muted = Color(0xFFB9C5D5)
+    val background = Color.Transparent
+    val panel = SupraGlass.Glass
+    val accent = SupraGlass.Ice
+    val muted = SupraGlass.Muted
 
     Column(
         Modifier.fillMaxSize().background(background).verticalScroll(rememberScrollState())
@@ -456,7 +456,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                     )
                     Text("روی تصویر لمس کن تا کلیک شود؛ انگشت را بکش تا نشانگر حرکت کند.", color = muted, style = MaterialTheme.typography.labelSmall)
                 } else {
-                    Box(Modifier.fillMaxWidth().height(170.dp).background(Color(0xFF151E2B), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(170.dp).background(SupraGlass.Glass, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
                         Text("پس از اتصال، تصویر صفحه اینجا نمایش داده می‌شود.", color = muted)
                     }
                 }
