@@ -99,6 +99,39 @@ import com.naeem.ai.core.assistant.*
 import java.io.File
 
 @Composable
+private fun GeminiStyleBackdrop(content: @Composable () -> Unit) {
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(
+                listOf(Color(0xFF070B14), Color(0xFF0B1424), Color(0xFF10182A), Color(0xFF080D18))
+            )
+        )
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(Color(0x554B8DCE), Color(0x223B68A8), Color.Transparent),
+                    center = Offset(size.width * 0.50f, size.height * 0.25f),
+                    radius = size.maxDimension * 0.78f
+                ),
+                radius = size.maxDimension * 0.78f,
+                center = Offset(size.width * 0.50f, size.height * 0.25f)
+            )
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(Color(0x333D65B5), Color(0x183D4B8E), Color.Transparent),
+                    center = Offset(size.width * 0.92f, size.height * 0.76f),
+                    radius = size.maxDimension * 0.62f
+                ),
+                radius = size.maxDimension * 0.62f,
+                center = Offset(size.width * 0.92f, size.height * 0.76f)
+            )
+        }
+        content()
+    }
+}
+
+@Composable
 private fun ModuleScreenBackdrop(
     module: String,
     content: @Composable () -> Unit
@@ -115,26 +148,19 @@ private fun ModuleScreenBackdrop(
         "social" -> Color(0xFFE0A0B8)
         else -> Color(0xFF9BAFC4)
     }
-    val monochrome = remember {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-    }
-    Box(Modifier.fillMaxSize().background(Color(0xFF090B0E))) {
-        Image(
-            painter = painterResource(R.drawable.bg_mountain),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.30f },
-            contentScale = ContentScale.Crop,
-            colorFilter = monochrome
-        )
-        Box(Modifier.fillMaxSize().background(accent.copy(alpha = 0.035f)))
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(Color(0x99080808), Color(0x66141414), Color(0xAA090909))
+    GeminiStyleBackdrop {
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.radialGradient(
+                        listOf(accent.copy(alpha = 0.055f), Color.Transparent),
+                        center = Offset(0.82f, 0.18f),
+                        radius = 980f
+                    )
                 )
             )
-        )
-        Box(Modifier.fillMaxSize()) { content() }
+            content()
+        }
     }
 }
 
@@ -944,7 +970,6 @@ fun NaeemApp(
                         IconButton(onClick = { showHub = true }, modifier = Modifier.onGloballyPositioned { menuTargetBounds = it.boundsInWindow() }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
                     },
                     actions = {
-                        var showQuickMenu by remember { mutableStateOf(false) }
                         IconButton(onClick = {
                             conversationStore.save(activeConversationId, messages)
                             activeConversationId = conversationStore.create()
@@ -960,19 +985,6 @@ fun NaeemApp(
                             stopSpeech()
                         }) {
                             Icon(Icons.Default.AddComment, contentDescription = "گفت‌وگوی تازه", tint = Gold)
-                        }
-                        Box {
-                            IconButton(onClick = { showQuickMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "دسترسی‌های بیشتر", tint = Gold)
-                            }
-                            DropdownMenu(expanded = showQuickMenu, onDismissRequest = { showQuickMenu = false }, containerColor = Panel) {
-                                DropdownMenuItem(text = { Text("گفت‌وگوهای من") }, leadingIcon = { Icon(Icons.Default.Forum, null, tint = Gold) }, onClick = { showQuickMenu = false; showConversationManager = true; conversationRefresh++ })
-                                DropdownMenuItem(text = { Text("آلبوم تصاویر") }, leadingIcon = { Icon(Icons.Default.Collections, null, tint = Gold) }, onClick = { showQuickMenu = false; showAlbum = true; albumImages = dataStore.images() })
-                                DropdownMenuItem(text = { Text("دفتر مالی") }, leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, null, tint = Gold) }, onClick = { showQuickMenu = false; showFinance = true; ledgerEntries = ledgerStore.entries() })
-                                DropdownMenuItem(text = { Text("حافظه هوشمند") }, leadingIcon = { Icon(Icons.Default.Bookmark, null, tint = Gold) }, onClick = { showQuickMenu = false; showMemory = true; memories = dataStore.memories() })
-                                DropdownMenuItem(text = { Text("کنترل کامپیوتر") }, leadingIcon = { Icon(Icons.Default.Computer, null, tint = Gold) }, onClick = { showQuickMenu = false; showPcControl = true })
-                                DropdownMenuItem(text = { Text("تنظیمات") }, leadingIcon = { Icon(Icons.Default.Settings, null, tint = Gold) }, onClick = { showQuickMenu = false; showSettings = true })
-                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -1081,83 +1093,57 @@ fun NaeemApp(
                 Modifier.fillMaxSize()
                     .background(
                     Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.0f to Color(0xFF090909),
-                            0.48f to Color(0xFF121110),
-                            1.0f to Color(0xFF080808)
-                        )
+                        listOf(Color(0xFF070B14), Color(0xFF0B1424), Color(0xFF10182A), Color(0xFF080D18))
                     )
                 )
                     .drawBehind {
-                        drawRect(
+                        drawCircle(
                             Brush.radialGradient(
-                                colors = listOf(Color(0x33C7A96B), Color(0x18A58C66), Color.Transparent),
-                                center = Offset(size.width * 0.5f, size.height * 1.06f),
+                                listOf(Color(0x334B8DCE), Color(0x183B68A8), Color.Transparent),
+                                center = Offset(size.width * 0.5f, size.height * 0.24f),
                                 radius = size.height * 0.92f
-                            )
+                            ),
+                            radius = size.height * 0.92f,
+                            center = Offset(size.width * 0.5f, size.height * 0.24f)
                         )
                     }
                     .padding(padding)
                     .padding(horizontal = 16.dp)
             ) {
                 if (messages.isEmpty()) {
-                    Spacer(Modifier.height(12.dp))
                     Column(
-                        Modifier.fillMaxWidth().weight(1f),
+                        Modifier.fillMaxSize().weight(1f).padding(horizontal = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("سلام " + userName.ifBlank { "دوست من" }, color = Color(0xFFF1EBDD), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                                Text("امروز چه کاری رو با هم جلو ببریم؟", color = Color(0xFFA9A39A), style = MaterialTheme.typography.bodySmall)
-                                Spacer(Modifier.height(3.dp))
-                                Surface(
-                                    color = Color(0xFF24211B),
-                                    shape = RoundedCornerShape(50.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.24f))
-                                ) {
-                                    Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Box(Modifier.size(6.dp).background(Color(0xFF8FC7A0), CircleShape))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("دستیار آماده است", color = Color(0xFFD6CDBB), style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                            }
-                            ThinkingOrb(diameter = 94.dp, active = false, onClick = { playThinkingOrbSound(context) })
-                        }
-                        Spacer(Modifier.height(17.dp))
-                        HomeSpacesOrbit(onOpen = { index ->
-                            when (index) {
-                                0 -> { showTravel = true }
-                                1 -> { showTrail = true }
-                                2 -> { showSports = true }
-                                3 -> { showMarkets = true }
-                                4 -> { showThinkRoom = true }
-                                5 -> { showNews = true }
-                                6 -> { showFinance = true; ledgerEntries = ledgerStore.entries() }
-                                7 -> { showJournal = true }
-                                8 -> { showMusic = true }
-                                9 -> { showSettings = true }
-                            }
-                        })
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { showHub = true },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.42f)),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold)
-                        ) {
-                            Icon(Icons.Default.GridView, null, tint = Gold)
-                            Spacer(Modifier.width(8.dp))
-                            Text("مرور همه قابلیت‌ها", color = Gold)
-                            Spacer(Modifier.weight(1f))
-                            Icon(Icons.Default.ArrowBack, null, tint = Gold, modifier = Modifier.size(17.dp))
-                        }
+                        Text(
+                            "سلام " + userName.ifBlank { "دوست من" },
+                            color = Color(0xFFEAF1FC),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(7.dp))
+                        Text(
+                            "امروز دوست داری درباره چی صحبت کنیم؟",
+                            color = Color(0xFFAFBED2),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.height(34.dp))
+                        ThinkingOrb(diameter = 204.dp, active = true, onClick = { playThinkingOrbSound(context) })
+                        Spacer(Modifier.height(25.dp))
+                        Text(
+                            "SUPRA AI",
+                            color = Color(0xFFD5E6FF),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 3.sp
+                        )
+                        Spacer(Modifier.height(7.dp))
+                        Text(
+                            "لمس گوی یا نوشتن پیام برای شروع",
+                            color = Color(0xFF879AB5),
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
                 if (error.isNotBlank()) {
@@ -1169,11 +1155,11 @@ fun NaeemApp(
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                         shape = RoundedCornerShape(26.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF191D22))
+                        colors = CardDefaults.cardColors(containerColor = Color(0xCC111D30))
                     ) {
                         Column(
                             Modifier.fillMaxWidth()
-                                .background(Brush.verticalGradient(listOf(Color(0xFF252321), Color(0xFF1A1A1C))))
+                                .background(Brush.verticalGradient(listOf(Color(0xCC1A2B43), Color(0xCC101A2B))))
                                 .padding(horizontal = 18.dp, vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(5.dp)
