@@ -59,10 +59,10 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-private val FG=Color(0xFFD4D9E0)
-private val FB=Color(0xFF111318)
-private val FC=Color(0xFF20232B)
-private val FM=Color(0xFFA8ADB8)
+private val FG=SupraGlass.Silver
+private val FB=SupraGlass.Night
+private val FC=SupraGlass.Glass
+private val FM=SupraGlass.Muted
 
 
 @Composable
@@ -95,9 +95,9 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = 3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("فضاهای اختصاصی", color = Color(0xFFE9E2D5), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("فضاهای اختصاصی", color = SupraGlass.Silver, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.weight(1f))
-            Text("انتخاب سریع", color = Color(0xFF928B80), style = MaterialTheme.typography.labelSmall)
+            Text("انتخاب سریع", color = SupraGlass.Muted, style = MaterialTheme.typography.labelSmall)
         }
 
         listOf(items.take(5), items.drop(5)).forEachIndexed { rowIndex, rowItems ->
@@ -111,8 +111,8 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
                         onClick = { onOpen(index) },
                         modifier = Modifier.width(106.dp).height(77.dp),
                         shape = RoundedCornerShape(17.dp),
-                        color = Color(0xE91A1917),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, item.color.copy(alpha = 0.30f)),
+                        color = SupraGlass.Glass,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, SupraGlass.Edge),
                         shadowElevation = 5.dp
                     ) {
                         Column(
@@ -124,10 +124,10 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
                                 Modifier.size(31.dp).background(item.color.copy(alpha = 0.15f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(item.icon, contentDescription = item.title, tint = item.color, modifier = Modifier.size(18.dp))
+                                Icon(item.icon, contentDescription = item.title, tint = SupraGlass.Ice, modifier = Modifier.size(18.dp))
                             }
-                            Text(item.title, color = Color(0xFFF1EEE8), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium, maxLines = 1)
-                            Text(item.subtitle, color = Color(0xFF9F9A91), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            Text(item.title, color = SupraGlass.Silver, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                            Text(item.subtitle, color = SupraGlass.Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
                         }
                     }
                 }
