@@ -64,10 +64,11 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
     }
     LaunchedEffect(baseUrl, localKey) { refreshModels() }
 
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             imageUri = uri
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            imageData = null
+            error = ""
             scope.launch {
                 runCatching { NetArzApiClient.imageAsBase64(context, uri) }
                     .onSuccess { imageData = it; error = "" }
