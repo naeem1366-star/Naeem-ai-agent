@@ -130,7 +130,7 @@ private fun ModuleScreenBackdrop(
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    listOf(Color(0x99090B0E), Color(0x66101825), Color(0xAA101B2A))
+                    listOf(Color(0x99080808), Color(0x66141414), Color(0xAA090909))
                 )
             )
         )
@@ -193,7 +193,22 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                MaterialTheme(typography = naeemTypography()) {
+                MaterialTheme(
+                    colorScheme = darkColorScheme(
+                        primary = Color(0xFFD7C6A1),
+                        onPrimary = Color(0xFF171512),
+                        secondary = Color(0xFFB9A7D8),
+                        onSecondary = Color(0xFF17131D),
+                        background = Color(0xFF090909),
+                        onBackground = Color(0xFFF1EEE8),
+                        surface = Color(0xFF151515),
+                        onSurface = Color(0xFFF1EEE8),
+                        surfaceVariant = Color(0xFF222222),
+                        onSurfaceVariant = Color(0xFFB9B4AA),
+                        outline = Color(0xFF514B40)
+                    ),
+                    typography = naeemTypography()
+                ) {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
@@ -397,7 +412,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
 }
 
 private val Ink = Color(0xFF080A0D)
-private val Panel = Color(0xFF191D22)
+private val Panel = Color(0xFF171615)
 private val Gold = Color(0xFFD4D9E0)
 private val Muted = Color(0xFF929BA6)
 
@@ -1061,16 +1076,16 @@ fun NaeemApp(
                     .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color(0xFF101827),
-                            0.48f to Color(0xFF101C30),
-                            1.0f to Color(0xFF111D32)
+                            0.0f to Color(0xFF090909),
+                            0.48f to Color(0xFF111111),
+                            1.0f to Color(0xFF080808)
                         )
                     )
                 )
                     .drawBehind {
                         drawRect(
                             Brush.radialGradient(
-                                colors = listOf(Color(0x554D86C8), Color(0x223B679F), Color.Transparent),
+                                colors = listOf(Color(0x33C7A96B), Color(0x18A58C66), Color.Transparent),
                                 center = Offset(size.width * 0.5f, size.height * 1.06f),
                                 radius = size.height * 0.92f
                             )
@@ -1086,7 +1101,7 @@ fun NaeemApp(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) { Text("Supra AI", color = Gold.copy(alpha = 0.92f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = Muted, style = MaterialTheme.typography.labelSmall) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) { Text("Supra AI", color = Color(0xFFE9DFC9), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = Color(0xFF8D877D), style = MaterialTheme.typography.labelSmall) }
                         Spacer(Modifier.height(8.dp))
                         ThinkingOrb(diameter = 142.dp, active = false, onClick = { playThinkingOrbSound(context) })
                         Spacer(Modifier.height(2.dp))
@@ -1132,7 +1147,7 @@ fun NaeemApp(
                     ) {
                         Column(
                             Modifier.fillMaxWidth()
-                                .background(Brush.verticalGradient(listOf(Color(0xFF30363E), Color(0xFF1A1A1C))))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF252321), Color(0xFF1A1A1C))))
                                 .padding(horizontal = 18.dp, vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(5.dp)
