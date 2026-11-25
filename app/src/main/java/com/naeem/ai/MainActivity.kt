@@ -100,35 +100,7 @@ import java.io.File
 
 @Composable
 private fun GeminiStyleBackdrop(content: @Composable () -> Unit) {
-    Box(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(
-                listOf(Color(0xFF070B14), Color(0xFF0B1424), Color(0xFF10182A), Color(0xFF080D18))
-            )
-        )
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(Color(0x554B8DCE), Color(0x223B68A8), Color.Transparent),
-                    center = Offset(size.width * 0.50f, size.height * 0.25f),
-                    radius = size.maxDimension * 0.78f
-                ),
-                radius = size.maxDimension * 0.78f,
-                center = Offset(size.width * 0.50f, size.height * 0.25f)
-            )
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(Color(0x333D65B5), Color(0x183D4B8E), Color.Transparent),
-                    center = Offset(size.width * 0.92f, size.height * 0.76f),
-                    radius = size.maxDimension * 0.62f
-                ),
-                radius = size.maxDimension * 0.62f,
-                center = Offset(size.width * 0.92f, size.height * 0.76f)
-            )
-        }
-        content()
-    }
+    SupraGlassBackdrop { content() }
 }
 
 @Composable
@@ -136,32 +108,8 @@ private fun ModuleScreenBackdrop(
     module: String,
     content: @Composable () -> Unit
 ) {
-    val accent = when (module) {
-        "health" -> Color(0xFF9AD6B0)
-        "sports" -> Color(0xFF91BFE8)
-        "finance", "markets" -> Color(0xFFD8BD83)
-        "travel", "trail" -> Color(0xFFA8C99A)
-        "music" -> Color(0xFFC2A8E8)
-        "discover", "gallery" -> Color(0xFFD9A6B8)
-        "games" -> Color(0xFFE0A68E)
-        "wrapped" -> Color(0xFFB9C5D8)
-        "social" -> Color(0xFFE0A0B8)
-        else -> Color(0xFF9BAFC4)
-    }
-    GeminiStyleBackdrop {
-        Box(Modifier.fillMaxSize()) {
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.radialGradient(
-                        listOf(accent.copy(alpha = 0.055f), Color.Transparent),
-                        center = Offset(0.82f, 0.18f),
-                        radius = 980f
-                    )
-                )
-            )
-            content()
-        }
-    }
+    // Module identity is expressed through content, while every space shares the same glass universe.
+    SupraGlassBackdrop { content() }
 }
 
 private val NaeemPersianFont = FontFamily(
@@ -229,17 +177,19 @@ class MainActivity : FragmentActivity() {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 MaterialTheme(
                     colorScheme = darkColorScheme(
-                        primary = Color(0xFFD7C6A1),
-                        onPrimary = Color(0xFF171512),
-                        secondary = Color(0xFFB9A7D8),
-                        onSecondary = Color(0xFF17131D),
-                        background = Color(0xFF090909),
-                        onBackground = Color(0xFFF1EEE8),
-                        surface = Color(0xFF151515),
-                        onSurface = Color(0xFFF1EEE8),
-                        surfaceVariant = Color(0xFF222222),
-                        onSurfaceVariant = Color(0xFFB9B4AA),
-                        outline = Color(0xFF514B40)
+                        primary = SupraGlass.Ice,
+                        onPrimary = Color(0xFF071426),
+                        secondary = Color(0xFF8CC4FF),
+                        onSecondary = Color(0xFF061426),
+                        tertiary = Color(0xFFB8D8F8),
+                        background = SupraGlass.Night,
+                        onBackground = SupraGlass.Silver,
+                        surface = Color(0xFF10243B),
+                        onSurface = SupraGlass.Silver,
+                        surfaceVariant = Color(0xFF172D47),
+                        onSurfaceVariant = SupraGlass.Muted,
+                        outline = Color(0x667DAFE4),
+                        surfaceTint = SupraGlass.Ice
                     ),
                     typography = naeemTypography()
                 ) {
@@ -252,7 +202,7 @@ class MainActivity : FragmentActivity() {
                         )
                     } else if (!authReady.value) {
                         Box(Modifier.fillMaxSize().background(Color(0xFF090B12)), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color(0xFFD7C6A1))
+                            CircularProgressIndicator(color = SupraGlass.Ice)
                         }
                     } else if (authSession.value == null) {
                         SupabaseAuthScreen(auth) { session -> authSession.value = session }
