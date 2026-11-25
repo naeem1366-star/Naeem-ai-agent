@@ -9,7 +9,9 @@ database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
 [vars]
-GHASEDAK_TEMPLATE_NAME = "naeem_login"
+SUPABASE_URL = "https://ifloyzpvgjgmneqgcggu.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Vq7tVwB8R8azcEKsIOmc-Q_aqO-fzSh"
+ADMIN_EMAILS = ""
 ALLOWED_ORIGINS = ""
 
 [assets]
