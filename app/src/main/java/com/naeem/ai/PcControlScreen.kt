@@ -1,5 +1,8 @@
 package com.naeem.ai
 
+import android.app.DownloadManager
+import android.net.Uri
+import android.os.Environment
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
@@ -39,6 +43,7 @@ fun PcControlScreen(onClose: () -> Unit) {
     var screen by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var textToType by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val client = remember {
         PcBridgeClient(
             onStatus = {
@@ -71,6 +76,40 @@ fun PcControlScreen(onClose: () -> Unit) {
                 Text("اتصال مستقیم و رمزگذاری‌شده در شبکه محلی", color = muted, style = MaterialTheme.typography.labelSmall)
             }
             TextButton(onClick = onClose) { Text("بستن", color = accent) }
+        }
+
+        Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("برنامه ویندوز", color = accent, style = MaterialTheme.typography.titleMedium)
+                Text("این فایل را از همین‌جا دریافت کن، به کامپیوتر ویندوزی منتقل و نصب کن؛ سپس برنامه دسکتاپ را باز نگه دار.", color = muted, style = MaterialTheme.typography.bodySmall)
+                Button(
+                    onClick = {
+                        try {
+                            val request = DownloadManager.Request(
+                                Uri.parse("https://github.com/naeem1366-star/Naeem-ai-agent/releases/download/desktop-bridge-alpha1/NaeemAI-DesktopBridge-Setup-alpha1.exe")
+                            )
+                                .setTitle("نصب‌کننده ویندوز Naeem AI")
+                                .setDescription("در حال دریافت برنامه اتصال کامپیوتر")
+                                .setMimeType("application/vnd.microsoft.portable-executable")
+                                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                .setAllowedOverMetered(true)
+                                .setDestinationInExternalPublicDir(
+                                    Environment.DIRECTORY_DOWNLOADS,
+                                    "NaeemAI-DesktopBridge-Setup-alpha1.exe"
+                                )
+                            val manager = context.getSystemService(DownloadManager::class.java)
+                                ?: throw IllegalStateException("مدیریت دانلود در این گوشی در دسترس نیست.")
+                            manager.enqueue(request)
+                            status = "دانلود نصب‌کننده شروع شد؛ فایل در پوشه Downloads گوشی قرار می‌گیرد."
+                        } catch (e: Exception) {
+                            status = e.message ?: "شروع دانلود ناموفق بود."
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("دانلود نصب‌کننده ویندوز")
+                }
+            }
         }
 
         Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
