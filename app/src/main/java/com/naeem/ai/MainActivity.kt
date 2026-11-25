@@ -290,15 +290,73 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
     val muted = Color(0xFFB9C5D5)
     Box(Modifier.fillMaxSize().background(Color.Transparent)) {
         if (page == -1) {
-            Image(painter = painterResource(R.drawable.ima_splash), contentDescription = "نشان ایما",
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Surface(onClick = { page = 0 },
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-                    .padding(horizontal = 34.dp, vertical = 28.dp).fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(18.dp), color = Color(0x553A5676), contentColor = silver,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x66B9D8FF)),
-                tonalElevation = 0.dp, shadowElevation = 0.dp) {
-                Box(contentAlignment = Alignment.Center) { Text("شروع", color = silver, fontWeight = FontWeight.SemiBold) }
+            Box(Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF0B1425), Color(0xFF050B18), Color(0xFF101B31), Color(0xFF07101F))
+                )
+            )) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    val upper = Path().apply {
+                        moveTo(0f, 0f); lineTo(w * 0.58f, 0f)
+                        cubicTo(w * 0.52f, h * 0.18f, w * 0.48f, h * 0.22f, 0f, h * 0.36f)
+                        close()
+                    }
+                    drawPath(upper, Brush.linearGradient(listOf(Color(0x443D5B86), Color(0x00101B31))))
+                    val lower = Path().apply {
+                        moveTo(w, h * 0.70f); cubicTo(w * 0.72f, h * 0.78f, w * 0.48f, h * 0.86f, w * 0.34f, h)
+                        lineTo(w, h); close()
+                    }
+                    drawPath(lower, Brush.linearGradient(listOf(Color(0x553D5B86), Color(0x00101B31))))
+                    val arc1 = Path().apply {
+                        moveTo(0f, h * 0.36f); cubicTo(w * 0.40f, h * 0.20f, w * 0.52f, h * 0.19f, w * 0.58f, 0f)
+                    }
+                    drawPath(arc1, Color(0x667F9CC4), style = Stroke(width = 1.2.dp.toPx()))
+                    val arc2 = Path().apply {
+                        moveTo(w * 0.34f, h); cubicTo(w * 0.48f, h * 0.86f, w * 0.72f, h * 0.78f, w, h * 0.70f)
+                    }
+                    drawPath(arc2, Color(0x6686A4CF), style = Stroke(width = 1.2.dp.toPx()))
+                }
+                Column(
+                    Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 24.dp)
+                        .offset(y = (-8).dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_brain_mark),
+                        contentDescription = "نشان ایما",
+                        modifier = Modifier.fillMaxWidth(0.82f).height(190.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(Modifier.height(30.dp))
+                    Text(
+                        androidx.compose.ui.text.buildAnnotatedString {
+                            append("تو زندگی کن؛ ")
+                            pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFF9CA8FF)))
+                            append("ایما")
+                            pop()
+                            append(" حواسش هست.")
+                        },
+                        color = Color(0xFFE2E6EF),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
+                }
+                Surface(
+                    onClick = { page = 0 },
+                    modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                        .padding(horizontal = 34.dp, vertical = 28.dp).fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(18.dp), color = Color(0x553A5676), contentColor = silver,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x668DAED8)),
+                    tonalElevation = 0.dp, shadowElevation = 0.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("شروع", color = silver, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         } else {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
