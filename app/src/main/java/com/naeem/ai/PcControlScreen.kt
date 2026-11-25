@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Environment
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -236,13 +237,13 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
 ساختار دقیق:
 {"summary":"خلاصه فارسی کار","actions":[{"type":"launch_app","app":"blender"},{"type":"wait","ms":8000},{"type":"key","key":"SHIFT+F4"},{"type":"type_text","text":"..."},{"type":"key","key":"ENTER"}]}
 فقط این actionها مجازند:
-- launch_app با app یکی از blender, freecad, krita, gimp, inkscape
+- launch_app با app یکی از blender, freecad, krita, gimp, inkscape, 3dsmax, photoshop
 - wait با ms بین 200 و 15000
 - key با میانبر صفحه‌کلید مانند CTRL+S یا SHIFT+F5 یا ENTER
 - type_text با متن حداکثر 2000 نویسه
 - mouse_move با x و y بین 0 و 1
 - mouse_click
-حداکثر 15 action تولید کن. برای برنامه‌های طراحی، اگر لازم است از فرمان‌های داخلی و میانبرهای شناخته‌شده همان برنامه استفاده کن. از دستورهای سیستم‌عامل، PowerShell، cmd، حذف فایل، نصب برنامه، خاموش‌کردن، تغییر رجیستری یا دسترسی به اطلاعات خصوصی استفاده نکن. اگر تصویر صفحه نشان می‌دهد برنامه آماده نیست، ابتدا وضعیت را بررسی کن و مراحل لازم را پیشنهاد بده. اگر برای انجام کار اطلاعات کافی نداری، summary را با سؤال روشن‌کننده شروع کن و actions را خالی بگذار.
+حداکثر 15 action تولید کن. برای Blender می‌توانی با SHIFT+F4 به Python Console بروی، فرمان bpy را اجرا کنی و با SHIFT+F5 به نمای سه‌بعدی برگردی. در 3ds Max می‌توانی با F11 پنجره MAXScript Listener را باز کنی و فرمان‌های MaxScript را وارد کنی. برای Photoshop فقط از ابزارها و میانبرهای معمول رابط کاربری استفاده کن. برای FreeCAD از رابط و فرمان‌های شناخته‌شده آن استفاده کن. از دستورهای سیستم‌عامل، PowerShell، cmd، حذف فایل، نصب برنامه، خاموش‌کردن، تغییر رجیستری یا دسترسی به اطلاعات خصوصی استفاده نکن. اگر تصویر صفحه نشان می‌دهد برنامه آماده نیست، ابتدا وضعیت را بررسی کن و مراحل لازم را پیشنهاد بده. اگر برای انجام کار اطلاعات کافی نداری، summary را با سؤال روشن‌کننده شروع کن و actions را خالی بگذار.
 درخواست کاربر: ${taskPrompt.trim()}
 """.trimIndent()
                                 val answer = aiClient.send(
@@ -263,7 +264,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                                         when (item.optString("type")) {
                                             "launch_app" -> {
                                                 val app = item.optString("app").lowercase()
-                                                require(app in setOf("blender", "freecad", "krita", "gimp", "inkscape")) { "برنامه پیشنهادی مجاز نیست." }
+                                                require(app in setOf("blender", "freecad", "krita", "gimp", "inkscape", "3dsmax", "photoshop")) { "برنامه پیشنهادی مجاز نیست." }
                                                 add(PcPlannedAction(type = "launch_app", app = app))
                                             }
                                             "wait" -> {
@@ -408,9 +409,18 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                     Text("ارسال متن به کامپیوتر")
                 }
                 Text("باز کردن نرم‌افزار", color = accent, style = MaterialTheme.typography.titleSmall)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    listOf("blender" to "Blender", "freecad" to "FreeCAD", "krita" to "Krita").forEach { (app, label) ->
-                        OutlinedButton(onClick = { client.launchApp(app) }, enabled = connected, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 3.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        "blender" to "Blender",
+                        "freecad" to "FreeCAD",
+                        "3dsmax" to "3ds Max",
+                        "photoshop" to "Photoshop",
+                        "krita" to "Krita"
+                    ).forEach { (app, label) ->
+                        OutlinedButton(onClick = { client.launchApp(app) }, enabled = connected, contentPadding = PaddingValues(horizontal = 9.dp)) {
                             Text(label, color = accent, style = MaterialTheme.typography.labelSmall)
                         }
                     }
