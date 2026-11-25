@@ -64,7 +64,7 @@ private val FM=Color(0xFFA8ADB8)
 
 
 @Composable
-fun HomeSpacesOrbit(onOpen: () -> Unit) {
+fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
     val items = listOf(
         Icons.Default.Luggage to "سفر", Icons.Default.Terrain to "طبیعت",
         Icons.Default.FitnessCenter to "ورزش", Icons.Default.TrendingUp to "بازار",
@@ -107,7 +107,7 @@ fun HomeSpacesOrbit(onOpen: () -> Unit) {
                         val sc = .68f + depth*.34f + if (isSelected) .16f else 0f
                         scaleX=sc; scaleY=sc; alpha=.45f + depth*.55f
                         cameraDistance=24f*density
-                    }.clickable { if (selected == i) onOpen() else { selected=i; rotation = -i * (2f * PI.toFloat() / items.size) } },
+                    }.clickable { if (selected == i) onOpen(i) else { selected=i; rotation = -i * (2f * PI.toFloat() / items.size) } },
                 shape = CircleShape,
                 color = Color(0xFF18263A),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9DBCE5).copy(alpha=.35f+depth*.5f)),
