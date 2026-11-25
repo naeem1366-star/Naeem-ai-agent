@@ -195,10 +195,10 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
                                         item.color.copy(alpha = .98f),
                                         Color(0xFF26364B),
                                         Color(0xFF101722)
-                                    )
-                                ),
-                                center = androidx.compose.ui.geometry.Offset(.34f, .25f),
-                                radius = diameter * 1.35f
+                                    ),
+                                    center = androidx.compose.ui.geometry.Offset(.34f, .25f),
+                                    radius = diameter * 1.35f
+                                )
                             ),
                             contentAlignment = Alignment.Center
                         ) {
