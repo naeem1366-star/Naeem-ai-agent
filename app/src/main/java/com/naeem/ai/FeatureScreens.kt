@@ -191,7 +191,7 @@ fun FeatureHub(
             LaunchedEffect(query) { orbitRotation = 0f }
             BoxWithConstraints(
                 Modifier.fillMaxWidth().weight(1f)
-                    .pointerInput(filtered.size, maxWidth) {
+                    .pointerInput(filtered.size) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
                             val circumferenceUnit = size.width.coerceAtLeast(1).toFloat()
