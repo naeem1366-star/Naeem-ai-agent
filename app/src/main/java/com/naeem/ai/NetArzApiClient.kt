@@ -112,7 +112,7 @@ class NetArzApiClient(
                     seconds = strings("seconds").mapNotNull { it.toIntOrNull() },
                     sizes = strings("sizes"),
                     imageInput = caps.optBoolean("image_input", false),
-                    videoInput = caps.optBoolean("video_input", false),
+                    videoInput = caps.optBoolean("video_input", id.contains("higgsfield", ignoreCase = true) || item.optString("name").contains("higgsfield", ignoreCase = true)),
                     audio = caps.optBoolean("audio", false)
                 )
             }
