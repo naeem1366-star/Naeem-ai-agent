@@ -184,7 +184,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
     }
     DisposableEffect(Unit){onDispose{mixJob?.cancel();runCatching{activePlayer?.release()}}}
 
-    Column(Modifier.fillMaxSize().background(Color(0xFF111318)).navigationBarsPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(Modifier.fillMaxSize().background(Color.Transparent).navigationBarsPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text("SUPRA MUSIC STUDIO",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
@@ -194,7 +194,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
             IconButton(onClick={stopMix();onClose()}){Icon(Icons.Default.Close,null,tint=Color.White)}
         }
         Card(
-            colors=CardDefaults.cardColors(containerColor=Color(0xFF1A2029)),
+            colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),
             shape=RoundedCornerShape(16.dp)
         ) {
             Column(Modifier.fillMaxWidth().padding(11.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
@@ -263,7 +263,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
                 Text("برای اضافه‌کردن به صف دی‌جی، علامت + را بزن.",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.bodySmall)
                 LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
                     items(results){track->
-                        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630))){
+                        Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass)){
                             Row(Modifier.fillMaxWidth().padding(9.dp),verticalAlignment=Alignment.CenterVertically){
                                 Column(Modifier.weight(1f)){
                                     Text(track.title,color=Color.White,fontWeight=FontWeight.SemiBold)
@@ -290,7 +290,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
                 }
                 LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
                     items(selected){track->
-                        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630))){
+                        Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass)){
                             Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
                                 Column(Modifier.weight(1f)){Text(track.title,color=Color.White,fontWeight=FontWeight.SemiBold);Text(track.artist+" • "+track.source,color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}
                                 IconButton(onClick={selected.remove(track)}){Icon(Icons.Default.RemoveCircleOutline,"حذف",tint=Color(0xFFFF9A91))}
@@ -303,7 +303,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
                 if(albums.isEmpty())Text("هنوز آلبومی نساختی. آهنگ‌ها را انتخاب و از میز دی‌جی ذخیره کن.",color=Color(0xFFA8ADB8))
                 LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)){
                     items(albums){album->
-                        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630))){
+                        Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass)){
                             Column(Modifier.fillMaxWidth().padding(12.dp)){
                                 Row(verticalAlignment=Alignment.CenterVertically){
                                     Column(Modifier.weight(1f)){Text(album.name,color=Color.White,fontWeight=FontWeight.Bold);Text("${album.tracks.size} آهنگ",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)}
@@ -400,7 +400,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
     }
 
     Column(modifier.verticalScroll(rememberScrollState()).padding(bottom=28.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630)),shape=RoundedCornerShape(16.dp)){
+        Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(16.dp)){
             Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Row(verticalAlignment=Alignment.CenterVertically){
                     Icon(Icons.Default.AutoAwesome,null,tint=Color(0xFFD9C18B))
@@ -540,7 +540,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
         if(generating)LinearProgressIndicator(Modifier.fillMaxWidth())
         if(status.isNotBlank())Text(status,color=if(status.contains("ناموفق")||status.contains("خارج"))Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.bodySmall)
         generated?.let{result->
-            Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF202630)),shape=RoundedCornerShape(16.dp)){
+            Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(16.dp)){
                 Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                     Text("خروجی آماده است",color=Color.White,fontWeight=FontWeight.Bold)
                     Text("مدل: ${result.model} • حجم: ${result.bytes.size/1024} KB"+(result.seconds?.let{" • مدت: ${it.toInt()} ثانیه"}.orEmpty()),color=Color(0xFFBFC7D2),style=MaterialTheme.typography.bodySmall)
