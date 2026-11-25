@@ -1,6 +1,5 @@
 package com.naeem.ai
 
-import android.graphics.BitmapFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,6 +32,9 @@ class PcBridgeClient(
     @Volatile private var socket: WebSocket? = null
     @Volatile private var http: OkHttpClient? = null
     @Volatile private var connected = false
+    @Volatile private var pairedToken: String? = null
+    @Volatile private var pairedHost: String? = null
+    @Volatile private var pairedFingerprint: String? = null
 
     suspend fun discover(): List<PcBridgeDevice> = withContext(Dispatchers.IO) {
         val found = linkedMapOf<String, PcBridgeDevice>()
@@ -68,10 +70,15 @@ class PcBridgeClient(
     }
 
     suspend fun connect(ip: String, port: Int, pin: String, fingerprint: String) = withContext(Dispatchers.IO) {
-        disconnect()
+        closeSocket()
+        Thread.sleep(250)
         val normalizedFingerprint = fingerprint.filter { it.isLetterOrDigit() }.uppercase()
         require(normalizedFingerprint.length == 64) { "اثر انگشت امنیتی معتبر نیست؛ آن را دقیقاً از پنجره کامپیوتر وارد کن." }
-        val trustManager = object : X509TrustManager {
+        val samePairedComputer = pairedToken != null && pairedHost == ip && pairedFingerprint == normalizedFingerprint
+        if (!samePairedComputer) {
+            http?.dispatcher?.executorService?.shutdown()
+            http?.connectionPool?.evictAll()
+            val trustManager = object : X509TrustManager {
             override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
             override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
@@ -84,30 +91,39 @@ class PcBridgeClient(
                 }
             }
         }
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
-        }
-        val client = OkHttpClient.Builder()
-            .sslSocketFactory(sslContext.socketFactory, trustManager)
-            .hostnameVerifier(HostnameVerifier { _, _ -> true })
-            .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
-            .build()
-        http = client
-        val pairJson = JSONObject().put("pin", pin).toString()
-        val request = Request.Builder()
-            .url("https://$ip:$port/pair")
-            .post(pairJson.toRequestBody("application/json; charset=utf-8".toMediaType()))
-            .build()
-        val token = client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                val message = runCatching { JSONObject(body).optString("error") }.getOrDefault("")
-                throw IllegalStateException(message.ifBlank { "جفت‌سازی ناموفق بود (" + response.code + ")." })
+        val token: String
+        if (samePairedComputer) {
+            token = pairedToken!!
+        } else {
+            val sslContext = SSLContext.getInstance("TLS").apply {
+                init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
             }
-            JSONObject(body).getString("token")
+            val client = OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.socketFactory, trustManager)
+                .hostnameVerifier(HostnameVerifier { _, _ -> true })
+                .connectTimeout(8, TimeUnit.SECONDS)
+                .readTimeout(0, TimeUnit.MILLISECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .build()
+            http = client
+            val pairJson = JSONObject().put("pin", pin).toString()
+            val request = Request.Builder()
+                .url("https://$ip:$port/pair")
+                .post(pairJson.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                .build()
+            token = client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    val message = runCatching { JSONObject(body).optString("error") }.getOrDefault("")
+                    throw IllegalStateException(message.ifBlank { "جفت‌سازی ناموفق بود (" + response.code + ")." })
+                }
+                JSONObject(body).getString("token")
+            }
+            pairedToken = token
+            pairedHost = ip
+            pairedFingerprint = normalizedFingerprint
         }
+        val client = http ?: throw IllegalStateException("سرویس اتصال آماده نیست.")
         val wsRequest = Request.Builder().url("wss://$ip:$port/ws?token=$token").build()
         val opened = java.util.concurrent.CountDownLatch(1)
         val failure = java.util.concurrent.atomic.AtomicReference<String?>(null)
@@ -147,12 +163,21 @@ class PcBridgeClient(
         if (connected) socket?.send(json.toString()) else onStatus("ابتدا به کامپیوتر وصل شو.")
     }
 
-    fun disconnect() {
+    private fun closeSocket() {
         connected = false
         socket?.close(1000, "User disconnected")
         socket = null
+    }
+
+    fun disconnect() = closeSocket()
+
+    fun dispose() {
+        closeSocket()
         http?.dispatcher?.executorService?.shutdown()
         http?.connectionPool?.evictAll()
         http = null
+        pairedToken = null
+        pairedHost = null
+        pairedFingerprint = null
     }
 }
