@@ -70,7 +70,8 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
     var quality by remember { mutableStateOf("720p") }
     var attempts by remember { mutableStateOf(readVideoAttempts(context)) }
 
-    val recentAttempts = attempts.filter { it > System.currentTimeMillis() - VIDEO_WEEK_MS }\n    val remainingAttempts = (VIDEO_WEEKLY_LIMIT - recentAttempts.size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
+    val recentAttempts = attempts.filter { it > System.currentTimeMillis() - VIDEO_WEEK_MS }
+    val remainingAttempts = (VIDEO_WEEKLY_LIMIT - recentAttempts.size).coerceIn(0, VIDEO_WEEKLY_LIMIT)
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
