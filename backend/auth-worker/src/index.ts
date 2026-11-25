@@ -201,6 +201,7 @@ async function adminProvisionUser(request: Request, env: Env, userId: string): P
   if (!env.GISOO_MANAGEMENT_KEY || !env.KEY_ENCRYPTION_SECRET) return json({ error: "GISOO_NOT_CONFIGURED" }, 503);
   const user = await env.DB.prepare("SELECT id, email FROM users WHERE id = ?").bind(userId).first<any>();
   if (!user) return json({ error: "USER_NOT_FOUND" }, 404);
+  if (typeof user.email !== "string" || !user.email.includes("@")) return json({ error: "LEGACY_PHONE_ACCOUNT" }, 409);
   try {
     await provisionProviderKey(env, user.id, user.email);
     const row = await env.DB.prepare("SELECT project_id, key_id, key_masked, status FROM provider_accounts WHERE user_id = ?").bind(userId).first<any>();
