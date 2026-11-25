@@ -1077,7 +1077,7 @@ fun NaeemApp(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color(0xFF090909),
-                            0.48f to Color(0xFF111111),
+                            0.48f to Color(0xFF121110),
                             1.0f to Color(0xFF080808)
                         )
                     )
