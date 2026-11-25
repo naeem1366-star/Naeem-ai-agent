@@ -302,7 +302,7 @@ public sealed class BridgeForm : Form
         var bounds = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1, 1);
         var input = new INPUT { type = INPUT_MOUSE, U = new InputUnion { mi = new MOUSEINPUT {
             dx = (int)(Math.Clamp(x, 0, 1) * 65535), dy = (int)(Math.Clamp(y, 0, 1) * 65535),
-            dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
         } } };
         SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
     }
