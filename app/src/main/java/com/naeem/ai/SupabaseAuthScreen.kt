@@ -63,7 +63,7 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
                             finally { busy = false }
                         }
                     }
-                    password.length < 8 -> { message = "رمز عبور باید حداقل ۸ نویسه داشته باشد."; isError = true }
+                    isSignup && password.length < 8 -> { message = "رمز عبور باید حداقل ۸ نویسه داشته باشد."; isError = true }
                     isSignup && password != confirmPassword -> { message = "تکرار رمز عبور با رمز اصلی یکسان نیست."; isError = true }
                     else -> {
                         busy = true
