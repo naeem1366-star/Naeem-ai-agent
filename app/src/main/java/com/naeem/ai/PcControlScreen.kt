@@ -3,7 +3,6 @@ package com.naeem.ai
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -42,14 +41,17 @@ fun PcControlScreen(onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val client = remember {
         PcBridgeClient(
-            onStatus = { status = it },
+            onStatus = {
+                status = it
+                if (it.startsWith("ارتباط قطع شد") || it.startsWith("اتصال بسته شد")) connected = false
+            },
             onScreen = { bytes ->
                 val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 if (decoded != null) screen = decoded.asImageBitmap()
             }
         )
     }
-    DisposableEffect(client) { onDispose { client.disconnect() } }
+    DisposableEffect(client) { onDispose { client.dispose() } }
 
     val background = Color(0xFF101827)
     val panel = Color(0xFF202A3A)
