@@ -273,21 +273,17 @@ public sealed class BridgeForm : Form
             var scale = Math.Min(1.0, 1280.0 / bounds.Width);
             var width = Math.Max(1, (int)(bounds.Width * scale));
             var height = Math.Max(1, (int)(bounds.Height * scale));
-            using var bitmap = new Bitmap(width, height);
-            using (var graphics = Graphics.FromImage(bitmap))
+            using var source = new Bitmap(bounds.Width, bounds.Height);
+            using (var graphics = Graphics.FromImage(source))
+                graphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+            using var output = new MemoryStream();
+            if (width != bounds.Width || height != bounds.Height)
             {
-                graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size);
-                if (width != bounds.Width || height != bounds.Height)
-                {
-                    using var resized = new Bitmap(bitmap, new Size(width, height));
-                    using var output = new MemoryStream();
-                    resized.Save(output, ImageFormat.Jpeg);
-                    return output.ToArray();
-                }
+                using var resized = new Bitmap(source, new Size(width, height));
+                resized.Save(output, ImageFormat.Jpeg);
             }
-            using var stream = new MemoryStream();
-            bitmap.Save(stream, ImageFormat.Jpeg);
-            return stream.ToArray();
+            else source.Save(output, ImageFormat.Jpeg);
+            return output.ToArray();
         }
         catch { return Array.Empty<byte>(); }
     }
