@@ -33,10 +33,10 @@ fun DailyJournalDashboard(onClose: () -> Unit) {
         (selectedCategory == "همه" || it.category == selectedCategory) &&
             (query.isBlank() || it.title.contains(query, true) || it.detail.contains(query, true) || it.category.contains(query, true))
     }
-    val background = Color(0xFF0A0C10)
-    val panel = Color(0xFF1B2028)
-    val accent = Color(0xFFD7E0ED)
-    val muted = Color(0xFF9AA3AE)
+    val background = Color.Transparent
+    val panel = SupraGlass.Glass
+    val accent = SupraGlass.Ice
+    val muted = SupraGlass.Muted
 
     Column(Modifier.fillMaxSize().background(background).padding(horizontal = 17.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
