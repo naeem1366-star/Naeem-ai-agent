@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -38,3 +38,14 @@ jobs:
           name: NaeemAI_v2.0-alpha11
           path: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
           if-no-files-found: error
+      - name: Publish Android APK download
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pc-bridge-mvp'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-bridge-alpha1
+          name: Naeem AI Desktop Bridge alpha1
+          prerelease: true
+          overwrite_files: true
+          files: app/build/outputs/apk/debug/NaeemAI_v2.0-alpha11.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
