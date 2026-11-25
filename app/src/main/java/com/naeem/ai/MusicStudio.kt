@@ -193,9 +193,48 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
             }
             IconButton(onClick={stopMix();onClose()}){Icon(Icons.Default.Close,null,tint=Color.White)}
         }
-        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically){
-            listOf("کشف آهنگ","میز دی‌جی","آلبوم‌ها","ساخت موسیقی").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)})}
-            IconButton(onClick={settings=true}){Icon(Icons.Default.Tune,"تنظیم منابع",tint=Color(0xFFD4D9E0))}
+        Card(
+            colors=CardDefaults.cardColors(containerColor=Color(0xFF1A2029)),
+            shape=RoundedCornerShape(16.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(11.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("ابزارهای موسیقی",color=Color.White,fontWeight=FontWeight.Bold)
+                        Text("یک بخش را برای ادامه انتخاب کن",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall)
+                    }
+                    IconButton(onClick={settings=true}){Icon(Icons.Default.Tune,"تنظیم منابع",tint=Color(0xFFD4D9E0))}
+                }
+                val tools = listOf(
+                    Triple("کشف آهنگ",Icons.Default.Search,"جست‌وجو و شنیدن قطعه‌ها"),
+                    Triple("میز دی‌جی",Icons.Default.GraphicEq,"چیدن و میکس آهنگ‌ها"),
+                    Triple("آلبوم‌ها",Icons.Default.Album,"مجموعه‌های ذخیره‌شده"),
+                    Triple("ساخت موسیقی",Icons.Default.AutoAwesome,"ساخت قطعه با هوش مصنوعی")
+                )
+                tools.chunked(2).forEach { rowTools ->
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        rowTools.forEach { item ->
+                            val active = tab == item.first
+                            Surface(
+                                onClick={tab=item.first},
+                                modifier=Modifier.weight(1f),
+                                color=if(active) Color(0xFF343B47) else Color(0xFF222A35),
+                                shape=RoundedCornerShape(12.dp),
+                                border=androidx.compose.foundation.BorderStroke(1.dp,if(active) Color(0xFFD4D9E0) else Color(0xFF343D49))
+                            ) {
+                                Row(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
+                                    Icon(item.second,null,tint=if(active) Color(0xFFE7D5A8) else Color(0xFFBFC7D2))
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(item.first,color=Color.White,fontWeight=FontWeight.SemiBold,style=MaterialTheme.typography.bodyMedium)
+                                        Text(item.third,color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall,maxLines=1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         if(mixing) Surface(color=Color(0xFF252B35),shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth()){
             Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically){
