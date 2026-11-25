@@ -33,10 +33,10 @@ import java.io.File
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val TrailBg = Color(0xFF090B0E)
-private val TrailPanel = Color(0xFF191D23)
-private val TrailSilver = Color(0xFFD5D9DE)
-private val TrailMuted = Color(0xFF929BA6)
+private val TrailBg = Color.Transparent
+private val TrailPanel = SupraGlass.Glass
+private val TrailSilver = SupraGlass.Ice
+private val TrailMuted = SupraGlass.Muted
 private data class TrailPoint(val lat: Double, val lon: Double, val altitude: Double, val time: Long)
 private data class TrailWaypoint(val title: String, val lat: Double, val lon: Double)
 
@@ -151,7 +151,7 @@ fun TrailNavigationDashboard(onClose: () -> Unit) {
         meters / 1000f
     }
 
-    Column(Modifier.fillMaxSize().background(TrailBg.copy(alpha = 0.84f)).padding(16.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("NAEEM TRAIL", color = TrailMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
