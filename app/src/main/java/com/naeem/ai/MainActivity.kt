@@ -284,48 +284,8 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
 
 @Composable
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
-    var page by remember { mutableStateOf(0) }
     val silver = Color(0xFFE8EDF5)
     val muted = Color(0xFFB9C5D5)
-    val spaces = listOf(
-        "سلامت و تغذیه" to "غذا، کالری و مراقبت روزانه",
-        "باشگاه ورزش" to "تمرین، فعالیت و پیشرفت",
-        "دفتر مالی" to "درآمد، هزینه و گزارش مالی",
-        "سفر و هم‌سفرها" to "برنامه سفر و هزینه‌های همراهان",
-        "اتاق فکر" to "تحلیل ایده و تبدیل آن به پروژه",
-        "به آینده وارد شو" to "تجربه‌های فکری و حل مسئله",
-        "نوت‌بوک" to "یادداشت، کارها و اعلان‌ها",
-        "یادآور دارو" to "یادآوری زمان مصرف دارو",
-        "روایت هفته و ماه" to "مرور اتفاق‌ها و فعالیت‌های ثبت‌شده",
-        "حافظه هوشمند" to "نگهداری نکته‌های مورد تأیید تو",
-        "نبض بازار" to "بررسی بازارها و دارایی‌ها",
-        "اخبار مهم" to "پیگیری و بررسی خبرها",
-        "آلبوم تصاویر" to "آرشیو تصویرهای ساخته‌شده",
-        "بازی‌ها" to "سرگرمی و تجربه‌های تعاملی",
-        "سینما و موسیقی" to "کشف فیلم، هنرمند و موسیقی",
-        "تحلیل اینستاگرام" to "بررسی آمار و عملکرد محتوا",
-        "مسیرهای نعیم" to "طبیعت‌گردی و مسیرها",
-        "تنظیمات" to "اتصال مدل و مدیریت امنیت"
-    )
-    val pageTitle = when (page) {
-        0 -> "این یک هوش مصنوعی معمولی نیست"
-        1 -> "یک مغز هوشمند، چندین فضای تخصصی"
-        2 -> "برای زندگی روزمره"
-        3 -> "برای فکر، کار و کشف"
-        else -> "کنترل همیشه دست توست"
-    }
-    val pageDescription = when (page) {
-        0 -> "اینجا شما با یک ابرهوش مصنوعی روبه‌رو هستید؛ فضایی فراتر از یک گفت‌وگوی ساده برای فکر کردن، برنامه‌ریزی و مدیریت بخش‌های مختلف زندگی و کار."
-        1 -> "می‌توانی با متن یا صدا با دستیار حرف بزنی. او موضوع را تشخیص می‌دهد و در قابلیت‌های متصل برنامه از ابزار مناسب کمک می‌گیرد."
-        2 -> "از سلامت و ورزش تا امور مالی، سفر و ثبت اتفاق‌های روزانه؛ هر موضوع فضای مخصوص خودش را دارد."
-        3 -> "برای ایده‌پردازی، یادگیری، خبر، بازار، تصویر، سرگرمی و کشف چیزهای تازه هم فضاهای جداگانه‌ای در نظر گرفته شده."
-        else -> "میکروفون فقط با انتخاب تو فعال می‌شود. اطلاعات مهم پیش از ثبت یا تغییر به تأیید تو می‌رسند و اطلاعات پروفایل روی همین گوشی نگهداری می‌شوند."
-    }
-    val featureItems = when (page) {
-        2 -> spaces.take(6)
-        3 -> spaces.drop(6).take(6)
-        else -> spaces.drop(12)
-    }
     Box(Modifier.fillMaxSize().background(Color.Transparent)) {
         Image(
             painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
@@ -333,75 +293,63 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
         )
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x3354A8FF), Color(0x22406FA6), Color(0x33101D35)))))
         Column(
-            Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) { Text("Supra AI", color = silver.copy(alpha = 0.92f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = muted, style = MaterialTheme.typography.labelSmall) }
-                Text(listOf("یک از پنج", "دو از پنج", "سه از پنج", "چهار از پنج", "پنج از پنج")[page], color = muted, style = MaterialTheme.typography.labelMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Supra AI", color = silver.copy(alpha = 0.95f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("by Naeem deh", color = muted, style = MaterialTheme.typography.labelMedium)
+                }
             }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(5) { index ->
-                    Box(Modifier.weight(1f).height(4.dp).background(if (index <= page) Color(0xFFB7D2FF) else Color(0x557D8CA3), RoundedCornerShape(4.dp)))
+            Spacer(Modifier.height(26.dp))
+            ThinkingOrb(diameter = 142.dp, active = true)
+            Spacer(Modifier.height(24.dp))
+            Text(
+                "این فقط یک هوش مصنوعی نیست؛ فراتر از هوش مصنوعی است",
+                color = silver, style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Supra AI فقط به سؤال‌ها جواب نمی‌دهد؛ به نیازها و موضوعاتی که در گفت‌وگوهایت مطرح می‌کنی توجه می‌کند و کمک می‌کند هر موضوع در بخش مرتبط خودش جریان پیدا کند.",
+                color = muted, style = MaterialTheme.typography.bodyLarge,
+                lineHeight = 27.sp, textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(18.dp))
+            Surface(
+                color = Color(0xCC17263A), shape = RoundedCornerShape(22.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("یک گفت‌وگو، چندین کار هم‌زمان", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "مثلاً وقتی از برنامه سفر حرف می‌زنی، اطلاعات لازم می‌تواند به برنامه‌ریزی سفر کمک کند؛ وقتی از غذایی که خوردی می‌گویی، جزئیات آن می‌تواند در بخش تغذیه ثبت و برای بررسی کالری استفاده شود. موضوع‌های کاری، مالی و روزمره هم می‌توانند به فضای مرتبط هدایت شوند.",
+                        color = silver, style = MaterialTheme.typography.bodyMedium, lineHeight = 25.sp
+                    )
+                    Divider(color = Color(0x557D97BA))
+                    Text(
+                        "با فعال‌کردن میکروفون، صدایت به گفت‌وگو تبدیل می‌شود. دستیار از متن گفت‌وگو نیازها و اطلاعات مرتبط را تشخیص می‌دهد؛ مواردی که نیاز به تأیید داشته باشند با اجازه تو ثبت می‌شوند. میکروفون بدون انتخاب تو فعال نیست.",
+                        color = muted, style = MaterialTheme.typography.bodySmall, lineHeight = 22.sp
+                    )
                 }
             }
             Spacer(Modifier.height(20.dp))
-            ThinkingOrb(diameter = if (page == 0) 142.dp else 92.dp, active = true)
-            Spacer(Modifier.height(15.dp))
-            Text(pageTitle, color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text(pageDescription, color = muted, style = MaterialTheme.typography.bodyMedium, lineHeight = 23.sp)
-            Spacer(Modifier.height(18.dp))
-            if (page == 1) {
-                Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("مثلاً می‌توانی بگویی:", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold)
-                        Text("«امروز یک ساعت ورزش کردم، برای صبحانه تخم‌مرغ خوردم و سه میلیون تومان خرید داشتم.»", color = silver, style = MaterialTheme.typography.bodyMedium)
-                        Text("دستیار می‌تواند موضوع‌های مختلف را تشخیص دهد و در بخش‌های مرتبط ثبت کند؛ هرجا نیاز به تأیید یا توضیح باشد از تو می‌پرسد.", color = muted, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            } else if (page in 2..4) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    featureItems.forEach { (title, detail) ->
-                        Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(13.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x334F78AC)), modifier = Modifier.fillMaxWidth()) {
-                            Row(Modifier.padding(horizontal = 13.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Circle, contentDescription = null, tint = Color(0xFF9FC4F4), modifier = Modifier.size(8.dp))
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(title, color = silver, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall)
-                                    Text(detail, color = muted, style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (page == 0) {
-                Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("شروع ساده است", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold)
-                        Text("در چند قدم کوتاه با امکانات آشنا می‌شوی؛ بعد اسمت را وارد می‌کنی و وارد فضای خودت می‌شوی.", color = muted, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            } else {
-                Surface(color = Color(0xCC17263A), shape = RoundedCornerShape(20.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6687A9D8)), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("حریم خصوصی و اختیار", color = Color(0xFFDCE8FA), fontWeight = FontWeight.Bold)
-                        Text("میکروفون دائماً روشن نیست. اطلاعات پروفایل روی گوشی ذخیره می‌شود. بعضی قابلیت‌ها هنوز در حال توسعه‌اند و وضعیت آن‌ها داخل برنامه مشخص می‌شود.", color = muted, style = MaterialTheme.typography.bodyMedium)
-                        Divider(color = Color(0x557D97BA))
-                        Text("طراحی، ایده‌پردازی و توسعه", color = muted, style = MaterialTheme.typography.labelSmall)
-                        Text("نعیم دهقانی", color = silver, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (page > 0) {
-                    OutlinedButton(onClick = { page-- }, modifier = Modifier.weight(1f).height(54.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF91A9CB)), colors = ButtonDefaults.outlinedButtonColors(contentColor = silver), shape = RoundedCornerShape(16.dp)) { Text("قبلی") }
-                }
-                Button(onClick = { if (page == 4) onEnter() else page++ }, modifier = Modifier.weight(if (page > 0) 1.5f else 1f).height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)), shape = RoundedCornerShape(16.dp)) {
-                    Text(if (page == 4) "شروع تجربه Supra AI" else "بعدی", fontWeight = FontWeight.Bold)
-                }
+            Text(
+                "تجربه‌ای یکپارچه که گفت‌وگو را به اقدام و ثبت اطلاعات در بخش‌های مختلف برنامه پیوند می‌دهد.",
+                color = Color(0xFFDCE8FA), style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center, lineHeight = 23.sp
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onEnter, modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
+                shape = RoundedCornerShape(17.dp)
+            ) {
+                Text("ورود به Supra AI", fontWeight = FontWeight.Bold)
             }
         }
     }
