@@ -8,6 +8,8 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +53,9 @@ import java.util.Date
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val FG=Color(0xFFD4D9E0)
 private val FB=Color(0xFF111318)
@@ -64,7 +71,7 @@ fun FeatureHub(
 ){
     var query by remember { mutableStateOf("") }
     var showFeatureMap by remember { mutableStateOf(false) }
-    val carouselState = rememberLazyListState()
+    var orbitRotation by remember { mutableStateOf(0f) }
     data class Entry(
         val title:String,val subtitle:String,val detail:String,
         val aiRole:String,val aiStatus:String,
@@ -181,88 +188,117 @@ fun FeatureHub(
         if(filtered.isEmpty()){
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
         } else {
-            LaunchedEffect(query) { carouselState.scrollToItem(0) }
-            LazyRow(
-                state = carouselState,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 74.dp, vertical = 26.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalAlignment = Alignment.CenterVertically
+            LaunchedEffect(query) { orbitRotation = 0f }
+            BoxWithConstraints(
+                Modifier.fillMaxWidth().weight(1f)
+                    .pointerInput(filtered.size, maxWidth) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            val circumferenceUnit = size.width.coerceAtLeast(1).toFloat()
+                            orbitRotation += (dragAmount.x / circumferenceUnit) * (2f * PI.toFloat())
+                        }
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                itemsIndexed(filtered) { index, entry ->
-                    val accent = when (entry.title) {
-                        "سلامت و تغذیه" -> Color(0xFF9AD6B0)
-                        "باشگاه ورزش" -> Color(0xFF91BFE8)
-                        "دفتر مالی", "نبض بازار" -> Color(0xFFD8BD83)
-                        "سفر و هم‌سفرها", "Naeem Trail" -> Color(0xFFA8C99A)
-                        "موسیقی" -> Color(0xFFC2A8E8)
-                        "اخبار مهم" -> Color(0xFF8DBBD0)
-                        "سینما" -> Color(0xFFD9A6B8)
-                        "حافظه هوشمند" -> Color(0xFFB5B7D9)
-                        "آلبوم تصاویر" -> Color(0xFFD5B49A)
-                        "بازی‌ها" -> Color(0xFFE0A68E)
-                        "روایت هفته و ماه" -> Color(0xFFB9C5D8)
-                        "تحلیل اینستاگرام" -> Color(0xFFE0A0B8)
-                        else -> Color(0xFFB8C2CE)
-                    }
-                    val itemInfo = carouselState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-                    val viewportCenter = (carouselState.layoutInfo.viewportStartOffset + carouselState.layoutInfo.viewportEndOffset) / 2f
-                    val itemCenter = itemInfo?.let { it.offset + it.size / 2f } ?: viewportCenter
-                    val distance = ((itemCenter - viewportCenter) / 300f).coerceIn(-2.2f, 2.2f)
-                    val proximity = (1f - kotlin.math.abs(distance) / 2.2f).coerceIn(0f, 1f)
+                val ringWidth = maxWidth.value
+                val ringHeight = maxHeight.value
+                val radiusX = ringWidth * 0.43f
+                val radiusY = ringHeight * 0.31f
+                val step = (2.0 * PI / filtered.size).toFloat()
+                val ringItems = filtered.indices.map { index ->
+                    val angle = index * step + orbitRotation + (PI.toFloat() / 2f)
+                    Triple(index, angle, ((sin(angle) + 1f) / 2f).coerceIn(0f, 1f))
+                }.sortedBy { it.third }
+                Canvas(Modifier.fillMaxSize()) {
+                    val ovalWidth = size.width * 0.88f
+                    val ovalHeight = size.height * 0.61f
+                    drawOval(
+                        brush = ComposeBrush.linearGradient(
+                            listOf(Color(0xFF222A38), Color(0xFF8C91A5), Color(0xFF353B4B))
+                        ),
+                        topLeft = androidx.compose.ui.geometry.Offset((size.width - ovalWidth) / 2f, (size.height - ovalHeight) / 2f),
+                        size = androidx.compose.ui.geometry.Size(ovalWidth, ovalHeight),
+                        style = Stroke(width = 2.2.dp.toPx())
+                    )
+                    drawOval(
+                        color = Color(0xFF9DA8C0).copy(alpha = 0.12f),
+                        topLeft = androidx.compose.ui.geometry.Offset((size.width - ovalWidth) / 2f, (size.height - ovalHeight) / 2f),
+                        size = androidx.compose.ui.geometry.Size(ovalWidth, ovalHeight),
+                        style = Stroke(width = 12.dp.toPx())
+                    )
+                }
+                ringItems.forEach { (index, angle, depth) ->
+                    val entry = filtered[index]
+                    val accent = Color(0xFFB9C2D0)
+                    val diameter = 42f + depth * 42f
+                    val x = cos(angle) * radiusX
+                    val y = sin(angle) * radiusY
+                    val isFront = depth > 0.88f
                     Column(
-                        Modifier
-                            .width(190.dp)
+                        modifier = Modifier
+                            .width((diameter + 14f).dp)
+                            .offset(x = x.dp, y = y.dp)
                             .graphicsLayer {
-                                scaleX = 0.72f + proximity * 0.32f
-                                scaleY = 0.72f + proximity * 0.32f
-                                rotationY = -distance * 27f
-                                cameraDistance = 18f * density
-                                alpha = 0.62f + proximity * 0.38f
+                                val scale = 0.72f + depth * 0.38f
+                                scaleX = scale
+                                scaleY = scale
+                                alpha = 0.52f + depth * 0.48f
+                                cameraDistance = 20f * density
                             }
                             .clickable { entry.action() },
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(13.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(Modifier.size(164.dp), contentAlignment = Alignment.Center) {
-                            Box(Modifier.size(150.dp).offset(y = 9.dp).background(Color(0xFF020304), CircleShape))
-                            Surface(
-                                modifier = Modifier.size(150.dp).offset(y = (-3).dp),
-                                shape = CircleShape,
-                                color = Color(0xFF171C23),
-                                border = androidx.compose.foundation.BorderStroke(1.5.dp, accent.copy(alpha = 0.72f)),
-                                shadowElevation = 28.dp
-                            ) {
-                                Box(
-                                    Modifier.fillMaxSize().background(
-                                        ComposeBrush.radialGradient(listOf(accent.copy(alpha = 0.42f), Color(0xFF202731), Color(0xFF090C11)))
-                                    ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        Modifier.fillMaxSize().padding(9.dp).background(
-                                            ComposeBrush.linearGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent, Color.Black.copy(alpha = 0.28f))),
-                                            CircleShape
-                                        )
+                        Surface(
+                            modifier = Modifier.size(diameter.dp),
+                            shape = CircleShape,
+                            color = Color(0xFF171D28),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isFront) 2.dp else 1.dp,
+                                accent.copy(alpha = 0.38f + depth * 0.38f)
+                            ),
+                            shadowElevation = (5f + depth * 18f).dp
+                        ) {
+                            Box(
+                                Modifier.fillMaxSize().background(
+                                    ComposeBrush.radialGradient(
+                                        listOf(Color(0xFF596477).copy(alpha = 0.42f), Color(0xFF252D3A), Color(0xFF0C111A))
                                     )
-                                    Icon(entry.icon, null, tint = accent, modifier = Modifier.size(65.dp))
-                                }
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    entry.icon,
+                                    null,
+                                    tint = Color(0xFFD0D6E0).copy(alpha = 0.72f + depth * 0.28f),
+                                    modifier = Modifier.size((diameter * 0.43f).dp)
+                                )
                             }
                         }
-                        Text(entry.title, color = Color(0xFFF0F2F5), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Text(entry.subtitle, color = Color(0xFFAAB2BD), style = MaterialTheme.typography.labelSmall, maxLines = 1)
-                        TextButton(onClick = { selectedEntry = entry }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                            Icon(Icons.Default.Info, null, tint = accent, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text("جزئیات", color = Color(0xFFADB7C4), style = MaterialTheme.typography.labelSmall)
+                        if (isFront) {
+                            Text(
+                                entry.title,
+                                color = Color(0xFFF0F2F5),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
                         }
                     }
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF9CA8BB), modifier = Modifier.size(25.dp))
+                    Text("فضاهای من", color = Color(0xFFDCE1E9), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("حلقه ابزارها", color = Color(0xFF8994A5), style = MaterialTheme.typography.labelSmall)
                 }
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
                 Icon(Icons.Default.Swipe,null,tint=gold.copy(alpha=.7f),modifier=Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("برای جابه‌جایی، صفحه را به چپ و راست بکش؛ لمس هر آیکون، آن بخش را باز می‌کند.",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
+                Text("حلقه را به چپ و راست بکش؛ لمس هر آیکون، آن بخش را باز می‌کند.",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
             }
         }
     }
