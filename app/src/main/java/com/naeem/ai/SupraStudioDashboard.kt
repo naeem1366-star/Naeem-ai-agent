@@ -198,7 +198,7 @@ fun SupraStudioDashboard(
                 Icon(Icons.Default.ArrowBack, contentDescription = "بازگشت", tint = Color.White)
             }
             Column(Modifier.weight(1f)) {
-                Text("SUPRA STUDIO", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                Text("IMA STUDIO", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
                 Text("استودیوی تدوین ویدیو", color = Color(0xFF9EACBD), style = MaterialTheme.typography.labelMedium)
             }
             Icon(Icons.Default.Movie, contentDescription = null, tint = Color(0xFF9CB9F4), modifier = Modifier.size(28.dp))
@@ -251,7 +251,7 @@ fun SupraStudioDashboard(
                 Text("افزودن ویدیو")
             }
             OutlinedButton(
-                onClick = { if (clips.isNotEmpty()) { onExternalActivityStarted(); exportLauncher.launch("SupraStudio.mp4") } },
+                onClick = { if (clips.isNotEmpty()) { onExternalActivityStarted(); exportLauncher.launch("ImaStudio.mp4") } },
                 enabled = clips.isNotEmpty() && !exporting,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(13.dp)
