@@ -260,6 +260,12 @@ public sealed class BridgeForm : Form
                 case "mouse_click":
                     ClickMouse();
                     break;
+                case "mouse_right_click":
+                    RightClickMouse();
+                    break;
+                case "mouse_scroll":
+                    ScrollMouse(root.GetProperty("delta").GetInt32());
+                    break;
                 case "key":
                     PressKey(root.GetProperty("key").GetString() ?? "");
                     break;
@@ -314,6 +320,24 @@ public sealed class BridgeForm : Form
             new INPUT { type = INPUT_MOUSE, U = new InputUnion { mi = new MOUSEINPUT { dwFlags = MOUSEEVENTF_LEFTUP } } }
         };
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+    }
+
+    private static void RightClickMouse()
+    {
+        var inputs = new[] {
+            new INPUT { type = INPUT_MOUSE, U = new InputUnion { mi = new MOUSEINPUT { dwFlags = MOUSEEVENTF_RIGHTDOWN } } },
+            new INPUT { type = INPUT_MOUSE, U = new InputUnion { mi = new MOUSEINPUT { dwFlags = MOUSEEVENTF_RIGHTUP } } }
+        };
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+    }
+
+    private static void ScrollMouse(int delta)
+    {
+        var input = new INPUT { type = INPUT_MOUSE, U = new InputUnion { mi = new MOUSEINPUT {
+            mouseData = unchecked((uint)Math.Clamp(delta, -1200, 1200)),
+            dwFlags = MOUSEEVENTF_WHEEL
+        } } };
+        SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
     }
 
     private static void PressKey(string chord)
@@ -455,7 +479,8 @@ public sealed class BridgeForm : Form
 
     private const int INPUT_MOUSE = 0, INPUT_KEYBOARD = 1;
     private const uint MOUSEEVENTF_MOVE = 0x0001, MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004,
-        MOUSEEVENTF_ABSOLUTE = 0x8000, MOUSEEVENTF_VIRTUALDESK = 0x4000, KEYEVENTF_KEYUP = 0x0002, KEYEVENTF_UNICODE = 0x0004;
+        MOUSEEVENTF_RIGHTDOWN = 0x0008, MOUSEEVENTF_RIGHTUP = 0x0010, MOUSEEVENTF_WHEEL = 0x0800,
+        MOUSEEVENTF_ABSOLUTE = 0x8000, KEYEVENTF_KEYUP = 0x0002, KEYEVENTF_UNICODE = 0x0004;
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public int type; public InputUnion U; }
     [StructLayout(LayoutKind.Explicit)] private struct InputUnion { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; }
     [StructLayout(LayoutKind.Sequential)] private struct MOUSEINPUT { public int dx, dy; public uint mouseData, dwFlags, time; public IntPtr dwExtraInfo; }
