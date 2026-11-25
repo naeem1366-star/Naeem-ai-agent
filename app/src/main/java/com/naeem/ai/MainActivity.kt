@@ -300,13 +300,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("ایما", color = silver, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("by Naeem", color = muted, style = MaterialTheme.typography.labelMedium)
-                }
-            }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(8.dp))
             ThinkingOrb(diameter = 118.dp, active = true)
             Spacer(Modifier.height(22.dp))
             if (page == 0) {
