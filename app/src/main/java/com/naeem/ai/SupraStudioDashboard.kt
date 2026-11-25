@@ -243,7 +243,7 @@ fun SupraStudioDashboard(
                 onClick = { onExternalActivityStarted(); importLauncher.launch(arrayOf("video/*")) },
                 enabled = !exporting,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCAD8F0), contentColor = Color(0xFF101722)),
+                colors = ButtonDefaults.buttonColors(containerColor = SupraGlass.Ice, contentColor = Color(0xFF101722)),
                 shape = RoundedCornerShape(13.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
