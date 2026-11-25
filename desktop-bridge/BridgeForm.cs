@@ -139,7 +139,7 @@ public sealed class BridgeForm : Form
             var app = builder.Build();
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
-            app.MapGet("/health", () => Results.Json(new { name = "Naeem AI Desktop Bridge", version = "1.0.0", secure = true }));
+            app.MapGet("/health", () => Results.Json(new { name = "Naeem AI Desktop Bridge", version = "1.0.0", secure = true, controlAllowed = _controlEnabled }));
             app.MapPost("/pair", async (HttpContext context) =>
             {
                 using var document = await JsonDocument.ParseAsync(context.Request.Body);
