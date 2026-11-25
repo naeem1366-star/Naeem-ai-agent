@@ -353,16 +353,71 @@ public sealed class BridgeForm : Form
 
     private static void LaunchAllowedApp(string app)
     {
-        var executable = app.ToLowerInvariant() switch {
-            "blender" => "blender",
-            "freecad" => "FreeCAD",
-            "krita" => "krita",
-            "gimp" => "gimp",
-            "inkscape" => "inkscape",
-            _ => ""
-        };
+        var normalized = app.ToLowerInvariant();
+        if (normalized is not ("blender" or "freecad" or "krita" or "gimp" or "inkscape" or "3dsmax" or "photoshop"))
+            return;
+
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var candidates = new List<string>();
+        void Add(string path) { if (!string.IsNullOrWhiteSpace(path)) candidates.Add(path); }
+
+        switch (normalized)
+        {
+            case "blender":
+                Add(Path.Combine(programFiles, "Blender Foundation", "Blender", "blender.exe"));
+                Add(Path.Combine(localAppData, "Programs", "Blender", "blender.exe"));
+                AddRange(Path.Combine(programFiles, "Blender Foundation"), "Blender*", "blender.exe");
+                break;
+            case "freecad":
+                Add(Path.Combine(programFiles, "FreeCAD", "bin", "FreeCAD.exe"));
+                AddRange(programFiles, "FreeCAD*", "FreeCAD.exe");
+                break;
+            case "krita":
+                Add(Path.Combine(programFiles, "Krita (x64)", "bin", "krita.exe"));
+                Add(Path.Combine(programFiles, "Krita (x64)", "krita.exe"));
+                break;
+            case "gimp":
+                Add(Path.Combine(programFiles, "GIMP 3", "bin", "gimp-3.0.exe"));
+                Add(Path.Combine(programFiles, "GIMP 2", "bin", "gimp-2.10.exe"));
+                break;
+            case "inkscape":
+                Add(Path.Combine(programFiles, "Inkscape", "bin", "inkscape.exe"));
+                break;
+            case "3dsmax":
+                AddRange(programFiles, "Autodesk\\3ds Max*", "3dsmax.exe");
+                AddRange(programFilesX86, "Autodesk\\3ds Max*", "3dsmax.exe");
+                break;
+            case "photoshop":
+                AddRange(Path.Combine(programFiles, "Adobe"), "Adobe Photoshop*", "Photoshop.exe");
+                AddRange(Path.Combine(programFilesX86, "Adobe"), "Adobe Photoshop*", "Photoshop.exe");
+                break;
+        }
+
+        var executable = candidates.FirstOrDefault(File.Exists) ??
+            (normalized switch {
+                "blender" => "blender", "freecad" => "FreeCAD", "krita" => "krita",
+                "gimp" => "gimp", "inkscape" => "inkscape", "3dsmax" => "3dsmax",
+                "photoshop" => "Photoshop", _ => ""
+            });
         if (executable.Length == 0) return;
         try { Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true }); } catch { }
+
+        void AddRange(string root, string directoryPattern, string fileName)
+        {
+            try
+            {
+                var parent = directoryPattern.Contains(Path.DirectorySeparatorChar)
+                    ? Path.GetDirectoryName(Path.Combine(root, directoryPattern))!
+                    : root;
+                var pattern = Path.GetFileName(directoryPattern);
+                if (!Directory.Exists(parent)) return;
+                foreach (var directory in Directory.GetDirectories(parent, pattern).OrderByDescending(x => x))
+                    Add(Path.Combine(directory, fileName));
+            }
+            catch { }
+        }
     }
 
     private void UpdateStatus()
