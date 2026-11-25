@@ -81,7 +81,7 @@ fun MonthlyWrappedDashboard(onClose: () -> Unit) {
         }
     }
 
-    val bg = Color(0xFF0A0C10)
+    val bg = Color.Transparent
     val panel = Color(0xFF1B1F25)
     val accent = Color(0xFFD4D9E0)
     Surface(Modifier.fillMaxSize(), color = bg.copy(alpha = 0.84f)) {
