@@ -62,6 +62,64 @@ private val FB=Color(0xFF111318)
 private val FC=Color(0xFF20232B)
 private val FM=Color(0xFFA8ADB8)
 
+
+@Composable
+fun HomeSpacesOrbit(onOpen: () -> Unit) {
+    val items = listOf(
+        Icons.Default.Luggage to "سفر", Icons.Default.Terrain to "طبیعت",
+        Icons.Default.FitnessCenter to "ورزش", Icons.Default.TrendingUp to "بازار",
+        Icons.Default.Psychology to "اتاق فکر", Icons.Default.Newspaper to "اخبار",
+        Icons.Default.AccountBalanceWallet to "مالی", Icons.Default.EventNote to "روزنگار",
+        Icons.Default.MusicNote to "موسیقی", Icons.Default.Settings to "تنظیمات"
+    )
+    var rotation by remember { mutableFloatStateOf(0f) }
+    var selected by remember { mutableIntStateOf(0) }
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().height(116.dp)
+            .pointerInput(items.size) {
+                detectDragGestures { change, drag ->
+                    change.consume()
+                    rotation += drag.x / size.width.coerceAtLeast(1).toFloat() * 2f * PI.toFloat()
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val rx = maxWidth.value * 0.39f
+        val ry = 27f
+        val nodes = items.indices.map { i ->
+            val a = i * (2f * PI.toFloat() / items.size) + rotation + PI.toFloat() / 2f
+            Triple(i, a, (sin(a) + 1f) / 2f)
+        }.sortedBy { it.third }
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width * .78f; val h = size.height * .47f
+            drawOval(
+                brush = ComposeBrush.linearGradient(listOf(Color(0xFF263A58), Color(0xFF9BB8DC), Color(0xFF263A58))),
+                topLeft = androidx.compose.ui.geometry.Offset((size.width-w)/2f, (size.height-h)/2f),
+                size = androidx.compose.ui.geometry.Size(w,h), style = Stroke(width = 1.5.dp.toPx())
+            )
+        }
+        nodes.forEach { (i, angle, depth) ->
+            val d = 28f + depth * 12f
+            Surface(
+                modifier = Modifier.offset(x = (cos(angle)*rx).dp, y = (sin(angle)*ry).dp)
+                    .size(d.dp).graphicsLayer {
+                        val sc = .72f + depth*.38f
+                        scaleX=sc; scaleY=sc; alpha=.45f + depth*.55f
+                        cameraDistance=24f*density
+                    }.clickable { selected=i; onOpen() },
+                shape = CircleShape,
+                color = Color(0xFF18263A),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9DBCE5).copy(alpha=.35f+depth*.5f)),
+                shadowElevation = (3f+depth*10f).dp
+            ) {
+                Box(Modifier.fillMaxSize().background(ComposeBrush.radialGradient(listOf(Color(0xFF607FA8),Color(0xFF18263A)))), contentAlignment=Alignment.Center) {
+                    Icon(items[i].first,null,tint=Color.White,modifier=Modifier.size((d*.48f).dp))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
@@ -188,117 +246,44 @@ fun FeatureHub(
         if(filtered.isEmpty()){
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
         } else {
-            LaunchedEffect(query) { orbitRotation = 0f }
-            BoxWithConstraints(
-                Modifier.fillMaxWidth().weight(1f)
-                    .pointerInput(filtered.size) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            val circumferenceUnit = size.width.coerceAtLeast(1).toFloat()
-                            orbitRotation += (dragAmount.x / circumferenceUnit) * (2f * PI.toFloat())
-                        }
-                    },
-                contentAlignment = Alignment.Center
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentPadding = PaddingValues(bottom = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                val ringWidth = maxWidth.value
-                val ringHeight = maxHeight.value
-                val radiusX = ringWidth * 0.43f
-                val radiusY = ringHeight * 0.31f
-                val step = (2.0 * PI / filtered.size).toFloat()
-                val ringItems = filtered.indices.map { index ->
-                    val angle = index * step + orbitRotation + (PI.toFloat() / 2f)
-                    Triple(index, angle, ((sin(angle) + 1f) / 2f).coerceIn(0f, 1f))
-                }.sortedBy { it.third }
-                Canvas(Modifier.fillMaxSize()) {
-                    val ovalWidth = size.width * 0.88f
-                    val ovalHeight = size.height * 0.61f
-                    drawOval(
-                        brush = ComposeBrush.linearGradient(
-                            listOf(Color(0xFF222A38), Color(0xFF8C91A5), Color(0xFF353B4B))
-                        ),
-                        topLeft = androidx.compose.ui.geometry.Offset((size.width - ovalWidth) / 2f, (size.height - ovalHeight) / 2f),
-                        size = androidx.compose.ui.geometry.Size(ovalWidth, ovalHeight),
-                        style = Stroke(width = 2.2.dp.toPx())
+                items(filtered) { entry ->
+                    val palette = listOf(
+                        Color(0xFF345B86), Color(0xFF69518C), Color(0xFF39766F),
+                        Color(0xFF8B6544), Color(0xFF8A4F68), Color(0xFF536A85)
                     )
-                    drawOval(
-                        color = Color(0xFF9DA8C0).copy(alpha = 0.12f),
-                        topLeft = androidx.compose.ui.geometry.Offset((size.width - ovalWidth) / 2f, (size.height - ovalHeight) / 2f),
-                        size = androidx.compose.ui.geometry.Size(ovalWidth, ovalHeight),
-                        style = Stroke(width = 12.dp.toPx())
-                    )
-                }
-                ringItems.forEach { (index, angle, depth) ->
-                    val entry = filtered[index]
-                    val accent = Color(0xFFB9C2D0)
-                    val diameter = 42f + depth * 42f
-                    val x = cos(angle) * radiusX
-                    val y = sin(angle) * radiusY
-                    val isFront = depth > 0.88f
-                    Column(
-                        modifier = Modifier
-                            .width((diameter + 14f).dp)
-                            .offset(x = x.dp, y = y.dp)
-                            .graphicsLayer {
-                                val scale = 0.72f + depth * 0.38f
-                                scaleX = scale
-                                scaleY = scale
-                                alpha = 0.52f + depth * 0.48f
-                                cameraDistance = 20f * density
-                            }
-                            .clickable { entry.action() },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    val accent = palette[(entries.indexOf(entry).coerceAtLeast(0)) % palette.size]
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().height(142.dp).clickable { selectedEntry = entry },
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color(0xFF171E2A),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.62f)),
+                        shadowElevation = 7.dp
                     ) {
-                        Surface(
-                            modifier = Modifier.size(diameter.dp),
-                            shape = CircleShape,
-                            color = Color(0xFF171D28),
-                            border = androidx.compose.foundation.BorderStroke(
-                                if (isFront) 2.dp else 1.dp,
-                                accent.copy(alpha = 0.38f + depth * 0.38f)
-                            ),
-                            shadowElevation = (5f + depth * 18f).dp
+                        Column(
+                            Modifier.fillMaxSize().background(
+                                ComposeBrush.linearGradient(listOf(accent.copy(alpha = 0.34f), Color(0xFF151B26), Color(0xFF10151E)))
+                            ).padding(13.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Box(
-                                Modifier.fillMaxSize().background(
-                                    ComposeBrush.radialGradient(
-                                        listOf(Color(0xFF596477).copy(alpha = 0.42f), Color(0xFF252D3A), Color(0xFF0C111A))
-                                    )
-                                ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    entry.icon,
-                                    null,
-                                    tint = Color(0xFFD0D6E0).copy(alpha = 0.72f + depth * 0.28f),
-                                    modifier = Modifier.size((diameter * 0.43f).dp)
-                                )
+                            Surface(shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.38f)) {
+                                Box(Modifier.size(43.dp), contentAlignment = Alignment.Center) {
+                                    Icon(entry.icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                                }
                             }
-                        }
-                        if (isFront) {
-                            Text(
-                                entry.title,
-                                color = Color(0xFFF0F2F5),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall)
+                                Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 1, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFF9CA8BB), modifier = Modifier.size(25.dp))
-                    Text("فضاهای من", color = Color(0xFFDCE1E9), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text("حلقه ابزارها", color = Color(0xFF8994A5), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
-                Icon(Icons.Default.Swipe,null,tint=gold.copy(alpha=.7f),modifier=Modifier.size(18.dp))
-                Spacer(Modifier.width(7.dp))
-                Text("حلقه را به چپ و راست بکش؛ لمس هر آیکون، آن بخش را باز می‌کند.",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
             }
         }
     }
