@@ -152,7 +152,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
                 Text("استودیو ساخت ویدیو", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
                 Text("اتصال به سرویس ساخت ویدیو", color = Color(0xFF9DA8B7), style = MaterialTheme.typography.bodySmall)
             }
-            Icon(Icons.Default.MovieCreation, contentDescription = null, tint = Color(0xFFD4D9E0), modifier = Modifier.size(27.dp))
+            Icon(Icons.Default.MovieCreation, contentDescription = null, tint = SupraGlass.Ice, modifier = Modifier.size(27.dp))
         }
 
         Surface(color = Color(0xFF17251F), shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF477A5B))) {
@@ -224,7 +224,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
             onClick = { openVideoService() },
             enabled = imageUri != null || prompt.isNotBlank(),
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4D9E0), contentColor = Color(0xFF10151C)),
+            colors = ButtonDefaults.buttonColors(containerColor = SupraGlass.Ice, contentColor = Color(0xFF10151C)),
             shape = RoundedCornerShape(13.dp)
         ) {
             Icon(Icons.Default.OpenInNew, contentDescription = null)
