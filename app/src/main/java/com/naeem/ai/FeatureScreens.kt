@@ -217,7 +217,6 @@ fun FeatureHub(
                                 scaleX = 0.72f + proximity * 0.32f
                                 scaleY = 0.72f + proximity * 0.32f
                                 rotationY = -distance * 27f
-                                translationZ = proximity * 72f
                                 cameraDistance = 18f * density
                                 alpha = 0.62f + proximity * 0.38f
                             }
