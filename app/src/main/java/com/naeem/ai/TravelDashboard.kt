@@ -140,10 +140,10 @@ fun TravelDashboard(onClose:()->Unit) {
     val selected=trips.firstOrNull { it.id==selectedId }
     LaunchedEffect(selectedId) { expenseBeneficiaries = selected?.members?.toSet().orEmpty() }
     val number= remember { NumberFormat.getNumberInstance(Locale("fa","IR")) }
-    val bg=Color(0xFF0A0C10); val panel=Color(0xFF1B1F25); val accent=Color(0xFFD4D9E0); val muted=Color(0xFF9AA3AE)
+    val bg=Color.Transparent; val panel=SupraGlass.Glass; val accent=SupraGlass.Ice; val muted=SupraGlass.Muted
     fun persist(next:List<LocalTrip>) { trips=next; store.save(next) }
 
-    Column(Modifier.fillMaxSize().background(bg.copy(alpha = 0.84f)).padding(horizontal=18.dp, vertical=14.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             if(selected!=null) IconButton(onClick={selectedId=null}) { Icon(Icons.Default.ArrowBack,null,tint=accent) }
             Column(Modifier.weight(1f)) {
@@ -211,7 +211,7 @@ fun TravelDashboard(onClose:()->Unit) {
                     }
                 }
                 item {
-                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF252B34)),shape=RoundedCornerShape(22.dp)) {
+                    Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(22.dp)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
                             Row(verticalAlignment=Alignment.CenterVertically) {
                                 Text("☁️", fontSize = 20.sp)
@@ -310,7 +310,7 @@ fun TravelDashboard(onClose:()->Unit) {
                     }
                 }
                 item {
-                    Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF252B34)),shape=RoundedCornerShape(20.dp)) {
+                    Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(20.dp)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
                             Text("تسویهٔ هوشمند سهم‌ها",color=accent,fontWeight=FontWeight.Bold)
                             Text("سهم هر نفر بر اساس افراد انتخاب‌شده برای هر هزینه محاسبه می‌شود؛ نه تقسیم مساوی کل سفر.",color=muted,style=MaterialTheme.typography.labelSmall)
