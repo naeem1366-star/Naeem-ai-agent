@@ -202,7 +202,7 @@ public sealed class BridgeForm : Form
                     WebSocketReceiveResult result;
                     do
                     {
-                        result = await socket.ReceiveAsync(buffer, receiverCts.Token);
+                        result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), receiverCts.Token);
                         if (result.MessageType == WebSocketMessageType.Close) return;
                         if (result.MessageType == WebSocketMessageType.Text) stream.Write(buffer, 0, result.Count);
                     } while (!result.EndOfMessage);
@@ -220,7 +220,7 @@ public sealed class BridgeForm : Form
                 while (incoming.TryDequeue(out var command)) ProcessCommand(command);
                 var frame = CaptureScreenJpeg();
                 if (frame.Length > 0)
-                    await socket.SendAsync(frame, WebSocketMessageType.Binary, true, context.RequestAborted);
+                    await socket.SendAsync(new ArraySegment<byte>(frame), WebSocketMessageType.Binary, true, context.RequestAborted);
                 await Task.Delay(500, context.RequestAborted);
             }
         }
@@ -314,7 +314,10 @@ public sealed class BridgeForm : Form
     private static void PressKey(string chord)
     {
         var names = chord.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var keys = names.Select(name => Enum.TryParse<Keys>(name, true, out var key) ? key : Keys.None).Where(key => key != Keys.None).ToArray();
+        var keys = names.Select(name => name.ToUpperInvariant() switch {
+            "CTRL" => Keys.ControlKey, "ALT" => Keys.Menu, "SHIFT" => Keys.ShiftKey,
+            "WIN" => Keys.LWin, _ => Enum.TryParse<Keys>(name, true, out var key) ? key : Keys.None
+        }).Where(key => key != Keys.None).ToArray();
         if (keys.Length == 0) return;
         var inputs = new List<INPUT>();
         foreach (var key in keys) inputs.Add(KeyInput(key, false));
@@ -356,7 +359,7 @@ public sealed class BridgeForm : Form
     private void UpdateStatus()
     {
         if (IsDisposed || !IsHandleCreated) return;
-        BeginInvoke(() => _statusLabel.Text = $"سرویس فعال • دستگاه‌های متصل: {_connectedClients} • کنترل: {(_controlEnabled ? "روشن" : "خاموش")}");
+        BeginInvoke(new Action(() => _statusLabel.Text = $"سرویس فعال • دستگاه‌های متصل: {_connectedClients} • کنترل: {(_controlEnabled ? "روشن" : "خاموش")}"));
     }
 
     private async Task StopServicesAsync()
