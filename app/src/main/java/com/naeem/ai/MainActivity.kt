@@ -1089,7 +1089,9 @@ fun NaeemApp(
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) { Text("Supra AI", color = Gold.copy(alpha = 0.92f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text("by Naeem deh", color = Muted, style = MaterialTheme.typography.labelSmall) }
                         Spacer(Modifier.height(8.dp))
                         ThinkingOrb(diameter = 142.dp, active = false, onClick = { playThinkingOrbSound(context) })
-                        Spacer(Modifier.height(15.dp))
+                        Spacer(Modifier.height(2.dp))
+                        HomeSpacesOrbit(onOpen = { showHub = true })
+                        Spacer(Modifier.height(8.dp))
                         Text("سلام " + userName.ifBlank { "دوست من" }, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Text("آماده‌ام؛ از هرجا دوست داری شروع کنیم.", color = Color(0xFFBFC6D0), style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(22.dp))
