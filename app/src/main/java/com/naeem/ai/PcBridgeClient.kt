@@ -201,6 +201,8 @@ class PcBridgeClient(
     fun sendMouseMove(x: Float, y: Float) =
         send(JSONObject().put("type", "mouse_move").put("x", x).put("y", y))
     fun click() = send(JSONObject().put("type", "mouse_click"))
+    fun rightClick() = send(JSONObject().put("type", "mouse_right_click"))
+    fun scroll(delta: Int) = send(JSONObject().put("type", "mouse_scroll").put("delta", delta.coerceIn(-1200, 1200)))
     fun key(key: String) = send(JSONObject().put("type", "key").put("key", key))
     fun typeText(value: String) =
         send(JSONObject().put("type", "type_text").put("text", value.take(2000)))
