@@ -171,7 +171,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
 
             if (model.imageInput) {
                 Text("تصویر ورودی", color = Color.White, fontWeight = FontWeight.Bold)
-                OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, enabled = !running, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { imagePicker.launch("image/*") }, enabled = !running, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.ImageIcon, null); Spacer(Modifier.width(7.dp)); Text(if (imageUri == null) "انتخاب تصویر مرجع" else "تعویض تصویر مرجع")
                 }
                 if (imageUri != null) TextButton(onClick = { imageUri = null; imageData = null }) { Text("حذف تصویر") }
