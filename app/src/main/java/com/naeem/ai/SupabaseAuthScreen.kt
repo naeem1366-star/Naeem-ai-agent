@@ -32,20 +32,28 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
     val isSignup = mode == "signup"
     val isRecovery = mode == "recovery"
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF05070D), Color(0xFF101C32), Color(0xFF090B12)))), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF07101D), Color(0xFF102744), Color(0xFF172E55)))), contentAlignment = Alignment.Center) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 24.dp, vertical = 30.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("SUPRA", color = Color(0xFFE2D3B3), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
+            Text("SUPRA", color = Color(0xFFE8EDF5), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
             Text(when (mode) { "signup" -> "ساخت حساب کاربری"; "recovery" -> "بازیابی رمز عبور"; else -> "ورود به حساب" },
                 color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("با ایمیل و رمز عبور وارد فضای شخصی خودت شو", color = Color(0xFFB8C3D5), fontSize = 13.sp)
+            Text("با ایمیل و رمز عبور وارد فضای شخصی خودت شو", color = Color(0xFFB9C5D5), fontSize = 13.sp)
             Spacer(Modifier.height(8.dp))
+            val authFieldColors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White, unfocusedTextColor = Color(0xFFF1F4F8),
+                focusedContainerColor = Color(0xFF17243A), unfocusedContainerColor = Color(0xFF17243A),
+                focusedBorderColor = Color(0xFFB7D2FF), unfocusedBorderColor = Color(0xFF71839D),
+                focusedLabelColor = Color(0xFFB7D2FF), unfocusedLabelColor = Color(0xFFCAD4E2),
+                focusedPlaceholderColor = Color(0xFF9EADC2), unfocusedPlaceholderColor = Color(0xFF9EADC2),
+                cursorColor = Color(0xFFB7D2FF)
+            )
             OutlinedTextField(value = email, onValueChange = { email = it; message = "" }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, label = { Text("ایمیل") }, placeholder = { Text("name@example.com") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(16.dp))
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(16.dp), colors = authFieldColors)
             if (!isRecovery) OutlinedTextField(value = password, onValueChange = { password = it; message = "" },
                 modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("رمز عبور") },
-                visualTransformation = PasswordVisualTransformation(), shape = RoundedCornerShape(16.dp))
+                visualTransformation = PasswordVisualTransformation(), shape = RoundedCornerShape(16.dp), colors = authFieldColors)
             if (isSignup) OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it; message = "" },
                 modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("تکرار رمز عبور") },
                 visualTransformation = PasswordVisualTransformation(), shape = RoundedCornerShape(16.dp))
@@ -81,15 +89,15 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
                     }
                 }
             }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8C7A6), contentColor = Color(0xFF17130D))) {
-                if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF17130D), strokeWidth = 2.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB7D2FF), contentColor = Color(0xFF101B2B))) {
+                if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF101B2B), strokeWidth = 2.dp)
                 else Text(when (mode) { "signup" -> "ساخت حساب"; "recovery" -> "ارسال لینک بازیابی"; else -> "ورود" }, fontWeight = FontWeight.Bold)
             }
             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 if (mode != "login") TextButton(onClick = { mode = "login"; message = ""; password = ""; confirmPassword = "" }) { Text("بازگشت به ورود") }
                 else {
                     TextButton(onClick = { mode = "signup"; message = "" }) { Text("ساخت حساب جدید") }
-                    Text("•", color = Color(0xFF7F8CA2))
+                    Text("•", color = Color(0xFF9EADC2))
                     TextButton(onClick = { mode = "recovery"; message = "" }) { Text("فراموشی رمز") }
                 }
             }
