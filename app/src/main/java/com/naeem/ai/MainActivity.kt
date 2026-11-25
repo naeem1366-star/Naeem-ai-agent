@@ -212,12 +212,19 @@ class MainActivity : FragmentActivity() {
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val store = SecureConfigStore(this)
+        val auth = SupabaseAuthClient(this)
+        val authReady = mutableStateOf(false)
+        val authSession = mutableStateOf<SupabaseSession?>(null)
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
         introCompleted.value = appPrefs.getBoolean("app_intro_completed", false)
 
         setContent {
+            LaunchedEffect(Unit) {
+                authSession.value = withContext(Dispatchers.IO) { auth.restoreSession() }
+                authReady.value = true
+            }
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 MaterialTheme(
                     colorScheme = darkColorScheme(
@@ -242,6 +249,12 @@ class MainActivity : FragmentActivity() {
                                 introCompleted.value = true
                             }
                         )
+                    } else if (!authReady.value) {
+                        Box(Modifier.fillMaxSize().background(Color(0xFF090B12)), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFFD7C6A1))
+                        }
+                    } else if (authSession.value == null) {
+                        SupabaseAuthScreen(auth) { session -> authSession.value = session }
                     } else if (!profileCompleted.value) {
                         UserProfileSetup(onSave = { name, interests, about, style ->
                             profilePrefs.edit()
