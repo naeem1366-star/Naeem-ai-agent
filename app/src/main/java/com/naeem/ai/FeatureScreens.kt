@@ -281,7 +281,6 @@ fun FeatureHub(
                         modifier=Modifier.offset(x=(offset*106).dp,y=(depth*13).dp).width(174.dp).height(194.dp)
                             .graphicsLayer{
                                 scaleX=scale;scaleY=scale;rotationY=offset*-25f
-                                translationZ=(3-depth)*22f
                                 alpha=if(depth==2)0.66f else if(depth==1)0.88f else 1f
                             },
                         shape=RoundedCornerShape(26.dp),color=SupraGlass.Glass,
