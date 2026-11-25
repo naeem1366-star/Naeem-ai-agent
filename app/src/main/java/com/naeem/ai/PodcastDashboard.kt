@@ -192,7 +192,7 @@ fun PodcastDashboard(onClose:()->Unit){
     var duration by remember{mutableIntStateOf(0)}
     var playError by remember{mutableStateOf("")}
     var seekRequested by remember{mutableStateOf(false)}
-    val bg=Color(0xFF0B0E13);val panel=Color(0xFF1B222C);val accent=Color(0xFFDDE5EF);val muted=Color(0xFF9BA8B8)
+    val bg=Color.Transparent;val panel=SupraGlass.Glass;val accent=SupraGlass.Ice;val muted=SupraGlass.Muted
 
     fun sendPlaybackAction(action:String, episode:PodcastEpisode?=null, seek:Int?=null) {
         val intent=Intent(context,PodcastPlaybackService::class.java).setAction(action)
@@ -292,7 +292,7 @@ fun PodcastDashboard(onClose:()->Unit){
             }
         }
         if(current!=null){
-            Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF263343)),shape=RoundedCornerShape(17.dp)){
+            Card(colors=CardDefaults.cardColors(containerColor=SupraGlass.Glass),shape=RoundedCornerShape(17.dp)){
                 Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
                     Text("در حال پخش",color=muted,style=MaterialTheme.typography.labelSmall)
                     Text(current!!.title,color=Color.White,fontWeight=FontWeight.Bold,maxLines=2)
