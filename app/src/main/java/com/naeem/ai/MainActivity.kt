@@ -167,7 +167,7 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v6", false)
+        introCompleted.value = false
 
         setContent {
             val authScope = rememberCoroutineScope()
@@ -198,7 +198,6 @@ class MainActivity : FragmentActivity() {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
-                                appPrefs.edit().putBoolean("app_intro_completed_v6", true).apply()
                                 introCompleted.value = true
                             }
                         )
@@ -893,7 +892,7 @@ fun NaeemApp(
                         Image(
                             painter = painterResource(id = R.drawable.ic_brain_mark),
                             contentDescription = "لوگوی ایما",
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(58.dp)
                         )
                     },
                     navigationIcon = {
