@@ -40,6 +40,7 @@ private data class PcPlannedAction(
     val text: String = "",
     val x: Float = 0f,
     val y: Float = 0f,
+    val delta: Int = 0,
     val waitMs: Long = 0L
 )
 
@@ -254,6 +255,8 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
 - type_text با متن حداکثر 2000 نویسه
 - mouse_move با x و y بین 0 و 1
 - mouse_click
+- mouse_right_click
+- mouse_scroll با delta برابر 120 برای بالا و -120 برای پایین
 حداکثر 15 action تولید کن. برای Blender می‌توانی با SHIFT+F4 به Python Console بروی، فرمان bpy را اجرا کنی و با SHIFT+F5 به نمای سه‌بعدی برگردی. در 3ds Max می‌توانی با F11 پنجره MAXScript Listener را باز کنی و فرمان‌های MaxScript را وارد کنی. برای Photoshop فقط از ابزارها و میانبرهای معمول رابط کاربری استفاده کن. برای FreeCAD از رابط و فرمان‌های شناخته‌شده آن استفاده کن. از دستورهای سیستم‌عامل، PowerShell، cmd، حذف فایل، نصب برنامه، خاموش‌کردن، تغییر رجیستری یا دسترسی به اطلاعات خصوصی استفاده نکن. اگر تصویر صفحه نشان می‌دهد برنامه آماده نیست، ابتدا وضعیت را بررسی کن و مراحل لازم را پیشنهاد بده. اگر برای انجام کار اطلاعات کافی نداری، summary را با سؤال روشن‌کننده شروع کن و actions را خالی بگذار.
 درخواست کاربر: ${taskPrompt.trim()}
 """.trimIndent()
@@ -299,6 +302,8 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                                                 add(PcPlannedAction(type = "mouse_move", x = x.toFloat(), y = y.toFloat()))
                                             }
                                             "mouse_click" -> add(PcPlannedAction(type = "mouse_click"))
+                                            "mouse_right_click" -> add(PcPlannedAction(type = "mouse_right_click"))
+                                            "mouse_scroll" -> add(PcPlannedAction(type = "mouse_scroll", delta = item.optInt("delta", 120).coerceIn(-1200, 1200)))
                                             else -> throw IllegalStateException("مدل یک مرحله خارج از فهرست مجاز پیشنهاد داده است.")
                                         }
                                     }
@@ -326,6 +331,8 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                             "key" -> "کلیدها: ${action.key}"
                             "type_text" -> "متن کامل فرمان برای تایپ:\n${action.text}"
                             "mouse_move" -> "حرکت ماوس به ${action.x}, ${action.y}"
+                            "mouse_right_click" -> "کلیک راست ماوس"
+                            "mouse_scroll" -> "اسکرول ماوس: ${action.delta}"
                             else -> "کلیک ماوس"
                         }
                         Text("${index + 1}. $detail", color = muted, style = MaterialTheme.typography.bodySmall)
@@ -346,6 +353,8 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                                                 "type_text" -> client.typeText(action.text)
                                                 "mouse_move" -> client.sendMouseMove(action.x, action.y)
                                                 "mouse_click" -> client.click()
+                                                "mouse_right_click" -> client.rightClick()
+                                                "mouse_scroll" -> client.scroll(action.delta)
                                             }
                                             if (action.type !in setOf("wait")) delay(350)
                                         }
@@ -406,6 +415,17 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
                         OutlinedButton(onClick = { client.key(key) }, enabled = connected && remoteControlAllowed, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 3.dp)) {
                             Text(label, color = accent, style = MaterialTheme.typography.labelSmall)
                         }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { client.rightClick() }, enabled = connected && remoteControlAllowed, modifier = Modifier.weight(1f)) {
+                        Text("کلیک راست", color = accent, style = MaterialTheme.typography.labelSmall)
+                    }
+                    OutlinedButton(onClick = { client.scroll(120) }, enabled = connected && remoteControlAllowed, modifier = Modifier.weight(1f)) {
+                        Text("اسکرول بالا", color = accent, style = MaterialTheme.typography.labelSmall)
+                    }
+                    OutlinedButton(onClick = { client.scroll(-120) }, enabled = connected && remoteControlAllowed, modifier = Modifier.weight(1f)) {
+                        Text("اسکرول پایین", color = accent, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 OutlinedTextField(
