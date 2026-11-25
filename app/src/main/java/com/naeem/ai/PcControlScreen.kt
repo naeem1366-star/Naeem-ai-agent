@@ -228,6 +228,7 @@ fun PcControlScreen(onClose: () -> Unit, baseUrl: String, model: String, apiKey:
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("دستور هوشمند به کامپیوتر", color = accent, style = MaterialTheme.typography.titleMedium)
                 Text("درخواستت را فارسی بنویس. دستیار با دیدن آخرین تصویر صفحه، مراحل پیشنهادی را می‌سازد؛ هیچ مرحله‌ای بدون تأیید تو اجرا نمی‌شود.", color = muted, style = MaterialTheme.typography.bodySmall)
+                Text("نکته حریم خصوصی: با زدن دکمه تحلیل، تصویر صفحه و متن درخواست به سرویس هوش مصنوعی تنظیم‌شده در برنامه ارسال می‌شود. پیش از تحلیل، پنجره‌ها و اطلاعات خصوصی را ببند.", color = Color(0xFFFFD28A), style = MaterialTheme.typography.labelSmall)
                 OutlinedTextField(
                     value = taskPrompt,
                     onValueChange = { taskPrompt = it },
