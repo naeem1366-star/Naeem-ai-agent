@@ -74,10 +74,13 @@ class SupabaseAuthClient(context: Context) {
 
     private fun post(path: String, body: JSONObject, accessToken: String? = null): JSONObject {
         val builder = Request.Builder().url(SUPABASE_URL + path)
+            // Publishable keys are API keys, not JWTs. Keep them only in the apikey header.
             .header("apikey", SUPABASE_PUBLISHABLE_KEY)
-            .header("Authorization", "Bearer " + (accessToken ?: SUPABASE_PUBLISHABLE_KEY))
             .header("Accept", "application/json")
             .post(body.toString().toRequestBody(jsonType))
+        if (!accessToken.isNullOrBlank()) {
+            builder.header("Authorization", "Bearer " + accessToken)
+        }
         http.newCall(builder.build()).execute().use { response ->
             val raw = response.body?.string().orEmpty()
             val parsed = runCatching { JSONObject(raw) }.getOrElse { JSONObject() }
