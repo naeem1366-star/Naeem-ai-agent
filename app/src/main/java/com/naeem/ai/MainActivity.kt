@@ -193,6 +193,7 @@ class MainActivity : FragmentActivity() {
                     ),
                     typography = naeemTypography()
                 ) {
+                    SupraGlassBackdrop {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
@@ -201,7 +202,7 @@ class MainActivity : FragmentActivity() {
                             }
                         )
                     } else if (!authReady.value) {
-                        Box(Modifier.fillMaxSize().background(Color(0xFF090B12)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxSize().background(Color.Transparent), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = SupraGlass.Ice)
                         }
                     } else if (authSession.value == null) {
@@ -229,6 +230,7 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
                         )
+                    }
                     }
                 }
             }
