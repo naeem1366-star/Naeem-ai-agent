@@ -217,12 +217,13 @@ fun FeatureHub(
             }
         )
     }
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){
-                Text("NAEEM AI  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+            Column(Modifier.weight(1f), horizontalAlignment=Alignment.End){
+                Text("IMA  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("هر فضا را با انتخاب آیکون خودش باز کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall)
+                Text("هر فضا را با انتخاب آیکون خودش باز کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall, textAlign=androidx.compose.ui.text.style.TextAlign.End)
             }
             IconButton(onClick={showFeatureMap=true}){Icon(Icons.Default.AccountTree,null,tint=gold)}
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
@@ -235,15 +236,15 @@ fun FeatureHub(
         ) {
             Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 Icon(Icons.Default.Hub, null, tint = Color(0xFFE0E6EE), modifier = Modifier.size(27.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("مغز هوشمند Naeem AI", color = Color(0xFFE0E6EE), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp), horizontalAlignment = Alignment.End) {
+                    Text("مغز هوشمند ایما", color = Color(0xFFE0E6EE), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                     Text("وقتی خودت گفتگو یا میکروفون را فعال می‌کنی، حرف‌هایت را می‌فهمد، موضوع را تشخیص می‌دهد و اطلاعات را به بخش مرتبط می‌فرستد؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", color = Color(0xFFADB7C4), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(
-            query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,
+            query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true, textStyle=androidx.compose.ui.text.TextStyle(textAlign=androidx.compose.ui.text.style.TextAlign.End),
             shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},
             leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
             colors=OutlinedTextFieldDefaults.colors(
@@ -293,7 +294,7 @@ fun FeatureHub(
                                     Icon(entry.icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
                                 }
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp), horizontalAlignment = Alignment.End) {
                                 Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall)
                                 Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 1, style = MaterialTheme.typography.labelSmall)
                             }
@@ -302,6 +303,7 @@ fun FeatureHub(
                 }
             }
         }
+    }
     }
 }
 @Composable private fun FCard(content:@Composable ColumnScope.()->Unit){Card(Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=FC),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp),content=content)}}
@@ -904,7 +906,7 @@ private class TrackSearch{
 
 @Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ MusicStudioDashboard(onClose,onAskAi) }
 
-// Graphite and silver 3D feature gallery for Naeem AI.
+// Graphite and silver 3D feature gallery for IMA.
 
 
 @Composable
@@ -1012,7 +1014,7 @@ private fun FeatureMapTree(
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.AccountTree, null, tint = silver, modifier = Modifier.size(30.dp))
                         Spacer(Modifier.height(5.dp))
-                        Text("Naeem AI", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                        Text("IMA", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
                         Text("ریشه درخت · هسته هوشمند و هماهنگ‌کننده فضاها", color = muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -1091,7 +1093,7 @@ fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
                     Spacer(Modifier.width(8.dp))
                     Text("ورود امن و حریم خصوصی", color = FG, fontWeight = FontWeight.SemiBold)
                 }
-                Text("رمز عبورت را داخل Naeem AI وارد نکن. اتصال مستقیم اینستاگرام از مسیر رسمی Meta در حال آماده‌سازی است و پس از ثبت اپ و مجوزها فعال می‌شود. فعلاً می‌توانی آمار Insights را وارد کنی و تحلیل بگیری.", color = FM, style = MaterialTheme.typography.bodySmall)
+                Text("رمز عبورت را داخل IMA وارد نکن. اتصال مستقیم اینستاگرام از مسیر رسمی Meta در حال آماده‌سازی است و پس از ثبت اپ و مجوزها فعال می‌شود. فعلاً می‌توانی آمار Insights را وارد کنی و تحلیل بگیری.", color = FM, style = MaterialTheme.typography.bodySmall)
             }
         }
         Text("پلتفرم", color = FG, fontWeight = FontWeight.SemiBold)
