@@ -65,11 +65,11 @@ private object GoogleResearchClient {
     }
 }
 
-private val ThinkBg = Color(0xFF0B0D11)
-private val ThinkCard = Color(0xFF171A20)
-private val ThinkLine = Color(0xFF292E38)
-private val ThinkText = Color(0xFFE5E8ED)
-private val ThinkMuted = Color(0xFF9AA2AE)
+private val ThinkBg = Color.Transparent
+private val ThinkCard = SupraGlass.Glass
+private val ThinkLine = SupraGlass.Edge
+private val ThinkText = SupraGlass.Silver
+private val ThinkMuted = SupraGlass.Muted
 
 private data class ThinkProject(
     val id: Long,
