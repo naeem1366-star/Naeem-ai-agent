@@ -437,6 +437,7 @@ fun NaeemApp(
     var sendTargetBounds by remember { mutableStateOf(Rect.Zero) }
     var menuTargetBounds by remember { mutableStateOf(Rect.Zero) }
     var showSettings by remember { mutableStateOf(false) }
+    var showPcControl by remember { mutableStateOf(false) }
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
     var apiKey by remember { mutableStateOf(store.apiKeyFor(store.baseUrl()).ifBlank { store.apiKey() }) }
@@ -954,6 +955,7 @@ fun NaeemApp(
                                 DropdownMenuItem(text = { Text("آلبوم تصاویر") }, leadingIcon = { Icon(Icons.Default.Collections, null, tint = Gold) }, onClick = { showQuickMenu = false; showAlbum = true; albumImages = dataStore.images() })
                                 DropdownMenuItem(text = { Text("دفتر مالی") }, leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, null, tint = Gold) }, onClick = { showQuickMenu = false; showFinance = true; ledgerEntries = ledgerStore.entries() })
                                 DropdownMenuItem(text = { Text("حافظه هوشمند") }, leadingIcon = { Icon(Icons.Default.Bookmark, null, tint = Gold) }, onClick = { showQuickMenu = false; showMemory = true; memories = dataStore.memories() })
+                                DropdownMenuItem(text = { Text("کنترل کامپیوتر") }, leadingIcon = { Icon(Icons.Default.Computer, null, tint = Gold) }, onClick = { showQuickMenu = false; showPcControl = true })
                                 DropdownMenuItem(text = { Text("تنظیمات") }, leadingIcon = { Icon(Icons.Default.Settings, null, tint = Gold) }, onClick = { showQuickMenu = false; showSettings = true })
                             }
                         }
@@ -1233,6 +1235,14 @@ fun NaeemApp(
                 }
             )
         } else FloatingTutorialButton(onClick = { tutorialStep = 0 })
+
+        if (showPcControl) {
+            Dialog(onDismissRequest = { showPcControl = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Ink) {
+                    PcControlScreen(onClose = { showPcControl = false })
+                }
+            }
+        }
 
         if (showHub) {
             Dialog(onDismissRequest = { showHub = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
