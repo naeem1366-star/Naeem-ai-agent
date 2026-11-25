@@ -220,7 +220,7 @@ fun ThinkRoomScreen(
                     },
                     enabled = !busy && question.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDDE2EA), contentColor = Color(0xFF171A20))
+                    colors = ButtonDefaults.buttonColors(containerColor = SupraGlass.Ice, contentColor = SupraGlass.Night)
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
