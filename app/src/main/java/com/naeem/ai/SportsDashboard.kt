@@ -39,14 +39,14 @@ fun SportsDashboard(onClose:()->Unit){
  var minutes by remember{mutableStateOf("45")};var sets by remember{mutableStateOf("3")};var reps by remember{mutableStateOf("10")}
  var weight by remember{mutableStateOf("0")};var distance by remember{mutableStateOf("0")};var notes by remember{mutableStateOf("")}
  var goal by remember{mutableStateOf("افزایش قدرت")};var selectedPlan by remember{mutableStateOf("قدرت پایه")}
- val bg=Color(0xFF0A0C10);val panel=Color(0xFF1B1F25);val accent=Color(0xFFD4D9E0);val muted=Color(0xFFB5B9C8)
+ val bg=Color.Transparent;val panel=SupraGlass.Glass;val accent=SupraGlass.Ice;val muted=SupraGlass.Muted
  val today=java.util.Calendar.getInstance().apply{set(java.util.Calendar.HOUR_OF_DAY,0);set(java.util.Calendar.MINUTE,0);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0)}.timeInMillis
  val week=logs.filter{it.date>=today-6L*24*60*60*1000};val weekMinutes=week.sumOf{it.minutes}
  val volume=week.sumOf{it.sets.toLong()*it.reps.toLong()*(it.weight*100).toLong()/100L}
  val number=remember{java.text.NumberFormat.getNumberInstance(Locale("fa","IR"))}
  val plans=mapOf("قدرت پایه" to listOf("اسکوات","پرس سینه","زیربغل قایقی","پرس سرشانه","ددلیفت رومانیایی","پلانک"),"عضله‌سازی" to listOf("پرس سینه دمبل","لت سیم‌کش","اسکوات جام","پرس بالا سینه","جلو بازو","پشت بازو"),"چربی‌سوزی و آمادگی" to listOf("پیاده‌روی تند","دوچرخه ثابت","اسکوات وزن بدن","شنا سوئدی","طناب","حرکات مرکزی"),"انعطاف و ریکاوری" to listOf("کشش همسترینگ","باز کردن لگن","کشش سینه","حرکت گربه گاو","تنفس آرام","پیاده‌روی سبک"))
  fun saveLog(){if(title.isNotBlank()){val x=SportLog(UUID.randomUUID().toString(),title.trim(),category,System.currentTimeMillis(),minutes.toIntOrNull()?.coerceAtLeast(0)?:0,distance.toDoubleOrNull()?:0.0,sets.toIntOrNull()?.coerceAtLeast(0)?:0,reps.toIntOrNull()?.coerceAtLeast(0)?:0,weight.toDoubleOrNull()?.coerceAtLeast(0.0)?:0.0,notes.trim());logs=listOf(x)+logs;store.save(logs);title="";notes=""}}
- Column(Modifier.fillMaxSize().background(bg.copy(alpha=0.84f)).padding(horizontal=16.dp,vertical=12.dp)){
+ Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=16.dp,vertical=12.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("NAEEM PERFORMANCE",color=accent,style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold);Text("باشگاه تمرین من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black);Text("تمرین، قدرت، استقامت و ریکاوری؛ همه در یک‌جا",color=muted,style=MaterialTheme.typography.bodySmall)};IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=accent)}}
   Spacer(Modifier.height(12.dp))
   Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("تمرین","برنامه‌ها","پیشرفت","تاریخچه").forEach{FilterChip(selected=tab==it,onClick={tab=it},label={Text(it)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=accent,selectedLabelColor=bg,containerColor=panel,labelColor=Color.White))}}
@@ -81,4 +81,4 @@ fun SportsDashboard(onClose:()->Unit){
  }
 }
 @Composable private fun SportInput(label:String,value:String,onValue:(String)->Unit,modifier:Modifier){OutlinedTextField(value,onValue,modifier=modifier,singleLine=true,label={Text(label,style=MaterialTheme.typography.labelSmall)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))}
-@Composable private fun SportMetric(title:String,value:String,modifier:Modifier,accent:Color,panel:Color){Card(modifier,colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(15.dp)){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(title,color=Color(0xFFB5B9C8),style=MaterialTheme.typography.labelSmall);Text(value,color=accent,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}}}
+@Composable private fun SportMetric(title:String,value:String,modifier:Modifier,accent:Color,panel:Color){Card(modifier,colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(15.dp)){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(title,color=SupraGlass.Muted,style=MaterialTheme.typography.labelSmall);Text(value,color=accent,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)}}}
