@@ -85,9 +85,14 @@ class SupabaseAuthClient(context: Context) {
             val raw = response.body?.string().orEmpty()
             val parsed = runCatching { JSONObject(raw) }.getOrElse { JSONObject() }
             if (!response.isSuccessful) {
-                val message = parsed.optString("msg").ifBlank { parsed.optString("message") }
+                val serverMessage = parsed.optString("msg").ifBlank { parsed.optString("message") }
                     .ifBlank { parsed.optString("error_description") }.ifBlank { parsed.optString("error") }
-                    .ifBlank { "خطای ارتباط با سرویس ورود (HTTP " + response.code + ")" }
+                val message = if (serverMessage.contains("invalid api key", ignoreCase = true) ||
+                    serverMessage.contains("invalid_api_key", ignoreCase = true)) {
+                    "کلید اتصال سرویس حساب کاربری معتبر نیست. باید کلید Publishable همین پروژه در تنظیمات Supabase بررسی و در نسخه برنامه جایگزین شود."
+                } else {
+                    serverMessage.ifBlank { "خطای ارتباط با سرویس ورود (HTTP " + response.code + ")" }
+                }
                 throw IOException(message)
             }
             return parsed
