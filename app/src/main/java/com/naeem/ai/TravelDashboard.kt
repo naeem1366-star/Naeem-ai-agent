@@ -143,7 +143,7 @@ fun TravelDashboard(onClose:()->Unit) {
     val bg=Color.Transparent; val panel=SupraGlass.Glass; val accent=SupraGlass.Ice; val muted=SupraGlass.Muted
     fun persist(next:List<LocalTrip>) { trips=next; store.save(next) }
 
-    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).imePadding().navigationBarsPadding().padding(horizontal=18.dp, vertical=14.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             if(selected!=null) IconButton(onClick={selectedId=null}) { Icon(Icons.Default.ArrowBack,null,tint=accent) }
             Column(Modifier.weight(1f)) {
@@ -179,7 +179,7 @@ fun TravelDashboard(onClose:()->Unit) {
             if(trips.isEmpty()) {
                 Box(Modifier.fillMaxWidth().weight(1f),contentAlignment=Alignment.Center) { Text("هنوز سفری ثبت نکرده‌ای.",color=muted) }
             } else {
-                LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=24.dp)) {
+                LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=88.dp)) {
                     items(trips,key={it.id}) { trip ->
                         Card(onClick={selectedId=trip.id},colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(20.dp)) {
                             Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -200,7 +200,7 @@ fun TravelDashboard(onClose:()->Unit) {
                 }
             }
         } else {
-            LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=26.dp)) {
+            LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=88.dp)) {
                 item {
                     Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(22.dp)) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
