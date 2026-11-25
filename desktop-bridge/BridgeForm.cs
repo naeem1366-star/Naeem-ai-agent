@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using QRCoder;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -28,6 +29,7 @@ public sealed class BridgeForm : Form
     private readonly Label _fingerprintLabel = new();
     private readonly Label _ipLabel = new();
     private readonly Label _statusLabel = new();
+    private readonly PictureBox _pairingQr = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White, Margin = new Padding(180, 3, 180, 3) };
     private readonly CheckBox _allowControl = new();
     private readonly Button _copyFingerprint = new();
     private readonly CancellationTokenSource _shutdown = new();
@@ -46,8 +48,8 @@ public sealed class BridgeForm : Form
     {
         Text = "Naeem AI — اتصال امن به کامپیوتر";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(620, 500);
-        Size = new Size(700, 560);
+        MinimumSize = new Size(640, 700);
+        Size = new Size(700, 760);
         BackColor = Color.FromArgb(16, 24, 38);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10F);
@@ -60,17 +62,19 @@ public sealed class BridgeForm : Form
         _certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(365));
         _fingerprint = Convert.ToHexString(SHA256.HashData(_certificate.RawData));
 
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28), ColumnCount = 1, RowCount = 10, BackColor = BackColor };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24), ColumnCount = 1, RowCount = 12, BackColor = BackColor };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 158));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         var title = new Label { Text = "اتصال گوشی به کامپیوتر", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(225, 232, 242), TextAlign = ContentAlignment.MiddleRight };
         layout.Controls.Add(title, 0, 0);
@@ -88,31 +92,33 @@ public sealed class BridgeForm : Form
         _fingerprintLabel.ForeColor = Color.FromArgb(200, 210, 225);
         _fingerprintLabel.TextAlign = ContentAlignment.MiddleCenter;
         layout.Controls.Add(_fingerprintLabel, 0, 4);
+        layout.Controls.Add(MakeLabel("برای اتصال سریع، این کد را با دوربین گوشی اسکن کن:", 10), 0, 5);
+        layout.Controls.Add(_pairingQr, 0, 6);
         _copyFingerprint.Text = "کپی اثر انگشت";
         _copyFingerprint.Dock = DockStyle.Fill;
         _copyFingerprint.BackColor = Color.FromArgb(48, 65, 90);
         _copyFingerprint.ForeColor = Color.White;
         _copyFingerprint.FlatStyle = FlatStyle.Flat;
         _copyFingerprint.Click += (_, _) => { Clipboard.SetText(_fingerprint); _statusLabel.Text = "اثر انگشت کپی شد."; };
-        layout.Controls.Add(_copyFingerprint, 0, 5);
+        layout.Controls.Add(_copyFingerprint, 0, 7);
         _ipLabel.Text = "نشانی شبکه: " + GetLocalIPv4ForDisplay() + "   |   درگاه: " + Port;
         _ipLabel.Dock = DockStyle.Fill;
         _ipLabel.TextAlign = ContentAlignment.MiddleRight;
         _ipLabel.ForeColor = Color.FromArgb(185, 198, 218);
-        layout.Controls.Add(_ipLabel, 0, 6);
+        layout.Controls.Add(_ipLabel, 0, 8);
         _allowControl.Text = "اجازه کنترل ماوس و صفحه‌کلید از گوشی (برای امنیت، پیش‌فرض خاموش است)";
         _allowControl.Dock = DockStyle.Fill;
         _allowControl.ForeColor = Color.FromArgb(255, 218, 155);
         _allowControl.CheckedChanged += (_, _) => _controlEnabled = _allowControl.Checked;
-        layout.Controls.Add(_allowControl, 0, 7);
+        layout.Controls.Add(_allowControl, 0, 9);
         _statusLabel.Text = "در حال راه‌اندازی سرویس محلی امن…";
         _statusLabel.Dock = DockStyle.Fill;
         _statusLabel.TextAlign = ContentAlignment.MiddleRight;
         _statusLabel.ForeColor = Color.FromArgb(160, 220, 180);
-        layout.Controls.Add(_statusLabel, 0, 8);
+        layout.Controls.Add(_statusLabel, 0, 10);
         var note = MakeLabel("فقط شبکه محلی • بدون سرور ابری • برای توقف اتصال، این پنجره را ببند.", 8);
         note.Dock = DockStyle.Fill;
-        layout.Controls.Add(note, 0, 9);
+        layout.Controls.Add(note, 0, 11);
         Controls.Add(layout);
 
         Shown += async (_, _) => await StartServicesAsync();
@@ -126,6 +132,32 @@ public sealed class BridgeForm : Form
     };
 
     private static string FormatFingerprint(string value) => string.Join(":", Enumerable.Range(0, value.Length / 2).Select(i => value.Substring(i * 2, 2)));
+
+    private void RefreshPairingQr(string ipAddress)
+    {
+        try
+        {
+            var payload = JsonSerializer.Serialize(new
+            {
+                type = "naeem_ai_pc_pair",
+                ip = ipAddress,
+                port = Port,
+                pin = _pin,
+                fingerprint = _fingerprint
+            });
+            using var generator = new QRCodeGenerator();
+            using var data = generator.CreateQrCode(payload, QRCodeGenerator.ECCLevel.Q);
+            using var qr = new QRCode(data);
+            using var bitmap = qr.GetGraphic(7, Color.Black, Color.White, drawQuietZones: true);
+            var previous = _pairingQr.Image;
+            _pairingQr.Image = new Bitmap(bitmap);
+            previous?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _statusLabel.Text = "ساخت کد اتصال ناموفق بود: " + ex.Message;
+        }
+    }
 
     private async Task StartServicesAsync()
     {
@@ -156,6 +188,7 @@ public sealed class BridgeForm : Form
 
             await app.StartAsync(_shutdown.Token);
             _server = app;
+            RefreshPairingQr(localAddress.ToString());
             _discovery = new UdpClient(DiscoveryPort) { EnableBroadcast = true };
             _ = Task.Run(() => DiscoveryLoopAsync(_shutdown.Token));
             _statusLabel.Text = "سرویس فعال است. گوشی را به همین مودم/شبکه وصل کن و «جست‌وجوی کامپیوتر» را بزن.";
