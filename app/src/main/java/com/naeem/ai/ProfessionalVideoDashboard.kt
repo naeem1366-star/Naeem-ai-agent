@@ -50,6 +50,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
     var status by remember { mutableStateOf("یک مدل را انتخاب کن.") }
     var error by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf(false) }
+    var showModelPicker by remember { mutableStateOf(false) }
     var resultBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     fun refreshModels() {
@@ -138,25 +139,20 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                 IconButton(onClick = { refreshModels() }, enabled = !loading) { Icon(Icons.Default.Refresh, "به‌روزرسانی", tint = silver) }
             }
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-            models.forEach { item ->
-                Surface(onClick = {
-                    selected = item
-                    seconds = item.seconds.firstOrNull() ?: 8
-                    size = item.sizes.firstOrNull() ?: "720x1280"
-                    prompt = ""; imageUri = null; imageData = null; error = ""
-                }, color = panel, shape = RoundedCornerShape(13.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF303946))) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(item.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                        if (item.description.isNotBlank()) Text(item.description, color = muted, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-                        Text(buildList {
-                            if (item.imageInput) add("ورودی تصویر")
-                            if (item.audio) add("همراه صدا")
-                            if (item.seconds.isNotEmpty()) add(item.seconds.joinToString("، ") + " ثانیه")
-                        }.joinToString("  •  ").ifBlank { "ساخت ویدیو از متن" }, color = Color(0xFFB7C7D9), style = MaterialTheme.typography.labelSmall)
-                    }
+            if (models.isEmpty() && !loading) {
+                Text("فهرست مدل‌ها خالی است یا دریافت نشده؛ اتصال را بررسی و دوباره تلاش کن.", color = muted)
+            } else if (models.isNotEmpty()) {
+                OutlinedButton(
+                    onClick = { showModelPicker = true },
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = silver)
+                ) {
+                    Text("انتخاب از فهرست مدل‌ها", modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                 }
+                Text("تعداد مدل‌های در دسترس: ${models.size}", color = muted, style = MaterialTheme.typography.labelSmall)
             }
-            if (models.isEmpty() && !loading) Text("فهرست مدل‌ها خالی است یا دریافت نشده؛ اتصال را بررسی و دوباره تلاش کن.", color = muted)
         } else {
             val model = selected!!
             Surface(color = Color(0xFF17271F), shape = RoundedCornerShape(13.dp)) {
@@ -218,6 +214,53 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
         if (resultBytes != null) Button(onClick = { savePicker.launch("Supra-Video-${System.currentTimeMillis()}.mp4") }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.CloudDownload, null); Spacer(Modifier.width(7.dp)); Text("ذخیره ویدیوی نهایی")
         }
+    }
+
+    if (showModelPicker) {
+        AlertDialog(
+            onDismissRequest = { showModelPicker = false },
+            title = { Text("انتخاب مدل تولید ویدیو") },
+            text = {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    models.forEach { item ->
+                        Surface(
+                            onClick = {
+                                selected = item
+                                seconds = item.seconds.firstOrNull() ?: 8
+                                size = item.sizes.firstOrNull() ?: "720x1280"
+                                prompt = ""
+                                imageUri = null
+                                imageData = null
+                                error = ""
+                                showModelPicker = false
+                            },
+                            color = panel,
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF303946))
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(item.name, color = Color.White, fontWeight = FontWeight.SemiBold)
+                                if (item.description.isNotBlank()) {
+                                    Text(item.description, color = muted, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                                }
+                                Text(
+                                    buildList {
+                                        if (item.imageInput) add("ورودی تصویر")
+                                        if (item.audio) add("همراه صدا")
+                                        if (item.seconds.isNotEmpty()) add(item.seconds.joinToString("، ") + " ثانیه")
+                                    }.joinToString(" • ").ifBlank { "ساخت ویدیو از متن" },
+                                    color = Color(0xFFB7C7D9), style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showModelPicker = false }) { Text("بستن") } }
+        )
     }
 
     if (confirm && selected != null) {
