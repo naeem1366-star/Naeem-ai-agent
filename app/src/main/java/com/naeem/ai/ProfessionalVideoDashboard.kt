@@ -106,10 +106,10 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
         }
     }
 
-    val bg = Color(0xFF0B0E13)
-    val panel = Color(0xFF171D27)
-    val muted = Color(0xFF9DA8B7)
-    val silver = Color(0xFFDCE3ED)
+    val bg = Color.Transparent
+    val panel = SupraGlass.Glass
+    val muted = SupraGlass.Muted
+    val silver = SupraGlass.Silver
 
     Column(Modifier.fillMaxSize().background(bg).verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -121,7 +121,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
                 Text("ویدیوساز هوشیار", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
                 Text(selected?.name ?: "انتخاب مدل ساخت ویدیو", color = muted, style = MaterialTheme.typography.bodySmall)
             }
-            Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFD6C08A))
+            Icon(Icons.Default.AutoAwesome, null, tint = SupraGlass.Ice)
         }
 
         Surface(color = panel, shape = RoundedCornerShape(14.dp)) {
