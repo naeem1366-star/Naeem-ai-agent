@@ -167,7 +167,7 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v4", false)
+        introCompleted.value = appPrefs.getBoolean("app_intro_completed_v5", false)
 
         setContent {
             val authScope = rememberCoroutineScope()
@@ -198,7 +198,7 @@ class MainActivity : FragmentActivity() {
                     if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
-                                appPrefs.edit().putBoolean("app_intro_completed_v4", true).apply()
+                                appPrefs.edit().putBoolean("app_intro_completed_v5", true).apply()
                                 introCompleted.value = true
                             }
                         )
@@ -285,82 +285,109 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
 
 @Composable
 private fun AppIntegrationIntro(onEnter: () -> Unit) {
-    var page by remember { mutableIntStateOf(0) }
+    var page by remember { mutableIntStateOf(-1) }
     val silver = Color(0xFFE8EDF5)
     val muted = Color(0xFFB9C5D5)
     Box(Modifier.fillMaxSize().background(Color.Transparent)) {
-        Image(
-            painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.22f }, contentScale = ContentScale.Crop
-        )
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x3354A8FF), Color(0x22406FA6), Color(0x33101D35)))))
-        Column(
-            Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp, vertical = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Spacer(Modifier.height(8.dp))
-            ThinkingOrb(diameter = 118.dp, active = true)
-            Spacer(Modifier.height(22.dp))
-            if (page == 0) {
-                Text(
-                    "فقط صحبت کن؛ ایما می‌فهمد و همراهت است.",
-                    color = silver, style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "با انتخاب میکروفون، حرف‌هایت را می‌شنود، منظورت را تشخیص می‌دهد و برای انجام کارها کمکت می‌کند.",
-                    color = muted, style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 28.sp, textAlign = TextAlign.Center
-                )
-            } else {
-                Text(
-                    "هر موضوع، در فضای خودش",
-                    color = silver, style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "ایما می‌تواند اطلاعات سفر، کار، تغذیه و برنامه‌های روزانه را به بخش مرتبط هدایت کند. ثبت یا تغییر موارد مهم با تأیید تو انجام می‌شود.",
-                    color = muted, style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 28.sp, textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "ساخت عکس و ویدیو، موسیقی و پادکست هم در دسترس توست.",
-                    color = Color(0xFFDCE8FA), style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center, lineHeight = 24.sp
-                )
-            }
-            Spacer(Modifier.height(26.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                repeat(2) { index ->
-                    Box(
-                        Modifier.padding(horizontal = 4.dp).size(if (page == index) 9.dp else 7.dp)
-                            .background(if (page == index) Color(0xFFDCE8FA) else Color(0x667D97BA), CircleShape)
-                    )
+        if (page == -1) {
+            Image(
+                painter = painterResource(R.drawable.ima_splash),
+                contentDescription = "تو زندگی کن؛ ایما حواسش هست",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Surface(
+                onClick = { page = 0 },
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 34.dp, vertical = 28.dp)
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0x553A5676),
+                contentColor = silver,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x66B9D8FF)),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("شروع", color = silver, fontWeight = FontWeight.SemiBold)
                 }
             }
-            Spacer(Modifier.height(18.dp))
-            if (page == 0) {
-                Button(
-                    onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                    shape = RoundedCornerShape(17.dp)
-                ) { Text("ادامه", fontWeight = FontWeight.Bold) }
-            } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(
-                        onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
-                        shape = RoundedCornerShape(17.dp)
-                    ) { Text("قبلی", color = silver) }
+        } else {
+            Image(
+                painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.22f }, contentScale = ContentScale.Crop
+            )
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x3354A8FF), Color(0x22406FA6), Color(0x33101D35)))))
+            Column(
+                Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState())
+                    .padding(horizontal = 22.dp, vertical = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Spacer(Modifier.height(8.dp))
+                ThinkingOrb(diameter = 118.dp, active = true)
+                Spacer(Modifier.height(22.dp))
+                if (page == 0) {
+                    Text(
+                        "فقط صحبت کن؛ ایما می‌فهمد و همراهت است.",
+                        color = silver, style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "با انتخاب میکروفون، حرف‌هایت را می‌شنود، منظورت را تشخیص می‌دهد و برای انجام کارها کمکت می‌کند.",
+                        color = muted, style = MaterialTheme.typography.bodyLarge,
+                        lineHeight = 28.sp, textAlign = TextAlign.Center
+                    )
+                } else {
+                    Text(
+                        "هر موضوع، در فضای خودش",
+                        color = silver, style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "ایما می‌تواند اطلاعات سفر، کار، تغذیه و برنامه‌های روزانه را به بخش مرتبط هدایت کند. ثبت یا تغییر موارد مهم با تأیید تو انجام می‌شود.",
+                        color = muted, style = MaterialTheme.typography.bodyLarge,
+                        lineHeight = 28.sp, textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "ساخت عکس و ویدیو، موسیقی و پادکست هم در دسترس توست.",
+                        color = Color(0xFFDCE8FA), style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center, lineHeight = 24.sp
+                    )
+                }
+                Spacer(Modifier.height(26.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    repeat(2) { index ->
+                        Box(
+                            Modifier.padding(horizontal = 4.dp).size(if (page == index) 9.dp else 7.dp)
+                                .background(if (page == index) Color(0xFFDCE8FA) else Color(0x667D97BA), CircleShape)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
+                if (page == 0) {
                     Button(
-                        onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                        onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
                         shape = RoundedCornerShape(17.dp)
-                    ) { Text("ورود به ایما", fontWeight = FontWeight.Bold) }
+                    ) { Text("ادامه", fontWeight = FontWeight.Bold) }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(
+                            onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
+                            shape = RoundedCornerShape(17.dp)
+                        ) { Text("قبلی", color = silver) }
+                        Button(
+                            onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
+                            shape = RoundedCornerShape(17.dp)
+                        ) { Text("ورود به ایما", fontWeight = FontWeight.Bold) }
+                    }
                 }
             }
         }
