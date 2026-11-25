@@ -65,56 +65,155 @@ private val FM=Color(0xFFA8ADB8)
 
 @Composable
 fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
+    data class OrbitItem(
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val title: String,
+        val description: String,
+        val color: Color
+    )
     val items = listOf(
-        Icons.Default.Luggage to "سفر", Icons.Default.Terrain to "طبیعت",
-        Icons.Default.FitnessCenter to "ورزش", Icons.Default.TrendingUp to "بازار",
-        Icons.Default.Psychology to "اتاق فکر", Icons.Default.Newspaper to "اخبار",
-        Icons.Default.AccountBalanceWallet to "مالی", Icons.Default.EventNote to "روزنگار",
-        Icons.Default.MusicNote to "موسیقی", Icons.Default.Settings to "تنظیمات"
+        OrbitItem(Icons.Default.Luggage, "سفر", "مقصد، همراهان و برنامه سفر", Color(0xFF4EA6FF)),
+        OrbitItem(Icons.Default.Terrain, "طبیعت", "مسیرها و ماجراجویی در طبیعت", Color(0xFF54C99A)),
+        OrbitItem(Icons.Default.FitnessCenter, "ورزش", "تمرین‌ها و رکوردهای ورزشی", Color(0xFFFF875E)),
+        OrbitItem(Icons.Default.TrendingUp, "بازار", "رصد بازارها و تحلیل دارایی‌ها", Color(0xFFFFC45C)),
+        OrbitItem(Icons.Default.Psychology, "اتاق فکر", "ایده‌پردازی و حل مسئله", Color(0xFFB18AFF)),
+        OrbitItem(Icons.Default.Newspaper, "اخبار", "خبرهای مهم و رویدادها", Color(0xFF69C7E8)),
+        OrbitItem(Icons.Default.AccountBalanceWallet, "مالی", "درآمد، هزینه و گزارش مالی", Color(0xFF5DD6C0)),
+        OrbitItem(Icons.Default.EventNote, "روزنگار", "یادداشت‌ها و اتفاق‌های روزانه", Color(0xFFFF8DB5)),
+        OrbitItem(Icons.Default.MusicNote, "موسیقی", "کشف آهنگ و حال‌وهوای موسیقی", Color(0xFF9BAEFF)),
+        OrbitItem(Icons.Default.Settings, "تنظیمات", "اتصال‌ها و تنظیمات برنامه", Color(0xFFB5C0CC))
     )
     var rotation by remember { mutableFloatStateOf(0f) }
     var selected by remember { mutableIntStateOf(-1) }
-    BoxWithConstraints(
-        Modifier.fillMaxWidth().height(116.dp)
-            .pointerInput(items.size) {
-                detectDragGestures { change, drag ->
-                    change.consume()
-                    rotation += drag.x / size.width.coerceAtLeast(1).toFloat() * 2f * PI.toFloat()
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        val rx = maxWidth.value * 0.39f
-        val ry = 27f
-        val nodes = items.indices.map { i ->
-            val a = i * (2f * PI.toFloat() / items.size) + rotation + PI.toFloat() / 2f
-            Triple(i, a, (sin(a) + 1f) / 2f)
-        }.sortedBy { it.third }
-        Canvas(Modifier.fillMaxSize()) {
-            val w = size.width * .78f; val h = size.height * .47f
-            drawOval(
-                brush = ComposeBrush.linearGradient(listOf(Color(0xFF263A58), Color(0xFF9BB8DC), Color(0xFF263A58))),
-                topLeft = androidx.compose.ui.geometry.Offset((size.width-w)/2f, (size.height-h)/2f),
-                size = androidx.compose.ui.geometry.Size(w,h), style = Stroke(width = 1.5.dp.toPx())
-            )
+    LaunchedEffect(selected) {
+        if (selected >= 0) {
+            kotlinx.coroutines.delay(2400)
+            selected = -1
         }
-        nodes.forEach { (i, angle, depth) ->
-            val isSelected = i == selected
-            val d = 25f + depth * 10f + if (isSelected) 5f else 0f
-            Surface(
-                modifier = Modifier.offset(x = (cos(angle)*rx).dp, y = (sin(angle)*ry).dp)
-                    .size(d.dp).graphicsLayer {
-                        val sc = .68f + depth*.34f + if (isSelected) .16f else 0f
-                        scaleX=sc; scaleY=sc; alpha=.45f + depth*.55f
-                        cameraDistance=24f*density
-                    }.clickable { if (selected == i) onOpen(i) else { selected=i; rotation = -i * (2f * PI.toFloat() / items.size) } },
-                shape = CircleShape,
-                color = Color(0xFF18263A),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9DBCE5).copy(alpha=.35f+depth*.5f)),
-                shadowElevation = (3f+depth*10f).dp
-            ) {
-                Box(Modifier.fillMaxSize().background(ComposeBrush.radialGradient(listOf(Color(0xFF607FA8),Color(0xFF18263A)))), contentAlignment=Alignment.Center) {
-                    Icon(items[i].first,null,tint=Color.White,modifier=Modifier.size((d*.48f).dp))
+    }
+    Column(
+        Modifier.fillMaxWidth().height(148.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = selected >= 0,
+            enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)),
+            exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(520))
+        ) {
+            val info = items.getOrNull(selected)
+            if (info != null) {
+                Surface(
+                    color = Color(0xE61B2635),
+                    shape = RoundedCornerShape(13.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, info.color.copy(alpha = .55f)),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.padding(top = 1.dp, bottom = 3.dp)
+                ) {
+                    Column(
+                        Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(info.title, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                        Text(info.description, color = Color(0xFFD3DCE8), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().weight(1f)
+                .pointerInput(items.size) {
+                    detectDragGestures { change, drag ->
+                        change.consume()
+                        rotation += drag.x / size.width.coerceAtLeast(1).toFloat() * 2f * PI.toFloat()
+                        selected = -1
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            val rx = maxWidth.value * 0.39f
+            val ry = 25f
+            val nodes = items.indices.map { i ->
+                val a = i * (2f * PI.toFloat() / items.size) + rotation + PI.toFloat() / 2f
+                Triple(i, a, (sin(a) + 1f) / 2f)
+            }.sortedBy { it.third }
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width * .80f
+                val h = size.height * .48f
+                val topLeft = androidx.compose.ui.geometry.Offset((size.width-w)/2f, (size.height-h)/2f)
+                val ovalSize = androidx.compose.ui.geometry.Size(w,h)
+                drawOval(
+                    brush = ComposeBrush.linearGradient(listOf(Color(0xFF26384D), Color(0xFF8AAFD8), Color(0xFF26384D))),
+                    topLeft = topLeft, size = ovalSize, style = Stroke(width = 1.dp.toPx())
+                )
+                drawOval(
+                    color = Color(0xFF78B9FF).copy(alpha = .10f),
+                    topLeft = topLeft, size = ovalSize, style = Stroke(width = 5.dp.toPx())
+                )
+            }
+            nodes.forEach { (i, angle, depth) ->
+                val item = items[i]
+                val isSelected = i == selected
+                val diameter = 24f + depth * 8f + if (isSelected) 5f else 0f
+                val scale = .76f + depth * .28f + if (isSelected) .13f else 0f
+                Box(
+                    modifier = Modifier.offset(x = (cos(angle)*rx).dp, y = (sin(angle)*ry).dp)
+                        .size(diameter.dp)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = .62f + depth * .38f
+                            cameraDistance = 28f * density
+                        }
+                        .clickable {
+                            if (selected == i) {
+                                onOpen(i)
+                            } else {
+                                selected = i
+                                rotation = -i * (2f * PI.toFloat() / items.size)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = CircleShape,
+                        color = item.color.copy(alpha = .18f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = if (isSelected) 1.8.dp else 1.dp,
+                            brush = ComposeBrush.linearGradient(
+                                listOf(Color.White.copy(alpha = .95f), item.color.copy(alpha = .8f), Color(0xFF182333))
+                            )
+                        ),
+                        shadowElevation = (5f + depth * 10f + if (isSelected) 7f else 0f).dp
+                    ) {
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                ComposeBrush.radialGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = .96f),
+                                        item.color.copy(alpha = .98f),
+                                        Color(0xFF26364B),
+                                        Color(0xFF101722)
+                                    )
+                                ),
+                                center = androidx.compose.ui.geometry.Offset(.34f, .25f),
+                                radius = diameter * 1.35f
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 4.dp)
+                                    .size((diameter * .18f).dp)
+                                    .background(Color.White.copy(alpha = .72f), CircleShape)
+                            )
+                            Icon(
+                                item.icon, contentDescription = item.title,
+                                tint = Color.White,
+                                modifier = Modifier.size((diameter * .43f).dp)
+                            )
+                        }
+                    }
                 }
             }
         }
