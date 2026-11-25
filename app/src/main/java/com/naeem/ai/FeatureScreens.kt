@@ -181,15 +181,15 @@ fun FeatureHub(
         if(filtered.isEmpty()){
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
+            LaunchedEffect(query) { carouselState.scrollToItem(0) }
+            LazyRow(
+                state = carouselState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = 74.dp, vertical = 26.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(filtered.size) { index ->
-                    val entry = filtered[index]
+                itemsIndexed(filtered) { index, entry ->
                     val accent = when (entry.title) {
                         "سلامت و تغذیه" -> Color(0xFF9AD6B0)
                         "باشگاه ورزش" -> Color(0xFF91BFE8)
@@ -201,62 +201,69 @@ fun FeatureHub(
                         "حافظه هوشمند" -> Color(0xFFB5B7D9)
                         "آلبوم تصاویر" -> Color(0xFFD5B49A)
                         "بازی‌ها" -> Color(0xFFE0A68E)
-                        "روایت ماه" -> Color(0xFFB9C5D8)
+                        "روایت هفته و ماه" -> Color(0xFFB9C5D8)
                         "تحلیل اینستاگرام" -> Color(0xFFE0A0B8)
                         else -> Color(0xFFB8C2CE)
                     }
+                    val itemInfo = carouselState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                    val viewportCenter = (carouselState.layoutInfo.viewportStartOffset + carouselState.layoutInfo.viewportEndOffset) / 2f
+                    val itemCenter = itemInfo?.let { it.offset + it.size / 2f } ?: viewportCenter
+                    val distance = ((itemCenter - viewportCenter) / 300f).coerceIn(-2.2f, 2.2f)
+                    val proximity = (1f - kotlin.math.abs(distance) / 2.2f).coerceIn(0f, 1f)
                     Column(
-                        Modifier.fillMaxWidth().clickable(onClick = { selectedEntry = entry }),
+                        Modifier
+                            .width(190.dp)
+                            .graphicsLayer {
+                                scaleX = 0.72f + proximity * 0.32f
+                                scaleY = 0.72f + proximity * 0.32f
+                                rotationY = -distance * 27f
+                                translationZ = proximity * 72f
+                                cameraDistance = 18f * density
+                                alpha = 0.62f + proximity * 0.38f
+                            }
+                            .clickable { entry.action() },
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(13.dp)
                     ) {
-                        Box(
-                            Modifier.size(88.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Offset graphite layers create a restrained 3D object, not a flat icon tile.
-                            Box(
-                                Modifier.fillMaxSize().offset(y = 5.dp)
-                                    .background(Color(0xFF020304), RoundedCornerShape(22.dp))
-                            )
+                        Box(Modifier.size(164.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(150.dp).offset(y = 9.dp).background(Color(0xFF020304), CircleShape))
                             Surface(
-                                modifier = Modifier.fillMaxSize().offset(y = (-1).dp),
-                                shape = RoundedCornerShape(22.dp),
+                                modifier = Modifier.size(150.dp).offset(y = (-3).dp),
+                                shape = CircleShape,
                                 color = Color(0xFF171C23),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.42f)),
-                                shadowElevation = 12.dp
+                                border = androidx.compose.foundation.BorderStroke(1.5.dp, accent.copy(alpha = 0.72f)),
+                                shadowElevation = 28.dp
                             ) {
                                 Box(
                                     Modifier.fillMaxSize().background(
-                                        ComposeBrush.linearGradient(
-                                            listOf(accent.copy(alpha = 0.20f), Color(0xFF202731), Color(0xFF0B0E13))
-                                        )
+                                        ComposeBrush.radialGradient(listOf(accent.copy(alpha = 0.42f), Color(0xFF202731), Color(0xFF090C11)))
                                     ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(
-                                        Modifier.align(Alignment.TopCenter).padding(top = 1.dp)
-                                            .width(42.dp).height(1.dp)
-                                            .background(accent.copy(alpha = 0.72f), RoundedCornerShape(1.dp))
+                                        Modifier.fillMaxSize().padding(9.dp).background(
+                                            ComposeBrush.linearGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent, Color.Black.copy(alpha = 0.28f))),
+                                            CircleShape
+                                        )
                                     )
-                                    Icon(
-                                        entry.icon,
-                                        null,
-                                        tint = accent,
-                                        modifier = Modifier.size(39.dp)
-                                    )
+                                    Icon(entry.icon, null, tint = accent, modifier = Modifier.size(65.dp))
                                 }
                             }
                         }
-                        Text(entry.title, color = Color(0xFFD4D9E0), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, maxLines = 1)
-                        IconButton(onClick = { selectedEntry = entry }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Info, contentDescription = "توضیحات " + entry.title, tint = Color(0xFF9BA7B5), modifier = Modifier.size(16.dp)) }
+                        Text(entry.title, color = Color(0xFFF0F2F5), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(entry.subtitle, color = Color(0xFFAAB2BD), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        TextButton(onClick = { selectedEntry = entry }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                            Icon(Icons.Default.Info, null, tint = accent, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text("جزئیات", color = Color(0xFFADB7C4), style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
                 Icon(Icons.Default.Swipe,null,tint=gold.copy(alpha=.7f),modifier=Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("برای ورود، آیکون هر بخش را لمس کن",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
+                Text("برای جابه‌جایی، صفحه را به چپ و راست بکش؛ لمس هر آیکون، آن بخش را باز می‌کند.",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
             }
         }
     }
