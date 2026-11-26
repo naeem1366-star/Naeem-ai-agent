@@ -141,7 +141,7 @@ fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onPodcast:()->Unit,onVideo:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onJournal:()->Unit,onTrail:()->Unit,onSocial:()->Unit,
-    onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {}
+    onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {}
 ){
     var query by remember { mutableStateOf("") }
     var showFeatureMap by remember { mutableStateOf(false) }
@@ -177,7 +177,8 @@ fun FeatureHub(
         Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی","حال‌وهوا، سبک یا هنرمند موردعلاقه‌ات را در گفتگو بگو؛ مغز هوشمند پیشنهاد می‌دهد و جست‌وجو و پیش‌نمایش موسیقی در همین بخش انجام می‌شود.","پیشنهاد از دستیار: از طریق گفتگو",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
         Entry("تحلیل اینستاگرام","رشد و عملکرد پیج","اتصال حساب و تحلیل محتوا","آمار پیج را وارد کن تا مغز هوشمند نرخ تعامل، بازدید و عملکرد محتوا را بررسی و برای رشد پیشنهاد بدهد. تحلیل خودکار حساب پس از اتصال رسمی و دریافت مجوزهای Meta ممکن می‌شود.","تحلیل دستی: آماده؛ اتصال رسمی: نیازمند تنظیم Meta",Icons.Default.Insights,onSocial,"اینستاگرام شبکه اجتماعی تحلیل پیج رشد محتوا") ,
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","از اینجا مدل هوش مصنوعی، نشانی سرویس و کلید API را تنظیم می‌کنی؛ این اتصال، مسیر ارتباط مغز هوشمند با گفتگو و ابزارهای برنامه است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال"),
-        Entry("اتصال به کامپیوتر","کنترل رایانه از گوشی","اتصال امن به برنامه دسکتاپ ایما","برنامه Desktop Bridge را روی رایانه اجرا کن و از این بخش وضعیت اتصال را ببین و فرمان‌های مجاز را از گوشی ارسال کن.","نیازمند اجرای برنامه دسکتاپ روی رایانه",Icons.Default.Computer,onPcControl,"کامپیوتر رایانه دسکتاپ کنترل از راه دور اتصال PC desktop bridge")
+        Entry("اتصال به کامپیوتر","کنترل رایانه از گوشی","اتصال امن به برنامه دسکتاپ ایما","برنامه Desktop Bridge را روی رایانه اجرا کن و از این بخش وضعیت اتصال را ببین و فرمان‌های مجاز را از گوشی ارسال کن.","نیازمند اجرای برنامه دسکتاپ روی رایانه",Icons.Default.Computer,onPcControl,"کامپیوتر رایانه دسکتاپ کنترل از راه دور اتصال PC desktop bridge"),
+        Entry("کیف پول و اشتراک","اعتبار AI و پلن حرفه‌ای","شارژ اعتبار مصرف هوش مصنوعی و مدیریت اشتراک EMA","موجودی اعتبار AI، سفارش شارژ، خرید اشتراک حرفه‌ای و پیگیری رسید پرداخت را از این بخش مدیریت کن. اعتبار AI و مدت اشتراک مستقل از هم هستند.","اتصال به کیف پول و سفارش‌های پرداخت سمت سرور",Icons.Default.AccountBalanceWallet,onWallet,"کیف پول اعتبار شارژ اشتراک پرداخت حساب AI")
     )
     val englishNames = mapOf(
         "سفر و هم‌سفرها" to "Travel & companions", "برنامه‌ریزی سفر" to "Trip planning",
@@ -203,7 +204,8 @@ fun FeatureHub(
         "موسیقی" to "Music", "آهنگ و هنرمند" to "Songs & artists",
         "تحلیل اینستاگرام" to "Instagram analytics", "رشد و عملکرد پیج" to "Account growth & performance",
         "تنظیمات" to "Settings", "اتصال و حریم خصوصی" to "Connections & privacy",
-        "اتصال به کامپیوتر" to "Connect to computer", "کنترل رایانه از گوشی" to "Control your PC from your phone"
+        "اتصال به کامپیوتر" to "Connect to computer", "کنترل رایانه از گوشی" to "Control your PC from your phone",
+        "کیف پول و اشتراک" to "Wallet & subscription", "اعتبار AI و پلن حرفه‌ای" to "AI credit & Professional plan"
     )
     val displayEntries = if (isEnglish) entries.map { it.copy(title = englishNames[it.title] ?: it.title, subtitle = englishNames[it.subtitle] ?: it.subtitle) } else entries
     fun hubText(fa: String, en: String) = if (isEnglish) en else fa
