@@ -1304,7 +1304,8 @@ fun NaeemApp(
                 }
             }
         }
-
+        }
+        }
         }
         if (showProfileDetails) {
             AlertDialog(onDismissRequest = { showProfileDetails = false }, containerColor = Panel,
