@@ -548,12 +548,7 @@ private val englishUiText = mapOf(
     "ذخیره" to "Save",
     "تنظیم خودکار API" to "Automatic API setup",
     "اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:" to "Connection details detected. Review before saving:",
-    "آدرس سرور: ${config.baseUrl}" to "Server URL: ${config.baseUrl}",
     "کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)" to "API key: detected •••••••• (hidden)",
-    "مدل چت: $it" to "Chat model: $it",
-    "مدل تصویر: $it" to "Image model: $it",
-    "مدل ویدیو: $it" to "Video model: $it",
-    "مدل گفتار: $it" to "Speech model: $it",
     "کلید به‌صورت رمزگذاری‌شده روی گوشی ذخیره می‌شود و متن حاوی آن وارد تاریخچه چت یا درخواست مدل نمی‌شود." to "The key is stored encrypted on this phone and is never included in chat history or model prompts.",
     "ذخیره امن تنظیمات" to "Save settings securely",
     "تنظیمات اتصال" to "Connection settings",
@@ -573,7 +568,21 @@ private val englishUiText = mapOf(
     "خروج از حساب" to "Sign out",
     "آموزش سریع برنامه" to "Quick app tour"
 )
-private fun appText(value: String, english: Boolean): String = if (english) englishUiText[value] ?: value else value
+private fun appText(value: String, english: Boolean): String {
+    if (!english) return value
+    englishUiText[value]?.let { return it }
+    val dynamicPrefixes = listOf(
+        "آدرس سرور: " to "Server URL: ",
+        "مدل چت: " to "Chat model: ",
+        "مدل تصویر: " to "Image model: ",
+        "مدل ویدیو: " to "Video model: ",
+        "مدل گفتار: " to "Speech model: "
+    )
+    dynamicPrefixes.firstOrNull { value.startsWith(it.first) }?.let {
+        return it.second + value.removePrefix(it.first)
+    }
+    return value
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1503,7 +1512,7 @@ fun NaeemApp(
                 "منوی فضاها" -> menuTargetBounds
                 else -> Rect.Zero
             }
-            GuidedTourOverlay(step = tutorialStep, targetBounds = target,
+            GuidedTourOverlay(step = tutorialStep, targetBounds = target, isEnglish = isEnglish,
                 onPrevious = { if (tutorialStep > 0) tutorialStep-- },
                 onNext = {
                     if (tutorialStep >= guidedTourItems.lastIndex) {
@@ -2341,7 +2350,7 @@ private val guidedTourItems = listOf(
 
 
 @Composable
-private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> Unit, onNext: () -> Unit) {
+private fun GuidedTourOverlay(step: Int, targetBounds: Rect, isEnglish: Boolean, onPrevious: () -> Unit, onNext: () -> Unit) {
     val item = guidedTourItems[step.coerceIn(guidedTourItems.indices)]
     Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {
         Box(Modifier.fillMaxSize()) {
