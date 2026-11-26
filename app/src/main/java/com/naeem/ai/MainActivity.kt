@@ -295,33 +295,35 @@ class MainActivity : FragmentActivity() {
 
 @Composable
 private fun AppLanguageSelection(selectedLanguage: String, onLanguageSelected: (String) -> Unit) {
-    var choice by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
-    val english = choice == "en"
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize()) {
         Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
             modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.58f }.blur(5.dp),
             contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Color(0x88050B16)))
-        Card(Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xE6102035))) {
-            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "EMA",
-                    modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
-                Text("تو زندگی کن؛ ایما حواسش هست.", color = Color.White,
-                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center)
-                Text("Live your life; EMA has your back.", color = Color(0xFFB9D8FF),
-                    style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { onLanguageSelected("en") }, modifier = Modifier.weight(1f).height(52.dp),
-                        shape = RoundedCornerShape(16.dp)) {
-                        Text("English")
-                    }
-                    Button(onClick = { onLanguageSelected("fa") }, modifier = Modifier.weight(1f).height(52.dp),
-                        shape = RoundedCornerShape(16.dp)) {
-                        Text("فارسی")
-                    }
+        Column(
+            Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(26.dp)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_brain_mark),
+                contentDescription = "EMA",
+                modifier = Modifier.fillMaxWidth(0.94f).height(300.dp),
+                contentScale = ContentScale.Fit
+            )
+            Row(
+                modifier = Modifier.wrapContentWidth(),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { onLanguageSelected("en") }) {
+                    Text("English", color = Color(0xFFE5EFFD), style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold)
+                }
+                Box(Modifier.width(1.dp).height(22.dp).background(Color(0x668CA7C8)))
+                TextButton(onClick = { onLanguageSelected("fa") }) {
+                    Text("فارسی", color = Color(0xFFE5EFFD), style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -2390,35 +2392,49 @@ private val guidedTourItems = listOf(
 
 @Composable
 private fun GuidedTourOverlay(step: Int, targetBounds: Rect, isEnglish: Boolean, onPrevious: () -> Unit, onNext: () -> Unit) {
-    val item = guidedTourItems[step.coerceIn(guidedTourItems.indices)]
-    Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {
-        Box(Modifier.fillMaxSize()) {
-            Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
-                drawRect(Color(0x88070B12))
-                if (targetBounds != Rect.Zero) {
-                    val pad = 9.dp.toPx()
-                    val left = targetBounds.left - pad
-                    val top = targetBounds.top - pad
-                    val width = targetBounds.width + pad * 2
-                    val height = targetBounds.height + pad * 2
-                    drawRoundRect(Color.Transparent, Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), blendMode = BlendMode.Clear)
-                    drawRoundRect(Color(0xFFBFD2FF), Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), style = Stroke(2.dp.toPx()))
-                }
-            }
-            Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(appText("آموزش سریع برنامه", isEnglish), color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
-                        Text(listOf("مرحله یک از چهار", "مرحله دو از چهار", "مرحله سه از چهار", "مرحله چهار از چهار")[step.coerceIn(0, 3)], color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
+    val index = step.coerceIn(guidedTourItems.indices)
+    val item = guidedTourItems[index]
+    val targetsEn = listOf("Smart orb", "Microphone", "Your spaces", "Review & confirm")
+    val titlesEn = listOf("Conversation & understanding", "Speak, don't just type", "The right tool for every topic", "Review your information")
+    val descriptionsEn = listOf(
+        "Ask a question, talk about your day, or share an image. EMA identifies the topic and uses connected tools when available.",
+        "Tap the microphone to turn your speech into text. It only activates when you choose; there is no always-on listening.",
+        "Open sports, nutrition, finance, travel, think room, memory, and other spaces here. For example, tell EMA about your day and review the organized entries in your journal.",
+        "Review and confirm important actions before they are saved. Use Weekly & monthly review to see summaries of recorded information. You can reopen this guide whenever you need."
+    )
+    val targetText = if (isEnglish) targetsEn[index] else item.target
+    val titleText = if (isEnglish) titlesEn[index] else item.title
+    val descriptionText = if (isEnglish) descriptionsEn[index] else item.description
+    CompositionLocalProvider(LocalLayoutDirection provides if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl) {
+        Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {
+            Box(Modifier.fillMaxSize()) {
+                Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
+                    drawRect(Color(0x88070B12))
+                    if (targetBounds != Rect.Zero) {
+                        val pad = 9.dp.toPx()
+                        val left = targetBounds.left - pad
+                        val top = targetBounds.top - pad
+                        val width = targetBounds.width + pad * 2
+                        val height = targetBounds.height + pad * 2
+                        drawRoundRect(Color.Transparent, Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), blendMode = BlendMode.Clear)
+                        drawRoundRect(Color(0xFFBFD2FF), Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), style = Stroke(2.dp.toPx()))
                     }
-                    LinearProgressIndicator(progress = { (step + 1).toFloat() / guidedTourItems.size }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Color(0xFF9CB9F4), trackColor = Color(0xFF303847))
-                    Text(item.target, color = Color(0xFFBFD2FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Text(item.title, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(item.description, color = Color(0xFFB8C2CE), style = MaterialTheme.typography.bodySmall, lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.35)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        if (step > 0) OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f)) { Text(appText("قبلی", isEnglish)) }
-                        Button(onClick = onNext, modifier = Modifier.weight(1.5f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE3ED), contentColor = Color(0xFF111722)), shape = RoundedCornerShape(14.dp)) {
-                            Text(if (step == guidedTourItems.lastIndex) "پایان و ورود" else "بعدی")
+                }
+                Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
+                    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (isEnglish) "Quick app tour" else "آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Step ${index + 1} of ${guidedTourItems.size}" else listOf("مرحله یک از چهار", "مرحله دو از چهار", "مرحله سه از چهار", "مرحله چهار از چهار")[index], color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
+                        }
+                        LinearProgressIndicator(progress = { (index + 1).toFloat() / guidedTourItems.size }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Color(0xFF9CB9F4), trackColor = Color(0xFF303847))
+                        Text(targetText, color = Color(0xFFBFD2FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Text(titleText, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(descriptionText, color = Color(0xFFB8C2CE), style = MaterialTheme.typography.bodySmall, lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.35)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            if (index > 0) OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f)) { Text(if (isEnglish) "Back" else "قبلی") }
+                            Button(onClick = onNext, modifier = Modifier.weight(1.5f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE3ED), contentColor = Color(0xFF111722)), shape = RoundedCornerShape(14.dp)) {
+                                Text(if (index == guidedTourItems.lastIndex) { if (isEnglish) "Finish & enter" else "پایان و ورود" } else { if (isEnglish) "Next" else "بعدی" })
+                            }
                         }
                     }
                 }
