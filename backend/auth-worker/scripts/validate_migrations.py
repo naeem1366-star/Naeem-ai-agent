@@ -116,6 +116,16 @@ print("OK one-time 50% subscription credit + provider allocation settlement")
 
 
 
+# A paid order must never be credited twice on an approval replay.
+balance_before_replay = db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0]
+db.execute(
+    "UPDATE payment_orders SET status='paid' WHERE id='test-order' AND status='pending'"
+)
+assert db.execute("SELECT changes()").fetchone()[0] == 0
+assert db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0] == balance_before_replay
+assert db.execute("SELECT COUNT(*) FROM wallet_transactions WHERE reference='payment:test-order'").fetchone()[0] == 1
+print("OK duplicate subscription approval cannot add wallet credit twice")
+
 # Exercise prepaid AI reservation, partial refund, and insufficient-balance protection.
 reserve_amount = 10_000
 db.execute(
@@ -158,3 +168,43 @@ db.execute(
 assert db.execute("SELECT changes()").fetchone()[0] == 0
 assert db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0] == credit-reserve_amount+refund_amount
 print("OK prepaid AI reserve, settlement refund, and insufficient-balance protection")
+
+# Failed provider calls release the reserved amount exactly once.
+failure_reserve = 1_000
+balance_before_failure = db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0]
+db.execute(
+    "UPDATE users SET wallet_balance_toman=wallet_balance_toman-? WHERE id='test-user' AND wallet_balance_toman>=?",
+    (failure_reserve, failure_reserve),
+)
+assert db.execute("SELECT changes()").fetchone()[0] == 1
+db.execute(
+    "INSERT INTO wallet_transactions (id,user_id,type,amount_toman,balance_after_toman,description,reference,created_at) SELECT 'failure-reserve-tx',id,'ai_reserve',-?,wallet_balance_toman,'reserve failed call','ai-reserve:failed-call',? FROM users WHERE id='test-user' AND changes()=1",
+    (failure_reserve, now),
+)
+db.execute(
+    "INSERT INTO usage_reservations (id,user_id,feature,model,reserved_toman,settled_toman,status,created_at,updated_at) VALUES ('failed-call','test-user','chat','gpt-4o-mini',?,0,'reserved',?,?)",
+    (failure_reserve, now, now),
+)
+db.execute(
+    "UPDATE users SET wallet_balance_toman=wallet_balance_toman+? WHERE id='test-user' AND EXISTS (SELECT 1 FROM usage_reservations WHERE id='failed-call' AND status='reserved')",
+    (failure_reserve,),
+)
+db.execute(
+    "INSERT INTO wallet_transactions (id,user_id,type,amount_toman,balance_after_toman,description,reference,created_at) SELECT 'failure-refund-tx',id,'ai_refund',?,wallet_balance_toman,'release failed call','ai-release:failed-call',? FROM users WHERE id='test-user' AND changes()=1",
+    (failure_reserve, now),
+)
+db.execute(
+    "UPDATE usage_reservations SET status='released',updated_at=? WHERE id='failed-call' AND status='reserved' AND EXISTS (SELECT 1 FROM wallet_transactions WHERE reference='ai-release:failed-call')",
+    (now,),
+)
+assert db.execute("SELECT status FROM usage_reservations WHERE id='failed-call'").fetchone()[0] == "released"
+assert db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0] == balance_before_failure
+# A second release attempt must be a no-op.
+db.execute(
+    "UPDATE users SET wallet_balance_toman=wallet_balance_toman+? WHERE id='test-user' AND EXISTS (SELECT 1 FROM usage_reservations WHERE id='failed-call' AND status='reserved')",
+    (failure_reserve,),
+)
+assert db.execute("SELECT changes()").fetchone()[0] == 0
+assert db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0] == balance_before_failure
+print("OK failed-call reservation release is idempotent")
+
