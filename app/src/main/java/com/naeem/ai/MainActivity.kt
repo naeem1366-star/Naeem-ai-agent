@@ -391,12 +391,15 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما",
                     modifier = Modifier.fillMaxWidth(0.86f).height(210.dp), contentScale = ContentScale.Fit)
                 Spacer(Modifier.height(24.dp))
-                Text(androidx.compose.ui.text.buildAnnotatedString {
-                    append("تو زندگی کن؛ ")
-                    pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFB9D8FF)))
-                    append("ایما"); pop(); append(" حواسش هست.")
-                }, color = Color.White, style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
+                if (isEnglish) {
+                    Text("Live your life; EMA has your back.", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
+                } else {
+                    Text(androidx.compose.ui.text.buildAnnotatedString {
+                        append("تو زندگی کن؛ ")
+                        pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFB9D8FF)))
+                        append("ایما"); pop(); append(" حواسش هست.")
+                    }, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
+                }
             }
             Surface(onClick = { page = 0 },
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
@@ -1977,7 +1980,7 @@ fun NaeemApp(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(appText("اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:", isEnglish), color = Color.White)
-                        Text("آدرس سرور: ${config.baseUrl}", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall)
+                        Text((if (isEnglish) "Server address: " else "آدرس سرور: ") + config.baseUrl, color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall)
                         Text(appText("کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)", isEnglish), color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
                         config.chatModel?.let { Text(appText("مدل چت: $it", isEnglish), color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
                         config.imageModel?.let { Text(appText("مدل تصویر: $it", isEnglish), color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
@@ -2025,7 +2028,8 @@ fun NaeemApp(
                                 context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "en").putBoolean("language_selected", true).apply()
                             }, label = { Text("English") })
                         }
-                        Text(appText("درگاه اتصال", isEnglish))
+                        Text(if (isEnglish) "Provider connection (local tools)" else "اتصال سرویس‌دهنده (ابزارهای محلی)")
+                        Text(if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) { if (isEnglish) "Secure chat: server gateway is not configured in this build. Saving a provider key here does not activate chat." else "چت امن: نشانی درگاه سرور در این نسخه تنظیم نشده؛ ذخیره کلید سرویس‌دهنده در این صفحه، چت را فعال نمی‌کند." } else { if (isEnglish) "Secure chat gateway: configured" else "درگاه امن چت: تنظیم شده" }, color = if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) Color(0xFFFFC28A) else Color(0xFF9BD7B0), style = MaterialTheme.typography.bodySmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                             OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text(appText("نت‌ارز", isEnglish), color = Gold) }
                             OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }
@@ -2053,9 +2057,9 @@ fun NaeemApp(
                                 scope.launch {
                                     try {
                                         availableModels = client.fetchModels(baseUrl, apiKey, selectedModelType)
-                                        providerTestStatus = "اتصال موفق؛ " + availableModels.size + " شناسه مدل دریافت شد."
+                                        providerTestStatus = if (isEnglish) "Connection successful; " + availableModels.size + " model IDs received." else "اتصال موفق؛ " + availableModels.size + " شناسه مدل دریافت شد."
                                     } catch (e: Exception) {
-                                        providerTestStatus = e.message ?: "آزمایش اتصال ناموفق بود."
+                                        providerTestStatus = e.message ?: if (isEnglish) "Connection test failed." else "آزمایش اتصال ناموفق بود."
                                     } finally {
                                         testingProvider = false
                                     }
@@ -2426,7 +2430,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, isEnglish: Boolean,
                         drawRoundRect(Color(0xFFBFD2FF), Offset(left, top), androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()), style = Stroke(2.dp.toPx()))
                     }
                 }
-                Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
+                Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF14263B)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(if (isEnglish) "Quick app tour" else "آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
