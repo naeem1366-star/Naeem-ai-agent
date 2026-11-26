@@ -15,8 +15,8 @@ android {
         applicationId 'com.naeem.ai'
         minSdk 26
         targetSdk 35
-        versionCode 28
-        versionName '2.0.0-alpha25'
+        versionCode 29
+        versionName '2.0.0-alpha26'
         buildConfigField 'String', 'CHAT_GATEWAY_URL', '\"' + chatGatewayUrl.replace('\\', '\\\\').replace('\"', '\\\"') + '\"'
     }
 
