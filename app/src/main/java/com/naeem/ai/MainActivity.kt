@@ -292,9 +292,9 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
     val silver = Color(0xFFE0E5EC)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.34f }.blur(12.dp),
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.56f }.blur(5.dp),
             contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Color(0xAA050B16)))
+        Box(Modifier.fillMaxSize().background(Color(0x77050B16)))
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -336,8 +336,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Transparent)) {
         if (page == -1) {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f }.blur(10.dp), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color(0x99050B16)))
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.58f }.blur(5.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x77050B16)))
             Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 24.dp).offset(y = (-8).dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما",
@@ -360,8 +360,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             }
         } else {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f }.blur(10.dp), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color(0x99050B16)))
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.58f }.blur(5.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x77050B16)))
             Column(Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 26.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
