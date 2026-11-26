@@ -419,6 +419,76 @@ async function adminReviewPayment(request: Request, env: Env, orderId: string): 
   return json({ success: true, status: "paid", creditedToman: credit, balanceToman: balance?.wallet_balance_toman || 0, subscription: createdSubscription });
 }
 
+async function adminBillingSettings(request: Request, env: Env): Promise<Response> {
+  if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
+  const [settings, plans, pricing] = await Promise.all([
+    env.DB.prepare("SELECT * FROM billing_settings WHERE id = 1").first<any>(),
+    env.DB.prepare("SELECT id, name, duration_days, price_toman, enabled, ai_credit_percent FROM subscription_plans ORDER BY duration_days").all(),
+    env.DB.prepare("SELECT id, model, feature, markup_bps, enabled, input_price_per_million_usd, output_price_per_million_usd FROM pricing_rules ORDER BY feature, model").all()
+  ]);
+  return json({ settings: settings || null, plans: plans.results || [], pricingRules: pricing.results || [] });
+}
+
+async function adminUpdateBillingSettings(request: Request, env: Env): Promise<Response> {
+  if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
+  const body = await request.json().catch(() => null) as any;
+  if (!body || typeof body !== "object") return json({ error: "INVALID_BODY" }, 400);
+  const current = await env.DB.prepare("SELECT * FROM billing_settings WHERE id = 1").first<any>();
+  if (!current) return json({ error: "BILLING_SETTINGS_NOT_INITIALIZED" }, 503);
+  const instructions = body.paymentInstructions === undefined ? current.payment_instructions : String(body.paymentInstructions).trim().slice(0, 2000);
+  const creditPercent = body.subscriptionCreditPercent === undefined ? Number(current.subscription_credit_percent) : Number(body.subscriptionCreditPercent);
+  const minTopup = body.minWalletTopupToman === undefined ? Number(current.min_wallet_topup_toman) : Number(body.minWalletTopupToman);
+  const maxTopup = body.maxWalletTopupToman === undefined ? Number(current.max_wallet_topup_toman) : Number(body.maxWalletTopupToman);
+  const markup = body.markupBps === undefined ? Number(current.markup_bps) : Number(body.markupBps);
+  const fx = body.usdToToman === undefined ? Number(current.usd_to_toman) : Number(body.usdToToman);
+  if (!Number.isInteger(creditPercent) || creditPercent < 0 || creditPercent > 100 ||
+      !Number.isSafeInteger(minTopup) || minTopup < 1000 ||
+      !Number.isSafeInteger(maxTopup) || maxTopup < minTopup ||
+      !Number.isInteger(markup) || markup < 0 || markup > 100000 ||
+      !Number.isSafeInteger(fx) || fx < 0 || fx > 1000000000) {
+    return json({ error: "INVALID_BILLING_SETTINGS" }, 400);
+  }
+  const statements = [env.DB.prepare(
+    "UPDATE billing_settings SET payment_instructions = ?, subscription_credit_percent = ?, min_wallet_topup_toman = ?, max_wallet_topup_toman = ?, markup_bps = ?, usd_to_toman = ?, updated_at = ? WHERE id = 1"
+  ).bind(instructions, creditPercent, minTopup, maxTopup, markup, fx, Math.floor(Date.now()/1000))];
+
+  if (body.plans !== undefined) {
+    if (!Array.isArray(body.plans) || body.plans.length > 20) return json({ error: "INVALID_PLANS" }, 400);
+    for (const plan of body.plans) {
+      if (!plan || typeof plan.id !== "string" || !Number.isSafeInteger(Number(plan.priceToman)) ||
+          Number(plan.priceToman) < 0 || typeof plan.enabled !== "boolean" ||
+          !Number.isInteger(Number(plan.aiCreditPercent)) || Number(plan.aiCreditPercent) < 0 || Number(plan.aiCreditPercent) > 100) {
+        return json({ error: "INVALID_PLAN_CONFIGURATION" }, 400);
+      }
+      if (plan.enabled && Number(plan.priceToman) <= 0) return json({ error: "ENABLED_PLAN_REQUIRES_PRICE" }, 400);
+      statements.push(env.DB.prepare(
+        "UPDATE subscription_plans SET price_toman = ?, enabled = ?, ai_credit_percent = ?, updated_at = ? WHERE id = ?"
+      ).bind(Number(plan.priceToman), plan.enabled ? 1 : 0, Number(plan.aiCreditPercent), Math.floor(Date.now()/1000), plan.id));
+    }
+  }
+
+  if (body.pricingRules !== undefined) {
+    if (!Array.isArray(body.pricingRules) || body.pricingRules.length > 100) return json({ error: "INVALID_PRICING_RULES" }, 400);
+    for (const rule of body.pricingRules) {
+      const input = Number(rule?.inputPricePerMillionUsd);
+      const output = Number(rule?.outputPricePerMillionUsd);
+      if (typeof rule?.id !== "string" || !Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0 || input > 100000 || output > 100000) {
+        return json({ error: "INVALID_MODEL_PRICING" }, 400);
+      }
+      statements.push(env.DB.prepare(
+        "UPDATE pricing_rules SET input_price_per_million_usd = ?, output_price_per_million_usd = ?, updated_at = ? WHERE id = ?"
+      ).bind(String(input), String(output), Math.floor(Date.now()/1000), rule.id));
+    }
+  }
+
+  try {
+    await env.DB.batch(statements);
+  } catch {
+    return json({ error: "BILLING_SETTINGS_UPDATE_FAILED" }, 500);
+  }
+  return await adminBillingSettings(request, env);
+}
+
 async function adminOverview(request: Request, env: Env): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   const users = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<any>();
@@ -517,6 +587,8 @@ export default {
       if (request.method === "POST" && paymentReviewMatch) return withHeaders(await adminReviewPayment(request, env, paymentReviewMatch[1]), headers);
       if (request.method === "POST" && url.pathname === "/v1/chat/completions") return withHeaders(await chatCompletion(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/wallet") return withHeaders(await walletSummary(request, env), headers);
+      if (request.method === "GET" && url.pathname === "/v1/admin/billing/settings") return withHeaders(await adminBillingSettings(request, env), headers);
+      if (request.method === "PATCH" && url.pathname === "/v1/admin/billing/settings") return withHeaders(await adminUpdateBillingSettings(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/overview") return withHeaders(await adminOverview(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/users") return withHeaders(await adminUsers(request, env), headers);
       const walletMatch = url.pathname.match(/^\/v1\/admin\/users\/([^/]+)\/wallet$/);
