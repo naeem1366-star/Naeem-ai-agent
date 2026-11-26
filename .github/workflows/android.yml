@@ -31,12 +31,12 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
       - name: Name versioned APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/IMA-v2.0.0-alpha21.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/IMA-v2.0.0-alpha22.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: IMA-v2.0.0-alpha21
-          path: app/build/outputs/apk/debug/IMA-v2.0.0-alpha21.apk
+          name: IMA-v2.0.0-alpha22
+          path: app/build/outputs/apk/debug/IMA-v2.0.0-alpha22.apk
           if-no-files-found: error
       - name: Publish Android APK download
         if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pc-bridge-mvp'
@@ -46,6 +46,6 @@ jobs:
           name: Naeem AI Desktop Bridge alpha1
           prerelease: true
           overwrite_files: true
-          files: app/build/outputs/apk/debug/IMA-v2.0.0-alpha21.apk
+          files: app/build/outputs/apk/debug/IMA-v2.0.0-alpha22.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
