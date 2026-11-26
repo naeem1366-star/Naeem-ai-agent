@@ -861,7 +861,13 @@ fun NaeemApp(
                 val textChunks = audioClient.splitText(text)
                 for (textChunk in textChunks) {
                     if (!isActive) break
-                    val audioBytes = audioClient.synthesize(baseUrl, apiKey, textChunk, store.speechModel())
+                    // Resolve the speech key for the currently selected provider.
+                    // Prefer the provider-specific secure entry; fall back to the active UI key.
+                    val speechApiKey = store.apiKeyFor(baseUrl).ifBlank { apiKey }
+                    check(speechApiKey.isNotBlank()) {
+                        "کلید API سرویس فعلی پیدا نشد. تنظیمات اتصال را بررسی کن."
+                    }
+                    val audioBytes = audioClient.synthesize(baseUrl, speechApiKey, textChunk, store.speechModel())
                     val generatedFile = File(context.cacheDir, "naeem_tts_${System.currentTimeMillis()}.mp3")
                     generatedFile.writeBytes(audioBytes)
                     val player = MediaPlayer()
