@@ -18,8 +18,9 @@ Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "");
-  const routeIndex = pathname.indexOf("/v1/");
-  const route = routeIndex >= 0 ? pathname.slice(routeIndex) : pathname;
+  const functionMarker = "/smooth-service";
+  const functionIndex = pathname.indexOf(functionMarker);
+  const route = functionIndex >= 0 ? pathname.slice(functionIndex + functionMarker.length) : pathname;
 
   const auth = request.headers.get("Authorization") || "";
   if (!auth.startsWith("Bearer ")) {
