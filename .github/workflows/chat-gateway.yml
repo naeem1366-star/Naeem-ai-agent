@@ -1,7 +1,7 @@
-name: IMA Chat Gateway Checks
+name: EMA ASI PLATFORM Chat Gateway Checks
 on:
   push:
-    branches: ["feature/ima-chat-gateway"]
+    branches: ["feature/ima-chat-gateway", "feature/ema-asi-platform"]
     paths:
       - "backend/auth-worker/**"
       - ".github/workflows/chat-gateway.yml"
