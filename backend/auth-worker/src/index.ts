@@ -573,12 +573,22 @@ async function adminUpdateBillingSettings(request: Request, env: Env): Promise<R
     for (const rule of body.pricingRules) {
       const input = Number(rule?.inputPricePerMillionUsd);
       const output = Number(rule?.outputPricePerMillionUsd);
-      if (typeof rule?.id !== "string" || !Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0 || input > 100000 || output > 100000) {
+      const modelName = typeof rule?.model === "string" ? rule.model.trim().slice(0, 120) : "";
+      const featureName = typeof rule?.feature === "string" ? rule.feature.trim().slice(0, 40) : "chat";
+      const enabled = rule?.enabled === undefined ? 1 : (rule.enabled === true || rule.enabled === 1 ? 1 : 0);
+      if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0 || input > 100000 || output > 100000 ||
+          !modelName || !["chat", "vision", "image", "audio", "video", "music"].includes(featureName)) {
         return json({ error: "INVALID_MODEL_PRICING" }, 400);
       }
-      statements.push(env.DB.prepare(
-        "UPDATE pricing_rules SET input_price_per_million_usd = ?, output_price_per_million_usd = ?, updated_at = ? WHERE id = ?"
-      ).bind(String(input), String(output), Math.floor(Date.now()/1000), rule.id));
+      if (typeof rule?.id === "string" && !rule.id.startsWith("new:")) {
+        statements.push(env.DB.prepare(
+          "UPDATE pricing_rules SET input_price_per_million_usd = ?, output_price_per_million_usd = ?, enabled = ?, updated_at = ? WHERE id = ?"
+        ).bind(String(input), String(output), enabled, Math.floor(Date.now()/1000), rule.id));
+      } else {
+        statements.push(env.DB.prepare(
+          "INSERT INTO pricing_rules (id, model, feature, markup_bps, enabled, updated_at, input_price_per_million_usd, output_price_per_million_usd) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(model) DO UPDATE SET feature = excluded.feature, markup_bps = excluded.markup_bps, enabled = excluded.enabled, updated_at = excluded.updated_at, input_price_per_million_usd = excluded.input_price_per_million_usd, output_price_per_million_usd = excluded.output_price_per_million_usd"
+        ).bind(crypto.randomUUID(), modelName, featureName, markup, enabled, Math.floor(Date.now()/1000), String(input), String(output)));
+      }
     }
   }
 
