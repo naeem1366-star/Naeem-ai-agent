@@ -8,6 +8,13 @@ interface Env {
   KEY_ENCRYPTION_SECRET?: string;
   ADMIN_EMAILS?: string;
   DEFAULT_KEY_LIMIT_USD?: string;
+  CHAT_PRIMARY_BASE_URL?: string;
+  CHAT_PRIMARY_MODEL?: string;
+  CHAT_PRIMARY_API_KEY?: string;
+  CHAT_SECONDARY_BASE_URL?: string;
+  CHAT_SECONDARY_MODEL?: string;
+  CHAT_SECONDARY_API_KEY?: string;
+  CHAT_FREE_MONTHLY_REQUESTS?: string;
   ASSETS?: Fetcher;
 }
 
@@ -28,7 +35,7 @@ function cors(request: Request, env: Env): Headers {
     headers.set("Access-Control-Allow-Origin", origin);
     headers.set("Vary", "Origin");
   }
-  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   headers.set("Access-Control-Max-Age", "86400");
   return headers;
@@ -136,6 +143,108 @@ async function provisionProviderKey(env: Env, userId: string, email: string): Pr
     .bind(userId, String(project.id), String(key.id), String(key.masked || ""), encrypted.cipher, encrypted.iv, now, now).run();
 }
 
+
+function decodeBase64Url(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
+
+async function decryptProviderSecret(cipher: string, iv: string, master: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(master));
+  const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["decrypt"]);
+  const clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv: decodeBase64Url(iv) }, key, decodeBase64Url(cipher));
+  return new TextDecoder().decode(clear);
+}
+
+async function chatCompletion(request: Request, env: Env): Promise<Response> {
+  const user = await authenticatedUser(request, env);
+  if (!user || user.status !== "active") return json({ error: { code: "UNAUTHORIZED", message: "برای استفاده از چت ابتدا وارد حساب شو." } }, 401);
+
+  const contentLength = Number(request.headers.get("Content-Length") || "0");
+  if (contentLength > 5_000_000) return json({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
+  const body = await request.json().catch(() => null) as any;
+  if (!body || !Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 80) {
+    return json({ error: { code: "INVALID_REQUEST", message: "ساختار درخواست گفتگو معتبر نیست." } }, 400);
+  }
+  const primaryBase = (env.CHAT_PRIMARY_BASE_URL || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+  const primaryKey = env.CHAT_PRIMARY_API_KEY || "";
+  const primaryModel = env.CHAT_PRIMARY_MODEL || "gpt-4o-mini";
+  const secondaryBase = (env.CHAT_SECONDARY_BASE_URL || "https://api.gapgpt.ir/v1").replace(/\/+$/, "");
+  const secondaryKey = env.CHAT_SECONDARY_API_KEY || "";
+  const secondaryModel = env.CHAT_SECONDARY_MODEL || primaryModel;
+  if (!primaryKey || !primaryBase.startsWith("https://")) {
+    return json({ error: { code: "CHAT_GATEWAY_NOT_CONFIGURED", message: "سرویس گفتگوی ایما هنوز روی سرور پیکربندی نشده است." } }, 503);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const period = new Date().toISOString().slice(0, 7);
+  const limit = Math.max(1, Math.min(10000, Number(env.CHAT_FREE_MONTHLY_REQUESTS || "50")));
+  const reserve = await env.DB.prepare(
+    "UPDATE users SET chat_free_period = ?, chat_free_used = CASE WHEN chat_free_period = ? THEN chat_free_used + 1 ELSE 1 END WHERE id = ? AND status = 'active' AND (chat_free_period != ? OR chat_free_used < ?)"
+  ).bind(period, period, user.id, period, limit).run();
+  if ((reserve.meta?.changes || 0) !== 1) {
+    const usage = await env.DB.prepare("SELECT chat_free_used, chat_free_period FROM users WHERE id = ?").bind(user.id).first<any>();
+    return json({ error: { code: "CHAT_QUOTA_EXHAUSTED", message: "سهمیه رایگان این ماه تمام شده است. برای ادامه، اعتبار حساب را افزایش بده." }, quota: { limit, used: usage?.chat_free_period === period ? usage.chat_free_used : 0, period } }, 402);
+  }
+
+  const payload = { ...body, model: primaryModel, stream: false };
+  delete (payload as any).user;
+  const tryProvider = async (base: string, key: string, model: string): Promise<Response> => {
+    if (!key || !base.startsWith("https://")) throw new Error("PROVIDER_NOT_CONFIGURED");
+    const outgoing = { ...payload, model };
+    return fetch(base + "/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(outgoing),
+      signal: AbortSignal.timeout(60000)
+    });
+  };
+
+  let upstream: Response | null = null;
+  let selectedModel = primaryModel;
+  let primaryFailure = "";
+  try {
+    upstream = await tryProvider(primaryBase, primaryKey, primaryModel);
+    if (upstream.status === 429 || upstream.status >= 500) {
+      primaryFailure = "HTTP_" + upstream.status;
+      await upstream.body?.cancel();
+      upstream = null;
+    }
+  } catch (error) {
+    primaryFailure = error instanceof Error ? error.name : "NETWORK_ERROR";
+  }
+
+  if (!upstream && secondaryKey && secondaryBase.startsWith("https://")) {
+    try {
+      upstream = await tryProvider(secondaryBase, secondaryKey, secondaryModel);
+      selectedModel = secondaryModel;
+      if (upstream.status === 429 || upstream.status >= 500) {
+        await upstream.body?.cancel();
+        upstream = null;
+      }
+    } catch { upstream = null; }
+  }
+
+  if (!upstream) {
+    await env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id).run();
+    return json({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "در حال حاضر سرویس گفتگو پاسخگو نیست. سهمیه‌ات کسر نشد؛ کمی بعد دوباره تلاش کن.", primary: primaryFailure } }, 503);
+  }
+
+  const raw = await upstream.text();
+  if (!upstream.ok) {
+    await env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id).run();
+    return new Response(raw || JSON.stringify({ error: { message: "خطا در سرویس گفتگو" } }), {
+      status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+    });
+  }
+
+  const responseData = await env.DB.prepare(
+    "INSERT INTO usage_events (id, user_id, feature, model, input_tokens, output_tokens, provider_cost_usd, charge_toman, status, created_at) VALUES (?, ?, 'chat', ?, ?, ?, '0', 0, 'success', ?)"
+  ).bind(crypto.randomUUID(), user.id, selectedModel, Number((JSON.parse(raw).usage || {}).prompt_tokens || 0), Number((JSON.parse(raw).usage || {}).completion_tokens || 0), now).run().catch(() => null);
+  return new Response(raw, { status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "X-IMA-Chat-Provider": selectedModel === primaryModel ? "primary" : "secondary" } });
+}
+
 async function walletSummary(request: Request, env: Env): Promise<Response> {
   const user = await authenticatedUser(request, env);
   if (!user || user.status !== "active") return json({ error: "UNAUTHORIZED" }, 401);
@@ -232,6 +341,7 @@ export default {
         if (env.ASSETS) return env.ASSETS.fetch(new Request(new URL("/admin.html", request.url), request));
         return json({ error: "ADMIN_ASSET_NOT_CONFIGURED" }, 503, headers);
       }
+      if (request.method === "POST" && url.pathname === "/v1/chat/completions") return withHeaders(await chatCompletion(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/wallet") return withHeaders(await walletSummary(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/overview") return withHeaders(await adminOverview(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/users") return withHeaders(await adminUsers(request, env), headers);
