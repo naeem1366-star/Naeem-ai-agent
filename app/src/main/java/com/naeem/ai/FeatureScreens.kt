@@ -225,7 +225,7 @@ fun FeatureHub(
     Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f), horizontalAlignment=Alignment.End){
-                Text("IMA  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                Text("EMA ASI PLATFORM  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                 Text("ابزارها و فضاهای ایما را انتخاب کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
             }
@@ -590,7 +590,7 @@ private fun PeriodTrackerCard(context: Context) {
     ).padding(horizontal = 18.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text("IMA  /  GAME STUDIO", color = SupraGlass.Ice, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text("EMA ASI PLATFORM  /  GAME STUDIO", color = SupraGlass.Ice, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 Text("باشگاه بازی", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
                 Text("هر بازی، یک تجربه مستقل", color = SupraGlass.Ice, style = MaterialTheme.typography.bodySmall)
             }
@@ -920,7 +920,7 @@ private class TrackSearch{
 
 @Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ MusicStudioDashboard(onClose,onAskAi) }
 
-// Graphite and silver 3D feature gallery for IMA.
+// Graphite and silver 3D feature gallery for EMA ASI PLATFORM.
 
 
 @Composable
@@ -1028,7 +1028,7 @@ private fun FeatureMapTree(
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.AccountTree, null, tint = silver, modifier = Modifier.size(30.dp))
                         Spacer(Modifier.height(5.dp))
-                        Text("IMA", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
+                        Text("EMA ASI PLATFORM", color = Color.White, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge)
                         Text("ریشه درخت · هسته هوشمند و هماهنگ‌کننده فضاها", color = muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -1107,7 +1107,7 @@ fun SocialAnalyticsDashboard(onClose: () -> Unit, onAskAi: (String) -> Unit) {
                     Spacer(Modifier.width(8.dp))
                     Text("ورود امن و حریم خصوصی", color = FG, fontWeight = FontWeight.SemiBold)
                 }
-                Text("رمز عبورت را داخل IMA وارد نکن. اتصال مستقیم اینستاگرام از مسیر رسمی Meta در حال آماده‌سازی است و پس از ثبت اپ و مجوزها فعال می‌شود. فعلاً می‌توانی آمار Insights را وارد کنی و تحلیل بگیری.", color = FM, style = MaterialTheme.typography.bodySmall)
+                Text("رمز عبورت را داخل EMA ASI PLATFORM وارد نکن. اتصال مستقیم اینستاگرام از مسیر رسمی Meta در حال آماده‌سازی است و پس از ثبت اپ و مجوزها فعال می‌شود. فعلاً می‌توانی آمار Insights را وارد کنی و تحلیل بگیری.", color = FM, style = MaterialTheme.typography.bodySmall)
             }
         }
         Text("پلتفرم", color = FG, fontWeight = FontWeight.SemiBold)
