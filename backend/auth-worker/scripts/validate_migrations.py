@@ -5,8 +5,6 @@ ROOT = Path(__file__).resolve().parents[1]
 db = sqlite3.connect(":memory:")
 db.execute("PRAGMA foreign_keys = ON")
 
-base = ROOT / "schema.sql"
-db.executescript(base.read_text(encoding="utf-8"))
 migration_dir = ROOT / "migrations"
 for path in sorted(migration_dir.glob("*.sql")):
     db.executescript(path.read_text(encoding="utf-8"))
