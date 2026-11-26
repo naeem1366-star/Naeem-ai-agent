@@ -72,7 +72,8 @@ npx wrangler d1 execute naeem-ai-auth --remote --file=./migrations/0004_chat_gat
 - `CHAT_SECONDARY_BASE_URL`: مقدار پیش‌فرض `https://api.gapgpt.ir/v1`
 - `CHAT_PRIMARY_MODEL`: مقدار پیش‌فرض `gpt-4o-mini`
 - `CHAT_SECONDARY_MODEL`: مقدار پیش‌فرض `gpt-4o-mini`
-- `CHAT_FREE_MONTHLY_REQUESTS`: مقدار پیشنهادی `50`
+- `CHAT_FREE_MONTHLY_REQUESTS`: مقدار پیشنهادی `50` درخواست برای هر کاربر در ماه
+- `CHAT_GLOBAL_MONTHLY_REQUESTS`: سقف کلی اولیه `5000` درخواست در ماه برای کنترل هزینه کل؛ در صورت نیاز قابل افزایش است
 
 کلیدها را در مخزن GitHub، فایل wrangler.toml یا کد اندروید قرار ندهید. پس از تنظیم Secretها، Worker را با `npx wrangler deploy` منتشر کنید.
 
