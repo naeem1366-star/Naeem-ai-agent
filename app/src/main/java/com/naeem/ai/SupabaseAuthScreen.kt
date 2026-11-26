@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun SupabaseAuthScreen(auth: SupabaseAuthClient, isEnglish: Boolean = false, onAuthenticated: (SupabaseSession) -> Unit) {
+fun SupabaseAuthScreen(auth: SupabaseAuthClient, isEnglish: Boolean = false, onAuthenticated: (SupabaseSession) -> Unit, onGuestAccess: () -> Unit = {}) {
     var mode by remember { mutableStateOf("login") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -109,6 +109,18 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, isEnglish: Boolean = false, onA
                 if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF101B2B), strokeWidth = 2.dp)
                 else Text(if (isEnglish) when (mode) { "signup" -> "Create account"; "recovery" -> "Send reset link"; else -> "Sign in" } else when (mode) { "signup" -> "ساخت حساب"; "recovery" -> "ارسال لینک بازیابی"; else -> "ورود" }, fontWeight = FontWeight.Bold)
             }
+            OutlinedButton(
+                onClick = onGuestAccess,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE5EFFD))
+            ) {
+                Text(if (isEnglish) "Continue as guest" else "ورود به‌عنوان میهمان")
+            }
+            Text(
+                if (isEnglish) "Guest mode does not require email verification. Account features can be unlocked later by signing in." else "برای استفاده از حالت میهمان نیازی به تأیید ایمیل نیست؛ هر زمان خواستی از داخل برنامه وارد حسابت شو.",
+                color = Color(0xFFB9C5D5), fontSize = 11.sp
+            )
             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 if (mode != "login") TextButton(onClick = { mode = "login"; message = ""; password = ""; confirmPassword = "" }) { Text(if (isEnglish) "Back to sign in" else "بازگشت به ورود") }
                 else {
