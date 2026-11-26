@@ -1350,14 +1350,14 @@ fun NaeemApp(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            "سلام " + userName.ifBlank { "دوست من" },
+                            appText("سلام ", isEnglish) + userName.ifBlank { appText("دوست من", isEnglish) },
                             color = Color(0xFFEAF1FC),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(Modifier.height(7.dp))
                         Text(
-                            "امروز دوست داری درباره چی صحبت کنیم؟",
+                            appText("امروز دوست داری درباره چی صحبت کنیم؟", isEnglish),
                             color = Color(0xFFAFBED2),
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -1368,7 +1368,7 @@ fun NaeemApp(
                             contentDescription = "لوگوی ایما", modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
                         Spacer(Modifier.height(7.dp))
                         Text(
-                            "لمس گوی یا نوشتن پیام برای شروع",
+                            appText("لمس گوی یا نوشتن پیام برای شروع", isEnglish),
                             color = Color(0xFF879AB5),
                             style = MaterialTheme.typography.labelMedium
                         )
@@ -1394,14 +1394,14 @@ fun NaeemApp(
                         ) {
                             ThinkingOrb(diameter = 158.dp, active = true)
                             Text(
-                                when {
+                                appText(when {
                                     speechPlaying -> "در حال صحبت با تو"
                                     listening -> "در حال شنیدن صدای تو"
                                     searchMode && busy -> "در حال جست‌وجو و بررسی منابع…"
                                     imageMode && busy -> "در حال ساخت تصویر…"
                                     busy -> "دارم فکر می‌کنم…"
                                     else -> "حالت مکالمه فعال است"
-                                },
+                                }, isEnglish),
                                 color = Gold, fontWeight = FontWeight.SemiBold
                             )
                             Text(appText("گوی هوشمند ایما", isEnglish), color = Muted, style = MaterialTheme.typography.labelSmall)
