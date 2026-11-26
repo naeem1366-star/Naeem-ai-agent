@@ -1977,8 +1977,9 @@ private fun ThinkingOrb(
         // Two rotating orbital ribbons make the movement visible at a glance.
         for (orbit in 0..1) {
             val path = Path()
-            val rx = radius * (1.82f + orbit * 0.18f)
-            val ry = radius * (0.56f + orbit * 0.13f)
+            // Keep both orbital rings fully visible around the central orb.
+            val rx = radius * (1.38f + orbit * 0.12f)
+            val ry = radius * (0.72f + orbit * 0.12f)
             val direction = if (orbit == 0) 1f else -1f
             val angle = Math.toRadians((rotation * direction + orbit * 72f).toDouble())
             val ca = kotlin.math.cos(angle).toFloat()
@@ -2035,6 +2036,39 @@ private fun ThinkingOrb(
             val tint = when (strand) { 0 -> ice; 1 -> cyan; else -> lavender }
             drawPath(path, tint.copy(alpha = 0.22f), style = Stroke(width = 5.dp.toPx()))
             drawPath(path, tint.copy(alpha = 0.84f), style = Stroke(width = 1.55.dp.toPx()))
+        }
+
+        // Re-draw the near halves of both orbital ribbons over the glass core.
+        // The far halves remain behind it, creating a clear 3D wrap-around effect.
+        for (orbit in 0..1) {
+            val frontPath = Path()
+            val rx = radius * (1.38f + orbit * 0.12f)
+            val ry = radius * (0.72f + orbit * 0.12f)
+            val direction = if (orbit == 0) 1f else -1f
+            val angle = Math.toRadians((rotation * direction + orbit * 72f).toDouble())
+            val ca = kotlin.math.cos(angle).toFloat()
+            val sa = kotlin.math.sin(angle).toFloat()
+            var drawingFront = false
+            for (i in 0..160) {
+                val t = i / 160f * (Math.PI * 2.0).toFloat()
+                val px = kotlin.math.cos(t) * rx
+                val py = kotlin.math.sin(t) * ry
+                val x = c.x + px * ca - py * sa
+                val y = c.y + px * sa + py * ca
+                if (y >= c.y) {
+                    if (!drawingFront) frontPath.moveTo(x, y) else frontPath.lineTo(x, y)
+                    drawingFront = true
+                } else {
+                    drawingFront = false
+                }
+            }
+            drawPath(frontPath, cyan.copy(alpha = 0.28f), style = Stroke(width = 7.dp.toPx()))
+            drawPath(
+                frontPath,
+                Brush.sweepGradient(listOf(Color.Transparent, ice.copy(alpha = 0.92f),
+                    cyan.copy(alpha = 0.82f), lavender.copy(alpha = 0.62f), Color.Transparent), c),
+                style = Stroke(width = if (orbit == 0) 2.4.dp.toPx() else 1.6.dp.toPx())
+            )
         }
 
         // Soft glass edge, not a hard neon outline.
