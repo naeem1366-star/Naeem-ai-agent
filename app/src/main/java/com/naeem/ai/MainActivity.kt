@@ -268,6 +268,7 @@ class MainActivity : FragmentActivity() {
                             onExternalActivityStarted = {},
                             onExternalActivityReturned = {},
                             userEmail = authSession.value?.email.orEmpty(),
+                            chatAccessToken = authSession.value?.accessToken.orEmpty(),
                             onSignOut = {
                                 authScope.launch {
                                     auth.signOut()
@@ -441,7 +442,8 @@ fun NaeemApp(
     onExternalActivityStarted: () -> Unit,
     onExternalActivityReturned: () -> Unit,
     onSignOut: () -> Unit = {},
-    userEmail: String = ""
+    userEmail: String = "",
+    chatAccessToken: String = ""
 ) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
@@ -606,6 +608,14 @@ fun NaeemApp(
     }
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
+    suspend fun sendChat(text: String, image: String? = null): String {
+        val gateway = BuildConfig.CHAT_GATEWAY_URL.trim()
+        return if (gateway.isNotBlank()) {
+            client.sendViaGateway(gateway, chatAccessToken, model, text, image)
+        } else {
+            client.send(baseUrl, model, apiKey, text, image)
+        }
+    }
     val imageClient = remember { ImageGenerationClient() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -813,7 +823,7 @@ fun NaeemApp(
                         playAnswer(actionReply, continueListening = true)
                         return@launch
                     }
-                    val answer = client.send(baseUrl, model, apiKey, question)
+                    val answer = sendChat(question)
                     messages.add(ChatMessage(answer, false))
                     playAnswer(answer, continueListening = true)
                 } catch (e: Exception) {
@@ -891,7 +901,7 @@ fun NaeemApp(
                         val findings = deepSearchClient.search(finalQuestion, 8)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
                         val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$userContext"
-                        val report = client.send(baseUrl, model, apiKey, researchPrompt)
+                        val report = sendChat(researchPrompt)
                         report + "\n\nمنابع بررسی‌شده:\n" + findings.mapIndexed { index, item -> "[${index + 1}] ${item.title} — ${item.url}" }.joinToString("\n")
                     } else {
                         val memoryAwarePrompt = "زمینه کاربر:\n$userContext\n\nدرخواست کاربر:\n$finalQuestion"
@@ -899,7 +909,7 @@ fun NaeemApp(
                             val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
                             if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
                         }
-                        client.send(baseUrl, model, apiKey, memoryAwarePrompt, imageToSend)
+                        sendChat(memoryAwarePrompt, imageToSend)
                     }
                     messages.add(ChatMessage(answer, false))
                     if (speakAnswer) playAnswer(answer)
