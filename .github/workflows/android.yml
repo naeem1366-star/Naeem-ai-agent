@@ -2,7 +2,7 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway"]
+    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway", "feature/ema-asi-platform"]
   pull_request:
     branches: ["feature/v2-foundation"]
 
@@ -33,11 +33,11 @@ jobs:
           CHAT_GATEWAY_URL: ${{ vars.CHAT_GATEWAY_URL }}
         run: gradle -PCHAT_GATEWAY_URL=\"$CHAT_GATEWAY_URL\" assembleDebug
       - name: Name versioned APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/IMA-v2.0.0-alpha25.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/EMA-ASI-PLATFORM-v2.0.0-alpha25.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: IMA-v2.0.0-alpha25
+          name: EMA-ASI-PLATFORM-v2.0.0-alpha25
           path: app/build/outputs/apk/debug/IMA-v2.0.0-alpha25.apk
           if-no-files-found: error
       - name: Publish Android APK download
@@ -48,6 +48,6 @@ jobs:
           name: Naeem AI Desktop Bridge alpha1
           prerelease: true
           overwrite_files: true
-          files: app/build/outputs/apk/debug/IMA-v2.0.0-alpha24.apk
+          files: app/build/outputs/apk/debug/EMA-ASI-PLATFORM-v2.0.0-alpha25.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
