@@ -1170,11 +1170,8 @@ fun NaeemApp(
                     Column(Modifier.fillMaxHeight().padding(horizontal = 14.dp, vertical = 18.dp)) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(52.dp))
-                            Column {
-                                Text(appText("ایما", isEnglish), color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                                Text(appText("فضای شخصی هوشمند", isEnglish), color = Muted, style = MaterialTheme.typography.labelSmall)
-                            }
+                            Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "EMA", modifier = Modifier.size(76.dp))
+                            Text(appText("فضای شخصی هوشمند", isEnglish), color = Muted, style = MaterialTheme.typography.labelSmall)
                         }
                         HorizontalDivider(color = Color(0x334F6B8C), modifier = Modifier.padding(vertical = 10.dp))
                         NavigationDrawerItem(label = { Text(appText("فضاهای من و ابزارها", isEnglish)) }, selected = false,
@@ -1229,6 +1226,9 @@ fun NaeemApp(
                         }
                     },
                     actions = {
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = if (isEnglish) "Settings" else "تنظیمات", tint = Gold)
+                        }
                         IconButton(onClick = { showHub = true }) {
                             Icon(Icons.Default.Apps, contentDescription = "فضاهای من و ابزارها", tint = Gold)
                         }
@@ -2034,7 +2034,13 @@ fun NaeemApp(
                 containerColor = Panel,
                 title = { Text(appText("تنظیمات اتصال", isEnglish), color = Gold) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 560.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(if (isEnglish) "App language" else "زبان برنامه", color = Gold, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(selected = appLanguage == "fa", onClick = {
