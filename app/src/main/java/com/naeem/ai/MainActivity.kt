@@ -697,6 +697,7 @@ fun NaeemApp(
     var pendingJournalDetail by remember { mutableStateOf<String?>(null) }
     var showFinance by remember { mutableStateOf(false) }
     var showHub by remember { mutableStateOf(false) }
+    var showWallet by remember { mutableStateOf(false) }
     var showHealth by remember { mutableStateOf(false) }
     var showJournal by remember { mutableStateOf(false) }
     var showGames by remember { mutableStateOf(false) }
@@ -1585,12 +1586,32 @@ fun NaeemApp(
                         onThinkRoom = { showHub = false; showThinkRoom = true },
                         onFuture = { showHub = false; showFutureGateway = true },
                          onProfessionalVideo = { showHub = false; showProfessionalVideo = true },
-                         onPcControl = { showHub = false; showPcControl = true }
+                         onPcControl = { showHub = false; showPcControl = true },
+                         onWallet = { showHub = false; showWallet = true }
                     ) }
                 }
                 }
             }
         }
+        if (showWallet) {
+            Dialog(onDismissRequest = { showWallet = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(
+                    modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = Color(0xFF050B16)
+                ) {
+                    ModuleScreenBackdrop("finance") {
+                        BillingScreen(
+                            accessToken = chatAccessToken,
+                            gatewayUrl = BuildConfig.CHAT_GATEWAY_URL,
+                            isEnglish = isEnglish,
+                            onClose = { showWallet = false }
+                        )
+                    }
+                }
+            }
+        }
+
         if (showJournal) {
             Dialog(onDismissRequest = { showJournal = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
