@@ -1429,11 +1429,11 @@ fun NaeemApp(
                 title = { Text(appText("مشخصات حساب من", isEnglish), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(appText("نام نمایشی: ", isEnglish)) + userName.ifBlank { "ثبت نشده" }, color = Color.White)
-                        Text(appText("ایمیل ورود: ", isEnglish)) + userEmail.ifBlank { "در دسترس نیست" }, color = Color.White)
-                        Text(appText("علایق: ", isEnglish)) + userInterests.ifBlank { "ثبت نشده" }, color = Muted)
-                        Text(appText("درباره من: ", isEnglish)) + userAbout.ifBlank { "ثبت نشده" }, color = Muted)
-                        Text(appText("لحن پاسخ: ", isEnglish)) + responseStyle, color = Muted)
+                        Text("${appText("نام نمایشی: ", isEnglish)}${userName.ifBlank { appText("ثبت نشده", isEnglish) }}", color = Color.White)
+                        Text("${appText("ایمیل ورود: ", isEnglish)}${userEmail.ifBlank { appText("در دسترس نیست", isEnglish) }}", color = Color.White)
+                        Text("${appText("علایق: ", isEnglish)}${userInterests.ifBlank { appText("ثبت نشده", isEnglish) }}", color = Muted)
+                        Text("${appText("درباره من: ", isEnglish)}${userAbout.ifBlank { appText("ثبت نشده", isEnglish) }}", color = Muted)
+                        Text("${appText("لحن پاسخ: ", isEnglish)}$responseStyle", color = Muted)
                     }
                 },
                 confirmButton = { TextButton(onClick = { showProfileDetails = false }) { Text(appText("بستن", isEnglish), color = Gold) } })
@@ -1833,7 +1833,7 @@ fun NaeemApp(
                 onDismissRequest = { deleteConversationTarget = null },
                 containerColor = Panel,
                 title = { Text(appText("حذف گفت‌وگو", isEnglish), color = Gold) },
-                text = { Text(appText("گفت‌وگوی «", isEnglish)) + target.title + "» و تاریخچهٔ آن برای همیشه حذف شود؟", color = Color.White) },
+                text = { Text(if (isEnglish) "Delete conversation “${target.title}” and its history permanently?" else "گفت‌وگوی «${target.title}» و تاریخچهٔ آن برای همیشه حذف شود؟", color = Color.White) },
                 confirmButton = {
                     TextButton(onClick = {
                         conversationStore.delete(target.id)
