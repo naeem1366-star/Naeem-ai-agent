@@ -179,14 +179,43 @@ fun FeatureHub(
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","از اینجا مدل هوش مصنوعی، نشانی سرویس و کلید API را تنظیم می‌کنی؛ این اتصال، مسیر ارتباط مغز هوشمند با گفتگو و ابزارهای برنامه است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال"),
         Entry("اتصال به کامپیوتر","کنترل رایانه از گوشی","اتصال امن به برنامه دسکتاپ ایما","برنامه Desktop Bridge را روی رایانه اجرا کن و از این بخش وضعیت اتصال را ببین و فرمان‌های مجاز را از گوشی ارسال کن.","نیازمند اجرای برنامه دسکتاپ روی رایانه",Icons.Default.Computer,onPcControl,"کامپیوتر رایانه دسکتاپ کنترل از راه دور اتصال PC desktop bridge")
     )
+    val englishNames = mapOf(
+        "سفر و هم‌سفرها" to "Travel & companions", "برنامه‌ریزی سفر" to "Trip planning",
+        "Naeem Trail" to "Naeem Trail", "ناوبری طبیعت‌گردی" to "Outdoor navigation",
+        "باشگاه ورزش" to "Sports club", "تمرین و آمادگی" to "Training & fitness",
+        "نبض بازار" to "Market pulse", "تحلیل و پیشنهاد رمزارز" to "Crypto analysis & ideas",
+        "اتاق فکر" to "Think room", "هم‌فکری و مدیریت پروژه" to "Ideas & project planning",
+        "به آینده وارد شو" to "Future gateway", "آزمایشگاه تجربه‌های فکری" to "Future experiences lab",
+        "اخبار مهم" to "Top news", "خبرهای مهم ایران و جهان" to "Iran & world headlines",
+        "یادآور دارو" to "Medication reminder", "زمان‌بندی مصرف دارو" to "Medication schedule",
+        "نوت‌بوک" to "Notebook", "یادداشت‌ها و برنامه‌های من" to "My notes & plans",
+        "دفتر مالی" to "Finance", "مدیریت پول" to "Money management",
+        "روایت هفته و ماه" to "Weekly & monthly review", "گزارش عملکرد و روزنگار" to "Activity & journal summary",
+        "روزنگار من" to "My journal", "روایت روزهای من" to "My daily stories",
+        "سلامت و تغذیه" to "Health & nutrition", "بدن، تغذیه و مراقبت‌های روزانه" to "Body, nutrition & daily care",
+        "حافظه هوشمند" to "Smart memory", "یادداشت‌های من" to "My saved notes",
+        "آلبوم تصاویر" to "Image album", "آرشیو آثار" to "Created images",
+        "بازی‌ها" to "Games", "چالش و سرگرمی" to "Challenges & fun",
+        "سینما" to "Cinema", "فیلم و پوستر" to "Movies & posters",
+        "پادکست" to "Podcasts", "شنیدن و کشف برنامه‌های صوتی" to "Discover and listen to podcasts",
+        "استودیو ایما" to "EMA Studio", "تدوین حرفه‌ای ویدیو" to "Video editing",
+        "ویدیوساز حرفه‌ای" to "AI video studio", "تولید ویدیو با هوش مصنوعی" to "AI video generation",
+        "موسیقی" to "Music", "آهنگ و هنرمند" to "Songs & artists",
+        "تحلیل اینستاگرام" to "Instagram analytics", "رشد و عملکرد پیج" to "Account growth & performance",
+        "تنظیمات" to "Settings", "اتصال و حریم خصوصی" to "Connections & privacy",
+        "اتصال به کامپیوتر" to "Connect to computer", "کنترل رایانه از گوشی" to "Control your PC from your phone"
+    )
+    val displayEntries = if (isEnglish) entries.map { it.copy(title = englishNames[it.title] ?: it.title, subtitle = englishNames[it.subtitle] ?: it.subtitle) } else entries
+    fun hubText(fa: String, en: String) = if (isEnglish) en else fa
+
     if (showFeatureMap) {
         FeatureMapTree(
             onClose = { showFeatureMap = false },
-            modules = entries.map { Triple(it.title, it.subtitle + " · " + it.detail, it.aiStatus) }
+            modules = displayEntries.map { Triple(it.title, it.subtitle + " · " + it.detail, it.aiStatus) }
         )
         return
     }
-    val filtered=entries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
+    val filtered=displayEntries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
     val gold=SupraGlass.Ice
     val champagne=SupraGlass.Silver
     val hubBg=SupraGlass.Night
@@ -202,7 +231,7 @@ fun FeatureHub(
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.End) {
                         Text(entry.detail, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                         Divider(color = Color(0xFF3B4551))
-                        Text("ارتباط با مغز هوشمند", color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                        Text(hubText("ارتباط با مغز هوشمند", "AI integration"), color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                         Text(entry.aiRole, style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                         Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(10.dp)) {
                             Text(entry.aiStatus, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color(0xFFD4DCE6), style = MaterialTheme.typography.labelSmall)
@@ -211,11 +240,11 @@ fun FeatureHub(
                 },
                 confirmButton = {
                     TextButton(onClick = { selectedEntry = null; entry.action() }) {
-                        Text("ورود به این بخش", color = Color(0xFFE0E6EE))
+                        Text(hubText("ورود به این بخش", "Open this space"), color = Color(0xFFE0E6EE))
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { selectedEntry = null }) { Text("بستن", color = Color(0xFF9BA7B5)) }
+                    TextButton(onClick = { selectedEntry = null }) { Text(hubText("بستن", "Close"), color = Color(0xFF9BA7B5)) }
                 }
             )
         }
@@ -227,8 +256,8 @@ fun FeatureHub(
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f), horizontalAlignment=Alignment.End){
                 Text("EMA ASI PLATFORM  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
-                Text("فضاهای من",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text("ابزارها و فضاهای ایما را انتخاب کن.",color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                Text(hubText("فضاهای من", "My spaces"),color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                Text(hubText("ابزارها و فضاهای ایما را انتخاب کن.", "Choose an EMA space or tool."),color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
             }
             IconButton(onClick={showFeatureMap=true}){Icon(Icons.Default.AccountTree,null,tint=gold)}
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
@@ -237,8 +266,8 @@ fun FeatureHub(
             border=androidx.compose.foundation.BorderStroke(1.dp,SupraGlass.Edge)){
             Row(Modifier.padding(13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(11.dp)){
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp),horizontalAlignment=Alignment.End){
-                    Text("مغز هوشمند ایما",color=Color(0xFFE0E6EE),fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
-                    Text("وقتی گفتگو یا میکروفون را فعال می‌کنی، ایما موضوع را تشخیص می‌دهد و اطلاعات را به فضای مرتبط هدایت می‌کند؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.",color=Color(0xFFADB7C4),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                    Text(hubText("مغز هوشمند ایما", "EMA intelligent core"),color=Color(0xFFE0E6EE),fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                    Text(hubText("وقتی گفتگو یا میکروفون را فعال می‌کنی، ایما موضوع را تشخیص می‌دهد و اطلاعات را به فضای مرتبط هدایت می‌کند؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", "When you chat or use the microphone, EMA identifies the topic and routes information to the relevant space. Important changes are made only with your confirmation."),color=Color(0xFFADB7C4),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
                 }
                 Icon(Icons.Default.Hub,null,tint=Color(0xFFE0E6EE),modifier=Modifier.size(27.dp))
             }
@@ -246,19 +275,19 @@ fun FeatureHub(
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,
             textStyle=androidx.compose.ui.text.TextStyle(textAlign=androidx.compose.ui.text.style.TextAlign.End),
-            shape=RoundedCornerShape(16.dp),placeholder={Text("جست‌وجو در فضاها…")},
+            shape=RoundedCornerShape(16.dp),placeholder={Text(hubText("جست‌وجو در فضاها…", "Search spaces…"))},
             leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
             colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=gold,unfocusedBorderColor=SupraGlass.Edge,
                 focusedContainerColor=Color(0x16FFFFFF),unfocusedContainerColor=Color(0x16FFFFFF),cursorColor=gold))
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-            Text(if(query.isBlank()) "فضاهای ایما" else "نتایج جست‌وجو",color=champagne,fontWeight=FontWeight.SemiBold)
+            Text(if(query.isBlank()) hubText("فضاهای ایما", "EMA spaces") else hubText("نتایج جست‌وجو", "Search results"),color=champagne,fontWeight=FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
-            Text("${filtered.size} مورد",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
+            Text(if(isEnglish) "${filtered.size} items" else "${filtered.size} مورد",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
         }
         Spacer(Modifier.height(4.dp))
         if(filtered.isEmpty()){
-            Box(Modifier.fillMaxWidth().weight(1f),contentAlignment=Alignment.Center){Text("قابلیتی با این نام پیدا نشد.",color=Color(0xFFAAB2BD))}
+            Box(Modifier.fillMaxWidth().weight(1f),contentAlignment=Alignment.Center){Text(hubText("قابلیتی با این نام پیدا نشد.", "No matching feature was found."),color=Color(0xFFAAB2BD))}
         }else{
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -297,7 +326,7 @@ fun FeatureHub(
                                 Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall)
                                 Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 2, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             }
-                            Text("ورود به بخش", color = gold, style = MaterialTheme.typography.labelSmall)
+                            Text(hubText("ورود به بخش", "Open space"), color = gold, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -306,7 +335,7 @@ fun FeatureHub(
                 TextButton(onClick={selectedEntry=filtered[centerIndex.coerceIn(0,filtered.lastIndex)]}){
                     Icon(Icons.Default.Info,null,tint=gold,modifier=Modifier.size(17.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("جزئیات فضای انتخاب‌شده",color=gold)
+                    Text(hubText("جزئیات فضای انتخاب‌شده", "Selected space details"),color=gold)
                 }
             }
             OutlinedButton(onClick = { showFeatureMap = true }, modifier = Modifier.fillMaxWidth(),
@@ -315,7 +344,7 @@ fun FeatureHub(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = gold)) {
                 Icon(Icons.Default.Apps, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("همه ابزارها", fontWeight = FontWeight.SemiBold)
+                Text(hubText("همه ابزارها", "All tools"), fontWeight = FontWeight.SemiBold)
             }
         }
     }
