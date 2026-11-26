@@ -1,4 +1,4 @@
-#define AppName "Naeem AI Desktop Bridge"
+#define AppName "EMA ASI Desktop Bridge"
 #define AppVersion "1.0.0-alpha1"
 #define AppPublisher "Naeem AI"
 
