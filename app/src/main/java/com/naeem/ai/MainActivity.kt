@@ -1915,7 +1915,7 @@ fun NaeemApp(
                 title = { Text(appText("تنظیمات اتصال", isEnglish), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("App language / زبان برنامه", color = Gold, fontWeight = FontWeight.SemiBold)
+                        Text(if (isEnglish) "App language" else "زبان برنامه", color = Gold, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(selected = appLanguage == "fa", onClick = {
                                 appLanguage = "fa"
@@ -1926,7 +1926,7 @@ fun NaeemApp(
                                 context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "en").apply()
                             }, label = { Text("English") })
                         }
-                        Text(appText(appText("درگاه اتصال", isEnglish), isEnglish))
+                        Text(appText("درگاه اتصال", isEnglish))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                             OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text(appText("نت‌ارز", isEnglish), color = Gold) }
                             OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }
