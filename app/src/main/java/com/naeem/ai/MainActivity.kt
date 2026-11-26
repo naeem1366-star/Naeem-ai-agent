@@ -123,7 +123,19 @@ private fun ModuleScreenBackdrop(
         "hub" -> listOf(Color(0xFF0A1B30), Color(0xFF1C3450), Color(0xFF10182A))
         else -> listOf(Color(0xFF0A1728), Color(0xFF1A2C45), Color(0xFF101827))
     }
+    val backdropRes = when (module.lowercase()) {
+        "finance", "markets" -> R.drawable.bg_finance
+        "travel" -> R.drawable.bg_travel
+        "games" -> R.drawable.bg_games
+        "journal", "wrapped" -> R.drawable.bg_wrapped
+        "social", "music", "podcast" -> R.drawable.bg_art
+        else -> R.drawable.bg_abstract
+    }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(palette))) {
+        Image(painter = painterResource(backdropRes), contentDescription = null,
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.20f }.blur(22.dp),
+            contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Color(0x55050B16)))
         Canvas(Modifier.fillMaxSize()) {
             val glow = when (module.lowercase()) {
                 "finance", "markets" -> Color(0xFF35C7B5)
@@ -934,10 +946,12 @@ fun NaeemApp(
                 }
             }
         }
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         ModalNavigationDrawer(
             drawerState = drawerState,
             gesturesEnabled = true,
             drawerContent = {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 ModalDrawerSheet(
                     modifier = Modifier.width(304.dp),
                     drawerContainerColor = Color(0xFF0B1728),
@@ -980,8 +994,10 @@ fun NaeemApp(
                             style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(12.dp))
                     }
                 }
+                }
             }
         ) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
