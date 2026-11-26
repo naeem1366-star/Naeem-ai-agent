@@ -66,8 +66,8 @@ class BillingClient(private val gatewayUrl:String) {
         return BillingSnapshot(catalog,orders)
     }
 
-    suspend fun createOrder(token:String,purpose:String,amountToman:Long=0,planId:String?=null) {
-        val body=JSONObject().put("purpose",purpose).put("idempotencyKey",UUID.randomUUID().toString())
+    suspend fun createOrder(token:String,purpose:String,amountToman:Long=0,planId:String?=null,idempotencyKey:String=UUID.randomUUID().toString()) {
+        val body=JSONObject().put("purpose",purpose).put("idempotencyKey",idempotencyKey)
         if(purpose=="wallet_topup") body.put("amountToman",amountToman)
         if(planId!=null) body.put("planId",planId)
         call("/v1/billing/orders",token,"POST",body)
