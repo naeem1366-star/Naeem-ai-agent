@@ -320,7 +320,12 @@ async function createPaymentOrder(request: Request, env: Env): Promise<Response>
     if (!Number.isSafeInteger(amount) || amount < min || amount > max) return json({ error: "INVALID_TOPUP_AMOUNT", minTopupToman: min, maxTopupToman: max }, 400);
   }
   const existing = await env.DB.prepare("SELECT id, amount_toman, purpose, status FROM payment_orders WHERE user_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<any>();
-  if (existing) return json({ order: existing, reused: true });
+  if (existing) {
+    const sameAmount = Number(existing.amount_toman) === amount;
+    const samePurpose = existing.purpose === purpose;
+    if (!sameAmount || !samePurpose) return json({ error: "IDEMPOTENCY_KEY_CONFLICT" }, 409);
+    return json({ order: existing, reused: true });
+  }
   const id = crypto.randomUUID(), reviewId = crypto.randomUUID(), now = Math.floor(Date.now()/1000);
   try {
     await env.DB.batch([
@@ -369,10 +374,11 @@ async function adminReviewPayment(request: Request, env: Env, orderId: string): 
   const note = typeof body?.note === "string" ? body.note.trim().slice(0, 500) : "";
   if (!["approve", "reject"].includes(decision)) return json({ error: "INVALID_DECISION" }, 400);
   const order = await env.DB.prepare(
-    "SELECT po.id, po.user_id, po.amount_toman, po.purpose, po.subscription_plan_id, po.status, sp.duration_days, sp.ai_credit_percent FROM payment_orders po LEFT JOIN subscription_plans sp ON sp.id = po.subscription_plan_id WHERE po.id = ?"
+    "SELECT po.id, po.user_id, po.amount_toman, po.purpose, po.subscription_plan_id, po.status, sp.duration_days, sp.ai_credit_percent, u.status AS user_status FROM payment_orders po JOIN users u ON u.id = po.user_id LEFT JOIN subscription_plans sp ON sp.id = po.subscription_plan_id WHERE po.id = ?"
   ).bind(orderId).first<any>();
   if (!order) return json({ error: "ORDER_NOT_FOUND" }, 404);
   if (order.status !== "pending") return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
+  if (order.user_status !== "active") return json({ error: "USER_NOT_ACTIVE" }, 409);
   const receipt = await env.DB.prepare("SELECT receipt_reference FROM manual_payment_reviews WHERE payment_order_id = ?").bind(orderId).first<any>();
   if (!receipt?.receipt_reference) return json({ error: "RECEIPT_NOT_SUBMITTED" }, 409);
   const now = Math.floor(Date.now()/1000);
@@ -395,7 +401,7 @@ async function adminReviewPayment(request: Request, env: Env, orderId: string): 
   const grantId = crypto.randomUUID();
   const allocationId = crypto.randomUUID();
   const results = await env.DB.batch([
-    env.DB.prepare("UPDATE payment_orders SET status = 'paid', paid_at = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ? AND status = 'pending'").bind(now, admin.id, now, orderId),
+    env.DB.prepare("UPDATE payment_orders SET status = 'paid', paid_at = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ? AND status = 'pending' AND EXISTS (SELECT 1 FROM users WHERE id = payment_orders.user_id AND status = 'active')").bind(now, admin.id, now, orderId),
     env.DB.prepare("UPDATE users SET wallet_balance_toman = wallet_balance_toman + ? WHERE id = ? AND status = 'active' AND changes() = 1 AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'paid' AND reviewed_by = ? AND reviewed_at = ?)").bind(credit, order.user_id, orderId, admin.id, now),
     env.DB.prepare("INSERT INTO wallet_transactions (id, user_id, type, amount_toman, balance_after_toman, description, reference, created_at) SELECT ?, id, ?, ?, wallet_balance_toman, ?, ?, ? FROM users WHERE id = ? AND changes() = 1").bind(walletTxId, order.purpose === "subscription" ? "subscription_credit" : "topup", credit, order.purpose === "subscription" ? "اعتبار هوش مصنوعی از اشتراک EMA" : "شارژ کیف پول EMA", "payment:" + orderId, now, order.user_id),
     env.DB.prepare("INSERT INTO subscriptions (id, user_id, plan_id, status, starts_at, expires_at, payment_order_id, created_at, updated_at, paid_amount_toman, ai_credit_granted_toman) SELECT ?, po.user_id, po.subscription_plan_id, 'active', CASE WHEN COALESCE((SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?), 0) > ? THEN (SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?) ELSE ? END, (CASE WHEN COALESCE((SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?), 0) > ? THEN (SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?) ELSE ? END) + sp.duration_days * 86400, po.id, ?, ?, po.amount_toman, ? FROM payment_orders po JOIN subscription_plans sp ON sp.id = po.subscription_plan_id WHERE po.id = ? AND po.status = 'paid' AND po.purpose = 'subscription' AND EXISTS (SELECT 1 FROM wallet_transactions WHERE reference = ?)")
