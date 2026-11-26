@@ -76,6 +76,50 @@ Deno.serve(async (request: Request) => {
   };
 
   try {
+    // Secure text-to-speech route: use the server-side provider key, never a phone-stored key.
+    if (request.method === "POST" && route === "/v1/audio/speech") {
+      const body = await jsonBody(request);
+      const input = String(body?.input || "").trim();
+      if (!input || input.length > 4096) {
+        return reply({ error: { code: "INVALID_SPEECH_INPUT", message: "متن گفتار خالی یا بیش از حد طولانی است." } }, 400);
+      }
+      const providerKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
+      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+      if (!providerKey || !providerBase.startsWith("https://")) {
+        return reply({ error: { code: "SPEECH_GATEWAY_NOT_CONFIGURED", message: "سرویس گفتار روی سرور تنظیم نشده است." } }, 503);
+      }
+      const speechPayload = {
+        model: String(body?.model || "gpt-4o-mini-tts"),
+        voice: String(body?.voice || "nova"),
+        input,
+        instructions: String(body?.instructions || "Speak Persian (Farsi) naturally and clearly."),
+        response_format: "mp3",
+      };
+      const upstream = await fetch(`${providerBase}/audio/speech`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${providerKey}`,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg, application/octet-stream, application/json",
+        },
+        body: JSON.stringify(speechPayload),
+        signal: AbortSignal.timeout(120000),
+      });
+      if (!upstream.ok) {
+        const detail = (await upstream.text()).slice(0, 600);
+        console.error("EMA speech provider failed", { status: upstream.status, detail: detail.slice(0, 180) });
+        return reply({ error: { code: "SPEECH_PROVIDER_ERROR", message: `سرویس ساخت صدا پاسخ ناموفق داد (HTTP ${upstream.status}): ${detail}` } }, upstream.status);
+      }
+      return new Response(await upstream.arrayBuffer(), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
     // Billing routes are served by this same function so Android can use one secure gateway URL.
     if (route.startsWith("/v1/billing/")) {
       if (request.method === "GET" && route === "/v1/billing/catalog") {
