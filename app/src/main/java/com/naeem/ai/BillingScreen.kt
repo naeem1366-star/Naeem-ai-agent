@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose:()->Unit) {
@@ -31,6 +32,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
     var topupAmount by remember { mutableStateOf("100000") }
     var receiptDrafts by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
     var workingOrder by remember { mutableStateOf("") }
+    var retryKeys by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
     fun money(value:Long)=NumberFormat.getNumberInstance(Locale.US).format(value)+(if(isEnglish) " toman" else " تومان")
     fun refresh() {
         scope.launch {
@@ -42,10 +44,16 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
     }
     LaunchedEffect(accessToken,gatewayUrl) { refresh() }
     fun createOrder(purpose:String,amount:Long=0,planId:String?=null) {
+        val actionKey = if (purpose=="subscription") "subscription:"+planId else "wallet_topup:"+amount
+        val requestKey = retryKeys[actionKey] ?: UUID.randomUUID().toString()
+        retryKeys = retryKeys + (actionKey to requestKey)
         scope.launch {
             workingOrder=planId ?: purpose; error=""
-            try { client.createOrder(accessToken,purpose,amount,planId); refresh() }
-            catch(e:Exception) { error=e.message ?: "خطا در ساخت سفارش" }
+            try {
+                client.createOrder(accessToken,purpose,amount,planId,requestKey)
+                retryKeys = retryKeys - actionKey
+                refresh()
+            } catch(e:Exception) { error=e.message ?: "خطا در ساخت سفارش" }
             finally { workingOrder="" }
         }
     }
@@ -119,7 +127,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
                                     finally { workingOrder="" }
                                 }
                             },enabled=workingOrder.isEmpty() && receiptDrafts[order.id].orEmpty().trim().length>=3) { Text(if(isEnglish) "Submit receipt" else "ثبت رسید") }
-                        } else if(order.receiptSubmitted) Text(if(isEnglish) "Receipt submitted · awaiting review" else "رسید ثبت شده · در انتظار بررسی مدیر",color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
+                        } else if(order.status=="pending" && order.receiptSubmitted) Text(if(isEnglish) "Receipt submitted · awaiting review" else "رسید ثبت شده · در انتظار بررسی مدیر",color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
                     }
                 }
             }
