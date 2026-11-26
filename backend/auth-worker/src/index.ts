@@ -160,6 +160,10 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
   if (!body || !Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 80) {
     return json({ error: { code: "INVALID_REQUEST", message: "ساختار درخواست گفتگو معتبر نیست." } }, 400);
   }
+  const hasImage = JSON.stringify(body.messages).includes("data:image/") || body.messages.some((m: any) =>
+    Array.isArray(m?.content) && m.content.some((part: any) => part?.type === "image_url"));
+  if (hasImage) return json({ error: { code: "IMAGE_BILLING_NOT_CONFIGURED", message: "قیمت‌گذاری امن تحلیل تصویر هنوز در کیف پول فعال نشده است؛ فعلاً فقط گفتگوی متنی در دسترس است." } }, 503);
+
   const primaryBase = (env.CHAT_PRIMARY_BASE_URL || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
   const primaryKey = env.CHAT_PRIMARY_API_KEY || "";
   const primaryModel = env.CHAT_PRIMARY_MODEL || "gpt-4o-mini";
@@ -170,51 +174,101 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
     return json({ error: { code: "CHAT_GATEWAY_NOT_CONFIGURED", message: "سرویس گفتگوی ایما هنوز روی سرور پیکربندی نشده است." } }, 503);
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  const period = new Date().toISOString().slice(0, 7);
-  const configuredFreeLimit = Number(env.CHAT_FREE_MONTHLY_REQUESTS ?? "0");
-  const limit = Number.isFinite(configuredFreeLimit) ? Math.max(0, Math.min(10000, Math.floor(configuredFreeLimit))) : 0;
-  if (limit === 0) {
-    return json({ error: { code: "PAID_WALLET_REQUIRED", message: "اعتبار رایگان برای حساب جدید فعال نیست. پس از فعال‌شدن کیف پول و پرداخت، از اعتبار حساب استفاده کن." } }, 402);
-  }
-  const reserve = await env.DB.prepare(
-    "UPDATE users SET chat_free_period = ?, chat_free_used = CASE WHEN chat_free_period = ? THEN chat_free_used + 1 ELSE 1 END WHERE id = ? AND status = 'active' AND (chat_free_period != ? OR chat_free_used < ?)"
-  ).bind(period, period, user.id, period, limit).run();
-  if ((reserve.meta?.changes || 0) !== 1) {
-    const usage = await env.DB.prepare("SELECT chat_free_used, chat_free_period FROM users WHERE id = ?").bind(user.id).first<any>();
-    return json({ error: { code: "CHAT_QUOTA_EXHAUSTED", message: "سهمیه رایگان این ماه تمام شده است. برای ادامه، اعتبار حساب را افزایش بده." }, quota: { limit, used: usage?.chat_free_period === period ? usage.chat_free_used : 0, period } }, 402);
+  const [settings, primaryPricing, secondaryPricing] = await Promise.all([
+    env.DB.prepare("SELECT ai_billing_enabled, usd_to_toman, markup_bps FROM billing_settings WHERE id = 1").first<any>(),
+    env.DB.prepare("SELECT input_price_per_million_usd, output_price_per_million_usd FROM pricing_rules WHERE model = ? AND feature = 'chat' AND enabled = 1").bind(primaryModel).first<any>(),
+    secondaryModel === primaryModel ? Promise.resolve(null) : env.DB.prepare("SELECT input_price_per_million_usd, output_price_per_million_usd FROM pricing_rules WHERE model = ? AND feature = 'chat' AND enabled = 1").bind(secondaryModel).first<any>()
+  ]);
+  if (Number(settings?.ai_billing_enabled) !== 1 || Number(settings?.usd_to_toman) <= 0 ||
+      !primaryPricing || Number(primaryPricing.input_price_per_million_usd) <= 0 ||
+      Number(primaryPricing.output_price_per_million_usd) <= 0) {
+    return json({ error: { code: "AI_BILLING_NOT_CONFIGURED", message: "قیمت واقعی مدل و نرخ تبدیل در پنل EMA هنوز تنظیم و فعال نشده است؛ برای جلوگیری از هزینه بدون صورتحساب، درخواست ارسال نشد." } }, 503);
   }
 
+  const primaryRate = {
+    input: Number(primaryPricing.input_price_per_million_usd),
+    output: Number(primaryPricing.output_price_per_million_usd)
+  };
+  const secondaryRate = secondaryPricing && Number(secondaryPricing.input_price_per_million_usd) > 0 &&
+    Number(secondaryPricing.output_price_per_million_usd) > 0
+    ? { input: Number(secondaryPricing.input_price_per_million_usd), output: Number(secondaryPricing.output_price_per_million_usd) }
+    : null;
+  const canFallback = !!secondaryKey && secondaryBase.startsWith("https://") &&
+    (secondaryModel === primaryModel || !!secondaryRate);
+  const reserveInputRate = canFallback && secondaryRate ? Math.max(primaryRate.input, secondaryRate.input) : primaryRate.input;
+  const reserveOutputRate = canFallback && secondaryRate ? Math.max(primaryRate.output, secondaryRate.output) : primaryRate.output;
+  const fx = Number(settings.usd_to_toman);
+  const markupBps = Number(settings.markup_bps);
+  const textForEstimate = JSON.stringify(body.messages);
+  const estimatedInputTokens = Math.max(1, Math.ceil(textForEstimate.length / 2.5) + body.messages.length * 16);
+  if (estimatedInputTokens > 100000) return json({ error: { code: "CONTEXT_TOO_LARGE", message: "حجم متن گفتگو برای محاسبه امن هزینه بیش از حد مجاز است." } }, 413);
+  const requestedOutput = Number(body.max_completion_tokens ?? body.max_tokens ?? 2048);
+  const maxOutputTokens = Number.isFinite(requestedOutput) ? Math.max(1, Math.min(4096, Math.floor(requestedOutput))) : 2048;
+  const reserveUsd = (estimatedInputTokens * reserveInputRate + maxOutputTokens * reserveOutputRate) / 1000000;
+  const reserveToman = Math.max(1, Math.ceil(reserveUsd * fx * (1 + markupBps / 10000)));
+  if (!Number.isSafeInteger(reserveToman) || reserveToman > 100000000) {
+    return json({ error: { code: "RESERVATION_TOO_LARGE", message: "هزینه تخمینی درخواست از سقف مجاز هر درخواست بیشتر است." } }, 400);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const reservationId = crypto.randomUUID();
+  const reserveWalletTx = crypto.randomUUID();
+  const reserveRef = "ai-reserve:" + reservationId;
+  const reserveResults = await env.DB.batch([
+    env.DB.prepare("UPDATE users SET wallet_balance_toman = wallet_balance_toman - ? WHERE id = ? AND status = 'active' AND wallet_balance_toman >= ?")
+      .bind(reserveToman, user.id, reserveToman),
+    env.DB.prepare("INSERT INTO wallet_transactions (id, user_id, type, amount_toman, balance_after_toman, description, reference, created_at) SELECT ?, id, 'ai_reserve', ?, wallet_balance_toman, 'رزرو موقت هزینه درخواست AI', ?, ? FROM users WHERE id = ? AND changes() = 1")
+      .bind(reserveWalletTx, -reserveToman, reserveRef, now, user.id),
+    env.DB.prepare("INSERT INTO usage_reservations (id, user_id, feature, model, reserved_toman, settled_toman, status, created_at, updated_at) SELECT ?, ?, 'chat', ?, ?, 0, 'reserved', ?, ? WHERE EXISTS (SELECT 1 FROM wallet_transactions WHERE reference = ?)")
+      .bind(reservationId, user.id, primaryModel, reserveToman, now, now, reserveRef)
+  ]);
+  if ((reserveResults[0]?.meta?.changes || 0) !== 1) {
+    const wallet = await env.DB.prepare("SELECT wallet_balance_toman FROM users WHERE id = ?").bind(user.id).first<any>();
+    return json({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "اعتبار کیف پول برای رزرو هزینه این درخواست کافی نیست." }, balanceToman: wallet?.wallet_balance_toman || 0, requiredToman: reserveToman }, 402);
+  }
+
+  const releaseReservation = async () => {
+    const refundId = crypto.randomUUID();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET wallet_balance_toman = wallet_balance_toman + ? WHERE id = ? AND EXISTS (SELECT 1 FROM usage_reservations WHERE id = ? AND status = 'reserved')")
+        .bind(reserveToman, user.id, reservationId),
+      env.DB.prepare("INSERT INTO wallet_transactions (id, user_id, type, amount_toman, balance_after_toman, description, reference, created_at) SELECT ?, id, 'ai_refund', ?, wallet_balance_toman, 'آزادسازی رزرو درخواست ناموفق', ?, ? FROM users WHERE id = ? AND changes() = 1")
+        .bind(refundId, reserveToman, "ai-release:" + reservationId, Math.floor(Date.now()/1000), user.id),
+      env.DB.prepare("UPDATE usage_reservations SET status = 'released', updated_at = ? WHERE id = ? AND status = 'reserved' AND EXISTS (SELECT 1 FROM wallet_transactions WHERE reference = ?)")
+        .bind(Math.floor(Date.now()/1000), reservationId, "ai-release:" + reservationId)
+    ]);
+  };
+
+  const period = new Date().toISOString().slice(0, 7);
   const globalLimit = Math.max(1, Math.min(1000000, Number(env.CHAT_GLOBAL_MONTHLY_REQUESTS || "5000")));
   const globalReserve = await env.DB.prepare(
     "INSERT INTO chat_global_usage (period, request_count, updated_at) VALUES (?, 1, ?) ON CONFLICT(period) DO UPDATE SET request_count = request_count + 1, updated_at = excluded.updated_at WHERE request_count < ?"
   ).bind(period, now, globalLimit).run();
   if ((globalReserve.meta?.changes || 0) !== 1) {
-    await env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id).run();
-    return json({ error: { code: "CHAT_CAPACITY_REACHED", message: "ظرفیت رایگان این ماه فعلاً تکمیل شده است. بعداً دوباره تلاش کن." } }, 503);
+    await releaseReservation();
+    return json({ error: { code: "CHAT_CAPACITY_REACHED", message: "ظرفیت کلی سرویس فعلاً تکمیل شده است؛ اعتبار کیف پولت آزاد شد." } }, 503);
   }
-  const refundReservation = async () => {
-    await env.DB.batch([
-      env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id),
-      env.DB.prepare("UPDATE chat_global_usage SET request_count = CASE WHEN request_count > 0 THEN request_count - 1 ELSE 0 END, updated_at = ? WHERE period = ?").bind(Math.floor(Date.now() / 1000), period)
-    ]);
+  const refundGlobal = async () => {
+    await env.DB.prepare("UPDATE chat_global_usage SET request_count = CASE WHEN request_count > 0 THEN request_count - 1 ELSE 0 END, updated_at = ? WHERE period = ?")
+      .bind(Math.floor(Date.now()/1000), period).run();
   };
 
-  const payload = { ...body, model: primaryModel, stream: false };
+  const payload = { ...body, model: primaryModel, stream: false, max_tokens: maxOutputTokens };
   delete (payload as any).user;
+  delete (payload as any).max_completion_tokens;
   const tryProvider = async (base: string, key: string, model: string): Promise<Response> => {
     if (!key || !base.startsWith("https://")) throw new Error("PROVIDER_NOT_CONFIGURED");
-    const outgoing = { ...payload, model };
     return fetch(base + "/chat/completions", {
       method: "POST",
       headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify(outgoing),
+      body: JSON.stringify({ ...payload, model }),
       signal: AbortSignal.timeout(60000)
     });
   };
 
   let upstream: Response | null = null;
   let selectedModel = primaryModel;
+  let selectedProvider = "netarz";
   let primaryFailure = "";
   try {
     upstream = await tryProvider(primaryBase, primaryKey, primaryModel);
@@ -227,10 +281,11 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
     primaryFailure = error instanceof Error ? error.name : "NETWORK_ERROR";
   }
 
-  if (!upstream && secondaryKey && secondaryBase.startsWith("https://")) {
+  if (!upstream && canFallback) {
     try {
       upstream = await tryProvider(secondaryBase, secondaryKey, secondaryModel);
       selectedModel = secondaryModel;
+      selectedProvider = "gapgpt";
       if (upstream.status === 429 || upstream.status >= 500) {
         await upstream.body?.cancel();
         upstream = null;
@@ -239,23 +294,68 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
   }
 
   if (!upstream) {
-    await refundReservation();
-    return json({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "در حال حاضر سرویس گفتگو پاسخگو نیست. سهمیه‌ات کسر نشد؛ کمی بعد دوباره تلاش کن.", primary: primaryFailure } }, 503);
+    await releaseReservation();
+    await refundGlobal();
+    return json({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "در حال حاضر سرویس گفتگو پاسخگو نیست. رزرو اعتبار آزاد شد؛ کمی بعد دوباره تلاش کن.", primary: primaryFailure } }, 503);
   }
 
   const raw = await upstream.text();
   if (!upstream.ok) {
-    await refundReservation();
+    await releaseReservation();
+    await refundGlobal();
     return new Response(raw || JSON.stringify({ error: { message: "خطا در سرویس گفتگو" } }), {
       status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
     });
   }
 
-  const usage = (() => { try { return JSON.parse(raw).usage || {}; } catch { return {}; } })();
-  await env.DB.prepare(
-    "INSERT INTO usage_events (id, user_id, feature, model, input_tokens, output_tokens, provider_cost_usd, charge_toman, status, created_at) VALUES (?, ?, 'chat', ?, ?, ?, '0', 0, 'success', ?)"
-  ).bind(crypto.randomUUID(), user.id, selectedModel, Number(usage.prompt_tokens || 0), Number(usage.completion_tokens || 0), now).run().catch(() => undefined);
-  return new Response(raw, { status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "X-EMA-Chat-Provider": selectedModel === primaryModel ? "primary" : "secondary" } });
+  let parsed: any = null;
+  try { parsed = JSON.parse(raw); } catch { parsed = null; }
+  const usage = parsed?.usage || null;
+  const inputTokens = Number(usage?.prompt_tokens);
+  const outputTokens = Number(usage?.completion_tokens);
+  const selectedRate = selectedModel === primaryModel ? primaryRate : secondaryRate;
+  if (usage && Number.isSafeInteger(inputTokens) && inputTokens >= 0 &&
+      Number.isSafeInteger(outputTokens) && outputTokens >= 0 && selectedRate) {
+    const providerCostUsd = (inputTokens * selectedRate.input + outputTokens * selectedRate.output) / 1000000;
+    const providerCostMicrousd = Math.max(0, Math.ceil(providerCostUsd * 1000000));
+    const calculatedCharge = Math.max(0, Math.ceil(providerCostUsd * fx * (1 + markupBps / 10000)));
+    let finalCharge = calculatedCharge;
+    let walletDelta = reserveToman - finalCharge;
+    if (walletDelta < 0) {
+      const extra = -walletDelta;
+      const extraBalance = await env.DB.prepare("SELECT wallet_balance_toman FROM users WHERE id = ?").bind(user.id).first<any>();
+      if (Number(extraBalance?.wallet_balance_toman || 0) < extra) {
+        finalCharge = reserveToman;
+        walletDelta = 0;
+      }
+    }
+    const settlementId = crypto.randomUUID();
+    const settlementRef = "ai-settlement:" + reservationId;
+    const walletAdjust = walletDelta >= 0
+      ? env.DB.prepare("UPDATE users SET wallet_balance_toman = wallet_balance_toman + ? WHERE id = ? AND status = 'active' AND EXISTS (SELECT 1 FROM usage_reservations WHERE id = ? AND status = 'reserved')").bind(walletDelta, user.id, reservationId)
+      : env.DB.prepare("UPDATE users SET wallet_balance_toman = wallet_balance_toman - ? WHERE id = ? AND status = 'active' AND wallet_balance_toman >= ? AND EXISTS (SELECT 1 FROM usage_reservations WHERE id = ? AND status = 'reserved')").bind(-walletDelta, user.id, -walletDelta, reservationId);
+    try {
+      await env.DB.batch([
+        walletAdjust,
+        env.DB.prepare("INSERT INTO wallet_transactions (id, user_id, type, amount_toman, balance_after_toman, description, reference, created_at) SELECT ?, id, 'ai_settlement', ?, wallet_balance_toman, 'تسویه هزینه واقعی درخواست AI', ?, ? FROM users WHERE id = ? AND changes() = 1")
+          .bind(settlementId, walletDelta, settlementRef, Math.floor(Date.now()/1000), user.id),
+        env.DB.prepare("UPDATE usage_reservations SET status = 'settled', settled_toman = ?, updated_at = ? WHERE id = ? AND status = 'reserved' AND EXISTS (SELECT 1 FROM wallet_transactions WHERE reference = ?)")
+          .bind(finalCharge, Math.floor(Date.now()/1000), reservationId, settlementRef),
+        env.DB.prepare("INSERT INTO provider_cost_ledger (id, usage_reservation_id, user_id, provider, provider_cost_microusd, exchange_rate_toman, markup_bps, user_charge_toman, created_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM usage_reservations WHERE id = ? AND status = 'settled')")
+          .bind(crypto.randomUUID(), reservationId, user.id, selectedProvider, providerCostMicrousd, fx, markupBps, finalCharge, Math.floor(Date.now()/1000), reservationId),
+        env.DB.prepare("INSERT INTO usage_events (id, user_id, feature, model, input_tokens, output_tokens, provider_cost_usd, charge_toman, status, created_at) SELECT ?, ?, 'chat', ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM usage_reservations WHERE id = ? AND status = 'settled')")
+          .bind(crypto.randomUUID(), user.id, selectedModel, inputTokens, outputTokens, providerCostUsd.toFixed(6), finalCharge, finalCharge < calculatedCharge ? "underfunded" : "success", Math.floor(Date.now()/1000), reservationId)
+      ]);
+    } catch {
+      // Keep the original reserve in place if settlement fails; it can be reconciled by an administrator.
+    }
+  } else {
+    // Missing provider usage data: keep the reserve instead of guessing a refund.
+    await env.DB.prepare("INSERT INTO usage_events (id, user_id, feature, model, input_tokens, output_tokens, provider_cost_usd, charge_toman, status, created_at) VALUES (?, ?, 'chat', ?, 0, 0, '0', ?, 'usage_missing', ?)")
+      .bind(crypto.randomUUID(), user.id, selectedModel, reserveToman, Math.floor(Date.now()/1000)).run().catch(() => undefined);
+  }
+
+  return new Response(raw, { status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "X-EMA-Chat-Provider": selectedProvider } });
 }
 
 async function walletSummary(request: Request, env: Env): Promise<Response> {
