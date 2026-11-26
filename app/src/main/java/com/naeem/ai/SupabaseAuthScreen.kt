@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -35,7 +37,14 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
     val isSignup = mode == "signup"
     val isRecovery = mode == "recovery"
 
-    SupraGlassBackdrop {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(R.drawable.bg_mountain),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f }.blur(10.dp),
+            contentScale = ContentScale.Crop
+        )
+        Box(Modifier.fillMaxSize().background(Color(0x99050B16)))
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             SupraGlassPanel(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp), radius = 28.dp) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 22.dp, vertical = 28.dp),
