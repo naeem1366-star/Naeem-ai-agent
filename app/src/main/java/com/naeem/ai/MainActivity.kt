@@ -1154,7 +1154,7 @@ fun NaeemApp(
                 }
             }
         ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        CompositionLocalProvider(LocalLayoutDirection provides if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
