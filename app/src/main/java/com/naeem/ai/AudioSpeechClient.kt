@@ -23,6 +23,44 @@ class AudioSpeechClient {
     /** Split long Persian answers into natural speech-sized parts. */
     fun splitText(text: String): List<String> = splitForSpeech(text)
 
+    suspend fun synthesizeViaGateway(
+        gatewayUrl: String,
+        accessToken: String,
+        text: String,
+        model: String = "gpt-4o-mini-tts"
+    ): ByteArray = withContext(Dispatchers.IO) {
+        val root = gatewayUrl.trim().trimEnd('/')
+        require(root.startsWith("https://", ignoreCase = true)) { "نشانی درگاه امن گفتار تنظیم نشده است." }
+        require(accessToken.isNotBlank()) { "نشست ورود منقضی شده است؛ دوباره وارد حساب شو." }
+        require(text.isNotBlank()) { "متنی برای تبدیل به صدا وجود ندارد." }
+        val payload = JSONObject()
+            .put("model", model.trim().ifBlank { "gpt-4o-mini-tts" })
+            .put("voice", "nova")
+            .put("input", text.take(4096))
+            .put("instructions", "Speak Persian (Farsi) in a warm, natural, conversational voice. Use clear pronunciation, gentle sentence-level pauses, varied intonation, and a comfortable moderate pace. Do not sound robotic or rush through the text.")
+            .put("response_format", "mp3")
+        val request = Request.Builder()
+            .url("$root/v1/audio/speech")
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "audio/mpeg, application/octet-stream, application/json")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            val bytes = response.body?.bytes() ?: ByteArray(0)
+            if (!response.isSuccessful) {
+                val raw = bytes.toString(Charsets.UTF_8)
+                val detail = runCatching {
+                    val json = JSONObject(raw)
+                    json.optJSONObject("error")?.optString("message")
+                        ?.takeIf { it.isNotBlank() } ?: json.optString("message").ifBlank { raw }
+                }.getOrDefault(raw).take(600)
+                throw IllegalStateException("خطای ساخت صدای فارسی (HTTP ${response.code}): $detail")
+            }
+            require(bytes.isNotEmpty()) { "درگاه گفتار فایل صوتی خالی برگرداند." }
+            bytes
+        }
+    }
+
     suspend fun synthesizeChunks(baseUrl: String, apiKey: String, text: String): List<ByteArray> {
         return splitForSpeech(text).map { part -> synthesize(baseUrl, apiKey, part) }
     }
