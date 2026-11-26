@@ -207,7 +207,7 @@ class MainActivity : FragmentActivity() {
         val auth = SupabaseAuthClient(this)
         val authReady = mutableStateOf(false)
         val authSession = mutableStateOf<SupabaseSession?>(null)
-        val guestMode = mutableStateOf(false)
+        val guestMode = mutableStateOf(appPrefs.getBoolean("guest_mode", false))
         val showAuthScreen = mutableStateOf(false)
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
@@ -263,14 +263,14 @@ class MainActivity : FragmentActivity() {
                         SupabaseAuthScreen(
                             auth,
                             isEnglish = appLanguage.value == "en",
-                            onAuthenticated = { session -> authSession.value = session; showAuthScreen.value = false },
-                            onGuestAccess = { guestMode.value = true; showAuthScreen.value = false }
+                            onAuthenticated = { session -> authSession.value = session; guestMode.value = false; appPrefs.edit().putBoolean("guest_mode", false).apply(); showAuthScreen.value = false },
+                            onGuestAccess = { guestMode.value = true; appPrefs.edit().putBoolean("guest_mode", true).apply(); showAuthScreen.value = false }
                         )
                     } else if (showAuthScreen.value) {
                         SupabaseAuthScreen(
                             auth,
                             isEnglish = appLanguage.value == "en",
-                            onAuthenticated = { session -> authSession.value = session; guestMode.value = false; showAuthScreen.value = false },
+                            onAuthenticated = { session -> authSession.value = session; guestMode.value = false; appPrefs.edit().putBoolean("guest_mode", false).apply(); showAuthScreen.value = false },
                             onGuestAccess = { showAuthScreen.value = false }
                         )
                     } else if (authSession.value != null && !profileCompleted.value) {
@@ -297,6 +297,7 @@ class MainActivity : FragmentActivity() {
                                     auth.signOut()
                                     authSession.value = null
                                     guestMode.value = true
+                                    appPrefs.edit().putBoolean("guest_mode", true).apply()
                                 }
                             }
                         )
