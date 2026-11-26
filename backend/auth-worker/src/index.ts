@@ -753,7 +753,7 @@ export default {
       if (request.method === "POST" && receiptMatch) return withHeaders(await submitPaymentReceipt(request, env, receiptMatch[1]), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/payments") return withHeaders(await adminPayments(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/provider-allocations") return withHeaders(await adminProviderAllocations(request, env), headers);
-      const providerTransferMatch = url.pathname.match(/^\\/v1\\/admin\\/provider-allocations\\/([^/]+)\\/transfer$/);
+      const providerTransferMatch = url.pathname.match(/^\/v1\/admin\/provider-allocations\/([^/]+)\/transfer$/);
       if (request.method === "POST" && providerTransferMatch) return withHeaders(await adminMarkProviderTransfer(request, env, providerTransferMatch[1]), headers);
       const paymentReviewMatch = url.pathname.match(/^\/v1\/admin\/payments\/([^/]+)\/review$/);
       if (request.method === "POST" && paymentReviewMatch) return withHeaders(await adminReviewPayment(request, env, paymentReviewMatch[1]), headers);
