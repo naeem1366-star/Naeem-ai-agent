@@ -504,10 +504,10 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/billing/catalog") return withHeaders(await billingCatalog(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/billing/orders") return withHeaders(await billingOrders(request, env), headers);
       if (request.method === "POST" && url.pathname === "/v1/billing/orders") return withHeaders(await createPaymentOrder(request, env), headers);
-      const receiptMatch = url.pathname.match(/^\\/v1\\/billing\\/orders\\/([^/]+)\\/receipt$/);
+      const receiptMatch = url.pathname.match(/^\/v1\/billing\/orders\/([^/]+)\/receipt$/);
       if (request.method === "POST" && receiptMatch) return withHeaders(await submitPaymentReceipt(request, env, receiptMatch[1]), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/payments") return withHeaders(await adminPayments(request, env), headers);
-      const paymentReviewMatch = url.pathname.match(/^\\/v1\\/admin\\/payments\\/([^/]+)\\/review$/);
+      const paymentReviewMatch = url.pathname.match(/^\/v1\/admin\/payments\/([^/]+)\/review$/);
       if (request.method === "POST" && paymentReviewMatch) return withHeaders(await adminReviewPayment(request, env, paymentReviewMatch[1]), headers);
       if (request.method === "POST" && url.pathname === "/v1/chat/completions") return withHeaders(await chatCompletion(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/wallet") return withHeaders(await walletSummary(request, env), headers);
