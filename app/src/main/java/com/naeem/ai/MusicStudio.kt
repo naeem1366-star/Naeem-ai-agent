@@ -187,7 +187,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
     Column(Modifier.fillMaxSize().background(Color.Transparent).navigationBarsPadding().imePadding().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text("IMA MUSIC STUDIO",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
+                Text("EMA ASI PLATFORM MUSIC STUDIO",color=Color(0xFFD4D9E0),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text("موسیقی و میز دی‌جی",color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
                 Text("جست‌وجو، میکس خودکار و آلبوم‌های شخصی",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.bodySmall)
             }
@@ -559,7 +559,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                         },modifier=Modifier.weight(1f)){Icon(Icons.Default.PlayArrow,null);Text("پخش")}
                         OutlinedButton(onClick={stopPreview()},modifier=Modifier.weight(1f)){Icon(Icons.Default.Stop,null);Text("توقف")}
                     }
-                    Button(onClick={saveLauncher.launch("Ima-Music-${System.currentTimeMillis()}.${result.format}")},modifier=Modifier.fillMaxWidth()){
+                    Button(onClick={saveLauncher.launch("EMA-Music-${System.currentTimeMillis()}.${result.format}")},modifier=Modifier.fillMaxWidth()){
                         Icon(Icons.Default.Download,null);Text("ذخیره فایل ${result.format.uppercase()}")
                     }
                     if(result.requestId.isNotBlank())Text("شناسه درخواست: ${result.requestId}",color=Color(0xFF8D96A4),style=MaterialTheme.typography.labelSmall)
