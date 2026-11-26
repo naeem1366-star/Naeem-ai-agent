@@ -13,7 +13,8 @@ import java.util.concurrent.TimeUnit
 
 data class BillingPlan(val id:String,val name:String,val durationDays:Int,val priceToman:Long,val aiCreditPercent:Int)
 data class BillingOrder(val id:String,val amountToman:Long,val purpose:String,val status:String,val receiptSubmitted:Boolean,val rejectionReason:String)
-data class BillingCatalog(val balanceToman:Long,val plans:List<BillingPlan>,val paymentInstructions:String,val minTopupToman:Long,val maxTopupToman:Long,val subscriptionName:String?)
+data class BillingCatalog(val balanceToman:Long,val plans:List<BillingPlan>,val paymentInstructions:String,val minTopupToman:Long,val maxTopupToman:Long,val subscriptionName:String?,val isAdmin:Boolean)
+data class BillingAdminOrder(val id:String,val userId:String,val amountToman:Long,val purpose:String,val reference:String,val createdAt:String)
 data class BillingSnapshot(val catalog:BillingCatalog,val orders:List<BillingOrder>)
 
 class BillingClient(private val gatewayUrl:String) {
@@ -56,7 +57,8 @@ class BillingClient(private val gatewayUrl:String) {
         val catalog=BillingCatalog(
             catalogJson.optLong("balanceToman"),plans,payment.optString("instructions"),
             payment.optLong("minTopupToman",100000),payment.optLong("maxTopupToman",50000000),
-            subscription?.optString("plan_name")?.takeIf { it.isNotBlank() }
+            subscription?.optString("plan_name")?.takeIf { it.isNotBlank() },
+            catalogJson.optBoolean("isAdmin",false)
         )
         val array=ordersJson.optJSONArray("orders") ?: JSONArray()
         val orders=(0 until array.length()).mapNotNull { i -> array.optJSONObject(i)?.let { o ->
@@ -75,5 +77,19 @@ class BillingClient(private val gatewayUrl:String) {
 
     suspend fun submitReceipt(token:String,orderId:String,reference:String) {
         call("/v1/billing/orders/"+orderId+"/receipt",token,"POST",JSONObject().put("receiptReference",reference.trim()))
+    }
+
+    suspend fun adminOrders(token:String):List<BillingAdminOrder> {
+        val json=call("/v1/billing/admin/orders",token)
+        val array=json.optJSONArray("orders") ?: JSONArray()
+        return (0 until array.length()).mapNotNull { i -> array.optJSONObject(i)?.let { o ->
+            BillingAdminOrder(o.optString("id"),o.optString("user_id"),o.optLong("amount_toman"),
+                o.optString("order_type"),o.optString("payment_reference"),o.optString("created_at"))
+        } }
+    }
+
+    suspend fun reviewOrder(token:String,orderId:String,decision:String,reason:String="") {
+        call("/v1/billing/admin/orders/"+orderId+"/review",token,"POST",
+            JSONObject().put("decision",decision).put("reason",reason))
     }
 }
