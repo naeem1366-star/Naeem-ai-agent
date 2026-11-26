@@ -33,6 +33,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
     var receiptDrafts by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
     var workingOrder by remember { mutableStateOf("") }
     var retryKeys by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
+    var showAdminPanel by remember { mutableStateOf(false) }
     fun money(value:Long)=NumberFormat.getNumberInstance(Locale.US).format(value)+(if(isEnglish) " toman" else " تومان")
     fun refresh() {
         scope.launch {
@@ -59,6 +60,9 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
     }
     val panel=Color(0xFF10243B)
     val accent=Color(0xFF8CC4FF)
+    if (showAdminPanel) {
+        AdminBillingScreen(client,accessToken,isEnglish) { showAdminPanel=false }
+    } else {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=onClose) { Icon(Icons.Default.ArrowBack,null,tint=accent) }
@@ -68,6 +72,11 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
             }
             Icon(Icons.Default.AccountBalanceWallet,null,tint=accent,modifier=Modifier.size(28.dp))
             IconButton(onClick={refresh()},enabled=!loading) { Icon(Icons.Default.Refresh,null,tint=accent) }
+        }
+        if(snapshot?.catalog?.isAdmin == true) {
+            OutlinedButton(onClick={showAdminPanel=true},modifier=Modifier.fillMaxWidth()) {
+                Text(if(isEnglish) "Admin payment review" else "ورود به پنل مدیریت پرداخت‌ها")
+            }
         }
         if(loading && snapshot==null) Box(Modifier.fillMaxWidth().padding(40.dp),contentAlignment=Alignment.Center) { CircularProgressIndicator(color=accent) }
         snapshot?.let { data ->
@@ -135,5 +144,6 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
         if(error.isNotBlank()) Text(error,color=Color(0xFFFFB2A8),style=MaterialTheme.typography.bodySmall)
         if(loading && snapshot!=null) LinearProgressIndicator(Modifier.fillMaxWidth(),color=accent)
         Spacer(Modifier.height(16.dp))
+    }
     }
 }
