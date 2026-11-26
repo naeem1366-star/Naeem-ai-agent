@@ -363,7 +363,8 @@ private fun UserProfileSetup(isEnglish: Boolean = false, onSave: (String, String
             OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)", isEnglish)) }, placeholder = { Text(appText("شغل، هدف‌ها یا موضوعات موردعلاقه…", isEnglish)) }, minLines = 2, colors = profileFieldColors)
             Text(appText("لحن گفت‌وگو", isEnglish), color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isEnglish) listOf("Friendly & natural", "Formal & precise", "Short & direct") else listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم").forEach { option ->
+                (if (isEnglish) listOf("Friendly & natural", "Formal & precise", "Short & direct")
+                else listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم")).forEach { option ->
                     FilterChip(selected = style == option, onClick = { style = option }, label = { Text(option, style = MaterialTheme.typography.labelSmall) })
                 }
             }
