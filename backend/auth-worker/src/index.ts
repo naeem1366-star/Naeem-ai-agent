@@ -266,6 +266,153 @@ async function walletSummary(request: Request, env: Env): Promise<Response> {
   return json({ balanceToman: balance?.wallet_balance_toman ?? 0, transactions: transactions.results || [] });
 }
 
+async function billingCatalog(request: Request, env: Env): Promise<Response> {
+  const user = await authenticatedUser(request, env);
+  if (!user || user.status !== "active") return json({ error: "UNAUTHORIZED" }, 401);
+  const [settings, plans, wallet, subscription] = await Promise.all([
+    env.DB.prepare("SELECT subscription_credit_percent, payment_instructions, min_wallet_topup_toman, max_wallet_topup_toman FROM billing_settings WHERE id = 1").first<any>(),
+    env.DB.prepare("SELECT id, name, duration_days, price_toman, ai_credit_percent FROM subscription_plans WHERE enabled = 1 AND price_toman > 0 ORDER BY duration_days").all(),
+    env.DB.prepare("SELECT wallet_balance_toman FROM users WHERE id = ?").bind(user.id).first<any>(),
+    env.DB.prepare("SELECT s.id, s.plan_id, p.name AS plan_name, s.starts_at, s.expires_at FROM subscriptions s JOIN subscription_plans p ON p.id = s.plan_id WHERE s.user_id = ? AND s.status = 'active' AND s.expires_at > ? ORDER BY s.expires_at DESC LIMIT 1").bind(user.id, Math.floor(Date.now()/1000)).first<any>()
+  ]);
+  return json({
+    balanceToman: wallet?.wallet_balance_toman || 0,
+    plans: plans.results || [],
+    payment: {
+      method: "manual",
+      instructions: settings?.payment_instructions || "",
+      minTopupToman: settings?.min_wallet_topup_toman || 100000,
+      maxTopupToman: settings?.max_wallet_topup_toman || 50000000
+    },
+    subscription: subscription || null
+  });
+}
+
+async function billingOrders(request: Request, env: Env): Promise<Response> {
+  const user = await authenticatedUser(request, env);
+  if (!user || user.status !== "active") return json({ error: "UNAUTHORIZED" }, 401);
+  const rows = await env.DB.prepare(
+    "SELECT id, amount_toman, purpose, subscription_plan_id, payment_method, status, gateway_ref, proof_note, created_at, paid_at, receipt_submitted_at, rejection_reason FROM payment_orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 30"
+  ).bind(user.id).all();
+  return json({ orders: rows.results || [] });
+}
+
+async function createPaymentOrder(request: Request, env: Env): Promise<Response> {
+  const user = await authenticatedUser(request, env);
+  if (!user || user.status !== "active") return json({ error: "UNAUTHORIZED" }, 401);
+  const body = await request.json().catch(() => null) as any;
+  const purpose = body?.purpose === "subscription" ? "subscription" : body?.purpose === "wallet_topup" ? "wallet_topup" : "";
+  if (!purpose) return json({ error: "INVALID_PURPOSE" }, 400);
+  const idempotencyKey = (request.headers.get("Idempotency-Key") || body?.idempotencyKey || "").toString().trim().slice(0, 120);
+  if (idempotencyKey.length < 8) return json({ error: "IDEMPOTENCY_KEY_REQUIRED" }, 400);
+  const settings = await env.DB.prepare("SELECT min_wallet_topup_toman, max_wallet_topup_toman FROM billing_settings WHERE id = 1").first<any>();
+  let amount = 0;
+  let planId: string | null = null;
+  if (purpose === "subscription") {
+    planId = typeof body?.planId === "string" ? body.planId.trim().slice(0, 80) : "";
+    const plan = await env.DB.prepare("SELECT id, price_toman FROM subscription_plans WHERE id = ? AND enabled = 1 AND price_toman > 0").bind(planId).first<any>();
+    if (!plan) return json({ error: "PLAN_NOT_AVAILABLE" }, 409);
+    amount = Number(plan.price_toman);
+  } else {
+    amount = Number(body?.amountToman);
+    const min = Number(settings?.min_wallet_topup_toman || 100000);
+    const max = Number(settings?.max_wallet_topup_toman || 50000000);
+    if (!Number.isSafeInteger(amount) || amount < min || amount > max) return json({ error: "INVALID_TOPUP_AMOUNT", minTopupToman: min, maxTopupToman: max }, 400);
+  }
+  const existing = await env.DB.prepare("SELECT id, amount_toman, purpose, status FROM payment_orders WHERE user_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<any>();
+  if (existing) return json({ order: existing, reused: true });
+  const id = crypto.randomUUID(), reviewId = crypto.randomUUID(), now = Math.floor(Date.now()/1000);
+  try {
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO payment_orders (id, user_id, amount_toman, gateway, status, created_at, payment_method, idempotency_key, purpose, subscription_plan_id) VALUES (?, ?, ?, 'manual', 'pending', ?, 'manual', ?, ?, ?)").bind(id, user.id, amount, now, idempotencyKey, purpose, planId),
+      env.DB.prepare("INSERT OR IGNORE INTO manual_payment_reviews (id, payment_order_id, user_id, status, created_at) VALUES (?, ?, ?, 'pending', ?)").bind(reviewId, id, user.id, now)
+    ]);
+  } catch {
+    const raced = await env.DB.prepare("SELECT id, amount_toman, purpose, status FROM payment_orders WHERE user_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<any>();
+    if (raced) return json({ order: raced, reused: true });
+    return json({ error: "ORDER_CREATE_FAILED" }, 500);
+  }
+  return json({ order: { id, amountToman: amount, purpose, planId, status: "pending", paymentMethod: "manual", createdAt: now } }, 201);
+}
+
+async function submitPaymentReceipt(request: Request, env: Env, orderId: string): Promise<Response> {
+  const user = await authenticatedUser(request, env);
+  if (!user || user.status !== "active") return json({ error: "UNAUTHORIZED" }, 401);
+  const body = await request.json().catch(() => null) as any;
+  const reference = typeof body?.receiptReference === "string" ? body.receiptReference.trim().slice(0, 200) : "";
+  const note = typeof body?.note === "string" ? body.note.trim().slice(0, 500) : "";
+  if (reference.length < 3) return json({ error: "RECEIPT_REFERENCE_REQUIRED" }, 400);
+  const now = Math.floor(Date.now()/1000);
+  const results = await env.DB.batch([
+    env.DB.prepare("UPDATE payment_orders SET gateway_ref = ?, proof_note = ?, receipt_submitted_at = ? WHERE id = ? AND user_id = ? AND status = 'pending'").bind(reference, note, now, orderId, user.id),
+    env.DB.prepare("UPDATE manual_payment_reviews SET receipt_reference = ?, status = 'pending', admin_note = NULL WHERE payment_order_id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND user_id = ? AND status = 'pending' AND receipt_submitted_at = ?)").bind(reference, orderId, user.id, orderId, user.id, now)
+  ]);
+  if ((results[0]?.meta?.changes || 0) !== 1) return json({ error: "ORDER_NOT_FOUND_OR_NOT_PENDING" }, 409);
+  return json({ success: true, status: "pending_review" });
+}
+
+async function adminPayments(request: Request, env: Env): Promise<Response> {
+  if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
+  const status = new URL(request.url).searchParams.get("status") || "pending";
+  if (!["pending", "paid", "rejected", "all"].includes(status)) return json({ error: "INVALID_STATUS" }, 400);
+  const rows = await env.DB.prepare(
+    "SELECT po.id, po.user_id, u.email, po.amount_toman, po.purpose, po.subscription_plan_id, sp.name AS plan_name, po.gateway_ref, po.proof_note, po.status, po.created_at, po.receipt_submitted_at, mpr.receipt_reference FROM payment_orders po JOIN users u ON u.id = po.user_id LEFT JOIN subscription_plans sp ON sp.id = po.subscription_plan_id LEFT JOIN manual_payment_reviews mpr ON mpr.payment_order_id = po.id WHERE (? = 'all' OR po.status = ?) ORDER BY po.created_at DESC LIMIT 100"
+  ).bind(status, status).all();
+  return json({ payments: rows.results || [] });
+}
+
+async function adminReviewPayment(request: Request, env: Env, orderId: string): Promise<Response> {
+  const admin = await adminUser(request, env);
+  if (!admin) return json({ error: "ADMIN_ONLY" }, 403);
+  const body = await request.json().catch(() => null) as any;
+  const decision = body?.decision;
+  const note = typeof body?.note === "string" ? body.note.trim().slice(0, 500) : "";
+  if (!["approve", "reject"].includes(decision)) return json({ error: "INVALID_DECISION" }, 400);
+  const order = await env.DB.prepare(
+    "SELECT po.id, po.user_id, po.amount_toman, po.purpose, po.subscription_plan_id, po.status, sp.duration_days, sp.ai_credit_percent FROM payment_orders po LEFT JOIN subscription_plans sp ON sp.id = po.subscription_plan_id WHERE po.id = ?"
+  ).bind(orderId).first<any>();
+  if (!order) return json({ error: "ORDER_NOT_FOUND" }, 404);
+  if (order.status !== "pending") return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
+  const receipt = await env.DB.prepare("SELECT receipt_reference FROM manual_payment_reviews WHERE payment_order_id = ?").bind(orderId).first<any>();
+  if (!receipt?.receipt_reference) return json({ error: "RECEIPT_NOT_SUBMITTED" }, 409);
+  const now = Math.floor(Date.now()/1000);
+  if (decision === "reject") {
+    const result = await env.DB.batch([
+      env.DB.prepare("UPDATE payment_orders SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, rejection_reason = ? WHERE id = ? AND status = 'pending'").bind(admin.id, now, note, orderId),
+      env.DB.prepare("UPDATE manual_payment_reviews SET status = 'rejected', admin_note = ?, reviewed_by = ?, reviewed_at = ? WHERE payment_order_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'rejected' AND reviewed_by = ? AND reviewed_at = ?)").bind(note, admin.id, now, orderId, orderId, admin.id, now)
+    ]);
+    if ((result[0]?.meta?.changes || 0) !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
+    return json({ success: true, status: "rejected" });
+  }
+
+  const settings = await env.DB.prepare("SELECT subscription_credit_percent FROM billing_settings WHERE id = 1").first<any>();
+  const percent = order.purpose === "subscription"
+    ? Math.max(0, Math.min(100, Number(order.ai_credit_percent ?? settings?.subscription_credit_percent ?? 50)))
+    : 100;
+  const credit = Math.floor(Number(order.amount_toman) * percent / 100);
+  const subscriptionId = crypto.randomUUID();
+  const walletTxId = crypto.randomUUID();
+  const grantId = crypto.randomUUID();
+  const allocationId = crypto.randomUUID();
+  const results = await env.DB.batch([
+    env.DB.prepare("UPDATE payment_orders SET status = 'paid', paid_at = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ? AND status = 'pending'").bind(now, admin.id, now, orderId),
+    env.DB.prepare("UPDATE users SET wallet_balance_toman = wallet_balance_toman + ? WHERE id = ? AND status = 'active' AND changes() = 1 AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'paid' AND reviewed_by = ? AND reviewed_at = ?)").bind(credit, order.user_id, orderId, admin.id, now),
+    env.DB.prepare("INSERT INTO wallet_transactions (id, user_id, type, amount_toman, balance_after_toman, description, reference, created_at) SELECT ?, id, ?, ?, wallet_balance_toman, ?, ?, ? FROM users WHERE id = ? AND changes() = 1").bind(walletTxId, order.purpose === "subscription" ? "subscription_credit" : "topup", credit, order.purpose === "subscription" ? "اعتبار هوش مصنوعی از اشتراک EMA" : "شارژ کیف پول EMA", "payment:" + orderId, now, order.user_id),
+    env.DB.prepare("INSERT INTO subscriptions (id, user_id, plan_id, status, starts_at, expires_at, payment_order_id, created_at, updated_at, paid_amount_toman, ai_credit_granted_toman) SELECT ?, po.user_id, po.subscription_plan_id, 'active', CASE WHEN COALESCE((SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?), 0) > ? THEN (SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?) ELSE ? END, (CASE WHEN COALESCE((SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?), 0) > ? THEN (SELECT MAX(expires_at) FROM subscriptions WHERE user_id = po.user_id AND status = 'active' AND expires_at > ?) ELSE ? END) + sp.duration_days * 86400, po.id, ?, ?, po.amount_toman, ? FROM payment_orders po JOIN subscription_plans sp ON sp.id = po.subscription_plan_id WHERE po.id = ? AND po.status = 'paid' AND po.purpose = 'subscription' AND EXISTS (SELECT 1 FROM wallet_transactions WHERE reference = ?)")
+      .bind(subscriptionId, now, now, now, now, now, now, now, now, now, now, credit, orderId, "payment:" + orderId),
+    env.DB.prepare("INSERT INTO subscription_credit_grants (id, subscription_id, user_id, gross_price_toman, credit_percent, credit_amount_toman, wallet_transaction_id, created_at) SELECT ?, s.id, s.user_id, s.paid_amount_toman, ?, s.ai_credit_granted_toman, ?, ? FROM subscriptions s WHERE s.payment_order_id = ? AND s.id = ? AND s.purpose IS NOT NULL").bind(grantId, percent, walletTxId, now, orderId, subscriptionId),
+    env.DB.prepare("INSERT INTO provider_replenishment_allocations (id, payment_order_id, provider, gross_subscription_toman, allocation_percent, allocated_toman, status, subscription_credit_grant_id, created_at, updated_at) SELECT ?, po.id, 'netarz', po.amount_toman, ?, ?, 'reserved', ?, ?, ? FROM payment_orders po JOIN subscriptions s ON s.payment_order_id = po.id WHERE po.id = ? AND po.purpose = 'subscription' AND po.status = 'paid' AND s.id = ?")
+      .bind(allocationId, percent, credit, grantId, now, now, orderId, subscriptionId),
+    env.DB.prepare("UPDATE manual_payment_reviews SET status = 'approved', admin_note = ?, reviewed_by = ?, reviewed_at = ? WHERE payment_order_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'paid' AND reviewed_by = ? AND reviewed_at = ?)").bind(note, admin.id, now, orderId, orderId, admin.id, now)
+  ]);
+  if ((results[0]?.meta?.changes || 0) !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
+  const balance = await env.DB.prepare("SELECT wallet_balance_toman FROM users WHERE id = ?").bind(order.user_id).first<any>();
+  const createdSubscription = order.purpose === "subscription"
+    ? await env.DB.prepare("SELECT id, plan_id, starts_at, expires_at, paid_amount_toman, ai_credit_granted_toman FROM subscriptions WHERE payment_order_id = ?").bind(orderId).first<any>()
+    : null;
+  return json({ success: true, status: "paid", creditedToman: credit, balanceToman: balance?.wallet_balance_toman || 0, subscription: createdSubscription });
+}
+
 async function adminOverview(request: Request, env: Env): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   const users = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<any>();
