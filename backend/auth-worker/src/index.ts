@@ -419,11 +419,12 @@ async function createPaymentOrder(request: Request, env: Env): Promise<Response>
     const max = Number(settings?.max_wallet_topup_toman || 50000000);
     if (!Number.isSafeInteger(amount) || amount < min || amount > max) return json({ error: "INVALID_TOPUP_AMOUNT", minTopupToman: min, maxTopupToman: max }, 400);
   }
-  const existing = await env.DB.prepare("SELECT id, amount_toman, purpose, status FROM payment_orders WHERE user_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<any>();
+  const existing = await env.DB.prepare("SELECT id, amount_toman, purpose, subscription_plan_id, status FROM payment_orders WHERE user_id = ? AND idempotency_key = ?").bind(user.id, idempotencyKey).first<any>();
   if (existing) {
     const sameAmount = Number(existing.amount_toman) === amount;
     const samePurpose = existing.purpose === purpose;
-    if (!sameAmount || !samePurpose) return json({ error: "IDEMPOTENCY_KEY_CONFLICT" }, 409);
+    const samePlan = (existing.subscription_plan_id || null) === planId;
+    if (!sameAmount || !samePurpose || !samePlan) return json({ error: "IDEMPOTENCY_KEY_CONFLICT" }, 409);
     return json({ order: existing, reused: true });
   }
   const id = crypto.randomUUID(), reviewId = crypto.randomUUID(), now = Math.floor(Date.now()/1000);
