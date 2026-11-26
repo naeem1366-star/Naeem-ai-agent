@@ -942,7 +942,9 @@ fun NaeemApp(
                     shape = RoundedCornerShape(0.dp),
                     color = Color(0xFF050B16)
                 ) {
-                    VideoCreatorDashboard(onClose = { showVideoDevelopment = false }, initialPrompt = prompt)
+                    ModuleScreenBackdrop("music") {
+                        VideoCreatorDashboard(onClose = { showVideoDevelopment = false }, initialPrompt = prompt)
+                    }
                 }
             }
         }
@@ -1357,12 +1359,14 @@ fun NaeemApp(
         if (showPcControl) {
             Dialog(onDismissRequest = { showPcControl = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    PcControlScreen(
-                        onClose = { showPcControl = false },
-                        baseUrl = baseUrl,
-                        model = model,
-                        apiKey = apiKey
-                    )
+                    ModuleScreenBackdrop("hub") {
+                        PcControlScreen(
+                            onClose = { showPcControl = false },
+                            baseUrl = baseUrl,
+                            model = model,
+                            apiKey = apiKey
+                        )
+                    }
                 }
             }
         }
@@ -1433,24 +1437,28 @@ fun NaeemApp(
         if (showThinkRoom) {
             Dialog(onDismissRequest = { showThinkRoom = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    ThinkRoomScreen(
-                        onClose = { showThinkRoom = false },
-                        baseUrl = baseUrl,
-                        model = model,
-                        apiKey = apiKey
-                    )
+                    ModuleScreenBackdrop("discover") {
+                        ThinkRoomScreen(
+                            onClose = { showThinkRoom = false },
+                            baseUrl = baseUrl,
+                            model = model,
+                            apiKey = apiKey
+                        )
+                    }
                 }
             }
         }
         if (showFutureGateway) {
             Dialog(onDismissRequest = { showFutureGateway = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    FutureGatewayScreen(
-                        onClose = { showFutureGateway = false },
-                        baseUrl = baseUrl,
-                        model = model,
-                        apiKey = apiKey
-                    )
+                    ModuleScreenBackdrop("wrapped") {
+                        FutureGatewayScreen(
+                            onClose = { showFutureGateway = false },
+                            baseUrl = baseUrl,
+                            model = model,
+                            apiKey = apiKey
+                        )
+                    }
                 }
             }
         }
@@ -1520,18 +1528,22 @@ fun NaeemApp(
         if (showProfessionalVideo) {
             Dialog(onDismissRequest = { showProfessionalVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, baseUrl = baseUrl, apiKey = apiKey)
+                    ModuleScreenBackdrop("music") {
+                        ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, baseUrl = baseUrl, apiKey = apiKey)
+                    }
                 }
             }
         }
         if (showVideoCreator) {
             Dialog(onDismissRequest = { showVideoCreator = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    SupraStudioDashboard(
-                        onClose = { showVideoCreator = false },
-                        onExternalActivityStarted = onExternalActivityStarted,
-                        onExternalActivityReturned = onExternalActivityReturned
-                    )
+                    ModuleScreenBackdrop("music") {
+                        SupraStudioDashboard(
+                            onClose = { showVideoCreator = false },
+                            onExternalActivityStarted = onExternalActivityStarted,
+                            onExternalActivityReturned = onExternalActivityReturned
+                        )
+                    }
                 }
             }
         }
