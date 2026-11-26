@@ -15,7 +15,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
-        android:label="ایما"
+        android:label="EMA ASI PLATFORM"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <receiver android:name=".NReminderReceiver" android:exported="false" />
