@@ -207,6 +207,8 @@ class MainActivity : FragmentActivity() {
         val auth = SupabaseAuthClient(this)
         val authReady = mutableStateOf(false)
         val authSession = mutableStateOf<SupabaseSession?>(null)
+        val guestMode = mutableStateOf(false)
+        val showAuthScreen = mutableStateOf(false)
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
@@ -257,9 +259,21 @@ class MainActivity : FragmentActivity() {
                         Box(Modifier.fillMaxSize().background(Color.Transparent), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = SupraGlass.Ice)
                         }
-                    } else if (authSession.value == null) {
-                        SupabaseAuthScreen(auth, isEnglish = appLanguage.value == "en") { session -> authSession.value = session }
-                    } else if (!profileCompleted.value) {
+                    } else if (authSession.value == null && !guestMode.value) {
+                        SupabaseAuthScreen(
+                            auth,
+                            isEnglish = appLanguage.value == "en",
+                            onAuthenticated = { session -> authSession.value = session; showAuthScreen.value = false },
+                            onGuestAccess = { guestMode.value = true; showAuthScreen.value = false }
+                        )
+                    } else if (showAuthScreen.value) {
+                        SupabaseAuthScreen(
+                            auth,
+                            isEnglish = appLanguage.value == "en",
+                            onAuthenticated = { session -> authSession.value = session; guestMode.value = false; showAuthScreen.value = false },
+                            onGuestAccess = { showAuthScreen.value = false }
+                        )
+                    } else if (authSession.value != null && !profileCompleted.value) {
                         UserProfileSetup(isEnglish = appLanguage.value == "en", onSave = { name, interests, about, style ->
                             profilePrefs.edit()
                                 .putString("user_name", name)
@@ -277,10 +291,12 @@ class MainActivity : FragmentActivity() {
                             onExternalActivityReturned = {},
                             userEmail = authSession.value?.email.orEmpty(),
                             chatAccessToken = authSession.value?.accessToken.orEmpty(),
+                            onRequestLogin = { showAuthScreen.value = true },
                             onSignOut = {
                                 authScope.launch {
                                     auth.signOut()
                                     authSession.value = null
+                                    guestMode.value = true
                                 }
                             }
                         )
@@ -620,6 +636,7 @@ fun NaeemApp(
     onExternalActivityStarted: () -> Unit,
     onExternalActivityReturned: () -> Unit,
     onSignOut: () -> Unit = {},
+    onRequestLogin: () -> Unit = {},
     userEmail: String = "",
     chatAccessToken: String = ""
 ) {
@@ -2028,6 +2045,19 @@ fun NaeemApp(
                                 context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "en").putBoolean("language_selected", true).apply()
                             }, label = { Text("English") })
                         }
+                        Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
+                        Text(if (isEnglish) "EMA account" else "حساب کاربری ایما", color = Gold, fontWeight = FontWeight.SemiBold)
+                        if (userEmail.isBlank()) {
+                            Text(if (isEnglish) "You are using EMA as a guest. Available tools remain accessible without email verification. Sign in only for purchases, wallet top-ups, and account features." else "در حال استفاده از ایما به‌صورت میهمان هستی. بدون تأیید ایمیل می‌توانی از ابزارهای در دسترس استفاده کنی. فقط برای خرید، شارژ کیف پول و امکانات حساب وارد شو.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { showSettings = false; onRequestLogin() }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Login, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (isEnglish) "Sign in / Create account" else "ورود یا ساخت حساب")
+                            }
+                        } else {
+                            Text(if (isEnglish) "Signed in as $userEmail" else "واردشده با $userEmail", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(if (isEnglish) "Provider connection (local tools)" else "اتصال سرویس‌دهنده (ابزارهای محلی)")
                         Text(if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) { if (isEnglish) "Secure chat: server gateway is not configured in this build. Saving a provider key here does not activate chat." else "چت امن: نشانی درگاه سرور در این نسخه تنظیم نشده؛ ذخیره کلید سرویس‌دهنده در این صفحه، چت را فعال نمی‌کند." } else { if (isEnglish) "Secure chat gateway: configured" else "درگاه امن چت: تنظیم شده" }, color = if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) Color(0xFFFFC28A) else Color(0xFF9BD7B0), style = MaterialTheme.typography.bodySmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
@@ -2125,7 +2155,7 @@ fun NaeemApp(
                 },
                 dismissButton = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { showSettings = false; onSignOut() }) { Text(appText("خروج از حساب", isEnglish), color = Color(0xFFFFA6A0)) }
+                        if (userEmail.isNotBlank()) TextButton(onClick = { showSettings = false; onSignOut() }) { Text(appText("خروج از حساب", isEnglish), color = Color(0xFFFFA6A0)) }
                         TextButton(onClick = { showSettings = false }) { Text(appText("انصراف", isEnglish)) }
                     }
                 }
