@@ -133,9 +133,9 @@ private fun ModuleScreenBackdrop(
     }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(palette))) {
         Image(painter = painterResource(backdropRes), contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.20f }.blur(22.dp),
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.34f }.blur(8.dp),
             contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Color(0x55050B16)))
+        Box(Modifier.fillMaxSize().background(Color(0x33050B16)))
         Canvas(Modifier.fillMaxSize()) {
             val glow = when (module.lowercase()) {
                 "finance", "markets" -> Color(0xFF35C7B5)
@@ -1918,113 +1918,137 @@ private fun ThinkingOrb(
     active: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
-    val motion = rememberInfiniteTransition(label = "energy-orb")
-    val phase by motion.animateFloat(
-        0f, (Math.PI * 2.0).toFloat(),
-        infiniteRepeatable(tween(if (active) 5200 else 9000, easing = LinearEasing)),
-        label = "orb-flow"
+    val motion = rememberInfiniteTransition(label = "ima-glass-orb")
+    val rotation by motion.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (active) 6800 else 11000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "orb-rotation"
     )
-    val pulse by motion.animateFloat(
-        0.97f, 1.035f,
-        infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "orb-breath"
+    val breathe by motion.animateFloat(
+        initialValue = 0.965f,
+        targetValue = 1.035f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "orb-breathe"
     )
-    val blue = Color(0xFF91BFE8)
-    val violet = Color(0xFFC2A8E8)
-    val rose = Color(0xFFD9A6B8)
-    val mint = Color(0xFF9AD6B0)
-    val gold = Color(0xFFD8BD83)
+    val ice = Color(0xFFBDEBFF)
+    val cyan = Color(0xFF65D8F2)
+    val silver = Color(0xFFE7F5FF)
+    val lavender = Color(0xFF9BAEFF)
+    val orbModifier = Modifier.size(diameter)
+        .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
 
-    val orbModifier = Modifier.size(diameter).then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
     Canvas(orbModifier) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = size.minDimension * 0.335f * pulse
-        val glowRadius = radius * 2.15f
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.315f * breathe
+        val halo = radius * 2.45f
 
-        drawCircle(
-            Brush.radialGradient(listOf(blue.copy(alpha = 0.44f), violet.copy(alpha = 0.22f), Color.Transparent),
-                center, glowRadius * 1.18f), glowRadius, center
-        )
-
-        // Moving luminous waves extending from behind the glass sphere.
-        for (ribbon in 0..1) {
-            val p = Path()
-            val width = size.width * 0.98f
-            val startX = center.x - width / 2f
-            for (i in 0..100) {
-                val t = i / 100f
-                val x = startX + width * t
-                val envelope = kotlin.math.sin((t * Math.PI).toFloat()).let { it * it }
-                val y = center.y + kotlin.math.sin(t * 10.5f + phase * (if (ribbon == 0) 1f else -0.82f)) *
-                    radius * (if (ribbon == 0) 0.44f else 0.30f) * envelope
-                if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
-            }
-            val colors = if (ribbon == 0)
-                listOf(Color.Transparent, rose.copy(alpha = 0.9f), violet, blue, Color.Transparent)
-            else listOf(Color.Transparent, mint.copy(alpha = 0.8f), blue, violet, Color.Transparent)
-            drawPath(p, Brush.horizontalGradient(colors, startX, startX + width),
-                style = Stroke(width = 4.5.dp.toPx()))
-            drawPath(p, Color.White.copy(alpha = 0.32f),
-                style = Stroke(width = 1.dp.toPx()))
-        }
-
-        // Transparent glass body with layered cool light, matching the app's section palette.
+        // Wide, feathered aura: several radial layers blend into the background.
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF8DBFE8), Color(0xFF385A88), Color(0xFF1B2948), Color(0xFF0B1222)),
-                Offset(center.x - radius * 0.28f, center.y - radius * 0.38f), radius * 1.55f
-            ), radius, center
+                listOf(cyan.copy(alpha = 0.26f), ice.copy(alpha = 0.12f),
+                    lavender.copy(alpha = 0.055f), Color.Transparent),
+                c, halo
+            ), halo, c
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0x667EDBEE), Color(0x2287A6E8), Color.Transparent),
-                Offset(center.x - radius * 0.25f, center.y - radius * 0.30f), radius * 1.25f
-            ), radius * 0.98f, center
+                listOf(Color.Transparent, cyan.copy(alpha = 0.10f), Color.Transparent),
+                c, radius * 2.05f
+            ), radius * 2.05f, c
         )
 
-        // Interwoven light filaments: several moving orbital curves inside the sphere.
-        for (strand in 0..2) {
+        // Two rotating orbital ribbons make the movement visible at a glance.
+        for (orbit in 0..1) {
             val path = Path()
-            val rotation = phase * (if (strand % 2 == 0) 0.72f else -0.48f) + strand * 1.55f
-            for (i in 0..180) {
-                val t = i / 180f * (Math.PI * 2.0).toFloat()
-                val x = center.x + kotlin.math.sin(t * (1.08f + strand * 0.045f) + rotation) *
-                    radius * (0.70f - strand * 0.045f)
-                val y = center.y + kotlin.math.sin(t * 2.0f + rotation * 0.63f) *
-                    kotlin.math.cos(t * 0.48f + rotation) * radius * 0.70f
+            val rx = radius * (1.82f + orbit * 0.18f)
+            val ry = radius * (0.56f + orbit * 0.13f)
+            val direction = if (orbit == 0) 1f else -1f
+            val angle = Math.toRadians((rotation * direction + orbit * 72f).toDouble())
+            val ca = kotlin.math.cos(angle).toFloat()
+            val sa = kotlin.math.sin(angle).toFloat()
+            for (i in 0..160) {
+                val t = i / 160f * (Math.PI * 2.0).toFloat()
+                val px = kotlin.math.cos(t) * rx
+                val py = kotlin.math.sin(t) * ry
+                val x = c.x + px * ca - py * sa
+                val y = c.y + px * sa + py * ca
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
-            val tint = when (strand % 5) {
-                0 -> blue
-                1 -> violet
-                2 -> rose
-                3 -> mint
-                else -> gold
-            }
-            drawPath(path, tint.copy(alpha = 0.24f), style = Stroke(width = 6.5.dp.toPx()))
-            drawPath(path, tint.copy(alpha = 0.82f), style = Stroke(width = 1.7.dp.toPx()))
-            drawPath(path, Color.White.copy(alpha = 0.48f), style = Stroke(width = 0.65.dp.toPx()))
+            drawPath(path, cyan.copy(alpha = 0.20f), style = Stroke(width = 7.dp.toPx()))
+            drawPath(
+                path,
+                Brush.sweepGradient(listOf(Color.Transparent, ice.copy(alpha = 0.86f),
+                    cyan.copy(alpha = 0.72f), lavender.copy(alpha = 0.54f), Color.Transparent), c),
+                style = Stroke(width = if (orbit == 0) 2.2.dp.toPx() else 1.35.dp.toPx())
+            )
+            val particleAngle = angle + (if (orbit == 0) 0.7 else 2.8)
+            val px = kotlin.math.cos(particleAngle).toFloat() * rx
+            val py = kotlin.math.sin(particleAngle).toFloat() * ry
+            drawCircle(ice.copy(alpha = 0.92f), radius * 0.045f, Offset(c.x + px, c.y + py))
+            drawCircle(cyan.copy(alpha = 0.26f), radius * 0.105f, Offset(c.x + px, c.y + py))
         }
 
-        // Glass rim and shifting specular highlights.
+        // Deep, translucent glass core with a cool luminous inner volume.
         drawCircle(
-            Brush.sweepGradient(listOf(blue, violet, rose, mint, blue), center),
-            radius, center, style = Stroke(width = 4.dp.toPx())
+            Brush.radialGradient(
+                listOf(Color(0xFFECFAFF), Color(0xFF8CDDF2), Color(0xFF416D9D),
+                    Color(0xFF1C3153), Color(0xFF101B31)),
+                Offset(c.x - radius * 0.34f, c.y - radius * 0.43f), radius * 1.62f
+            ), radius, c
         )
-        drawCircle(Color.White.copy(alpha = 0.72f), radius * 0.035f,
-            Offset(center.x - radius * 0.42f, center.y - radius * 0.53f))
-        drawCircle(Color.White.copy(alpha = 0.34f), radius * 0.018f,
-            Offset(center.x + radius * 0.50f, center.y + radius * 0.16f))
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0x66FFFFFF), Color(0x338DEBFF),
+                    Color(0x1495BFFF), Color.Transparent),
+                Offset(c.x - radius * 0.28f, c.y - radius * 0.36f), radius * 1.18f
+            ), radius * 0.96f, c
+        )
+
+        // Slow internal currents, rotating in opposite directions.
+        for (strand in 0..2) {
+            val path = Path()
+            val phase = Math.toRadians((rotation * (if (strand == 1) -0.72f else 0.48f) + strand * 118f).toDouble()).toFloat()
+            for (i in 0..180) {
+                val t = i / 180f * (Math.PI * 2.0).toFloat()
+                val x = c.x + kotlin.math.sin(t * 1.12f + phase) * radius * (0.70f - strand * 0.10f)
+                val y = c.y + kotlin.math.sin(t * 2.0f + phase * 0.72f) *
+                    kotlin.math.cos(t * 0.52f - phase) * radius * 0.66f
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            val tint = when (strand) { 0 -> ice; 1 -> cyan; else -> lavender }
+            drawPath(path, tint.copy(alpha = 0.22f), style = Stroke(width = 5.dp.toPx()))
+            drawPath(path, tint.copy(alpha = 0.84f), style = Stroke(width = 1.55.dp.toPx()))
+        }
+
+        // Soft glass edge, not a hard neon outline.
+        drawCircle(
+            Brush.sweepGradient(listOf(Color.Transparent, ice.copy(alpha = 0.56f),
+                cyan.copy(alpha = 0.72f), lavender.copy(alpha = 0.48f), Color.Transparent), c),
+            radius * 1.005f, c, style = Stroke(width = 2.2.dp.toPx())
+        )
+        drawCircle(Color.White.copy(alpha = 0.78f), radius * 0.052f,
+            Offset(c.x - radius * 0.40f, c.y - radius * 0.52f))
+        drawCircle(Color.White.copy(alpha = 0.38f), radius * 0.022f,
+            Offset(c.x + radius * 0.48f, c.y + radius * 0.19f))
         drawArc(
-            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.75f), blue.copy(alpha = 0.12f), violet.copy(alpha = 0.55f))),
-            198f + phase * 22f, 88f, false,
-            Offset(center.x - radius * 0.88f, center.y - radius * 0.88f),
-            androidx.compose.ui.geometry.Size(radius * 1.76f, radius * 1.76f),
+            Brush.sweepGradient(listOf(Color.Transparent, silver.copy(alpha = 0.72f),
+                cyan.copy(alpha = 0.20f), Color.Transparent), c),
+            startAngle = rotation * 0.75f + 205f,
+            sweepAngle = 82f,
+            useCenter = false,
+            topLeft = Offset(c.x - radius * 0.84f, c.y - radius * 0.84f),
+            size = androidx.compose.ui.geometry.Size(radius * 1.68f, radius * 1.68f),
             style = Stroke(width = 2.4.dp.toPx())
         )
     }
 }
-
 
 private fun playThinkingOrbSound(context: Context) {
     runCatching {
