@@ -302,8 +302,8 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             ThinkingOrb(diameter = 132.dp, active = true)
-            Text("اول با هم آشنا بشیم", color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت.", color = Color(0xFFB0BAC6), style = MaterialTheme.typography.bodyMedium)
+            Text(appText("اول با هم آشنا بشیم", isEnglish)), color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(appText("چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت.", isEnglish)), color = Color(0xFFB0BAC6), style = MaterialTheme.typography.bodyMedium)
             val profileFieldColors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White, unfocusedTextColor = Color(0xFFF1F4F8),
                 focusedContainerColor = Color(0x1AFFFFFF), unfocusedContainerColor = Color(0x12FFFFFF),
@@ -312,19 +312,19 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
                 focusedPlaceholderColor = Color(0xFF9EADC2), unfocusedPlaceholderColor = Color(0xFF9EADC2),
                 cursorColor = Color(0xFFB7D2FF)
             )
-            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("دوست داری چی صدات کنم؟") }, placeholder = { Text("مثلاً نعیم") }, colors = profileFieldColors)
-            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text("به چه چیزهایی علاقه داری؟ (اختیاری)") }, placeholder = { Text("مثلاً طراحی، تکنولوژی، سفر…") }, minLines = 2, colors = profileFieldColors)
-            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)") }, placeholder = { Text("شغل، هدف‌ها یا موضوعات موردعلاقه…") }, minLines = 2, colors = profileFieldColors)
-            Text("لحن گفت‌وگو", color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
+            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(appText("دوست داری چی صدات کنم؟", isEnglish))) }, placeholder = { Text(appText("مثلاً نعیم", isEnglish))) }, colors = profileFieldColors)
+            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("به چه چیزهایی علاقه داری؟ (اختیاری)", isEnglish))) }, placeholder = { Text(appText("مثلاً طراحی، تکنولوژی، سفر…", isEnglish))) }, minLines = 2, colors = profileFieldColors)
+            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)", isEnglish))) }, placeholder = { Text(appText("شغل، هدف‌ها یا موضوعات موردعلاقه…", isEnglish))) }, minLines = 2, colors = profileFieldColors)
+            Text(appText("لحن گفت‌وگو", isEnglish)), color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم").forEach { option ->
                     FilterChip(selected = style == option, onClick = { style = option }, label = { Text(option, style = MaterialTheme.typography.labelSmall) })
                 }
             }
             Button(onClick = { if (name.isNotBlank()) onSave(name.trim(), interests.trim(), about.trim(), style) }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)), shape = RoundedCornerShape(17.dp)) {
-                Text("ذخیره و ورود به برنامه", fontWeight = FontWeight.Bold)
+                Text(appText("ذخیره و ورود به برنامه", isEnglish)), fontWeight = FontWeight.Bold)
             }
-            Text("این اطلاعات فقط روی همین گوشی ذخیره می‌شوند و هر زمان می‌توانی تغییرشان بدهی.", color = Color(0xFF8995A5), style = MaterialTheme.typography.labelSmall)
+            Text(appText("این اطلاعات فقط روی همین گوشی ذخیره می‌شوند و هر زمان می‌توانی تغییرشان بدهی.", isEnglish)), color = Color(0xFF8995A5), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -357,7 +357,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 shape = RoundedCornerShape(18.dp), color = Color(0x773A5676), contentColor = Color.White,
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x889DBDE5)),
                 tonalElevation = 0.dp, shadowElevation = 0.dp) {
-                Box(contentAlignment = Alignment.Center) { Text("شروع", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                Box(contentAlignment = Alignment.Center) { Text(appText("شروع", isEnglish)), color = Color.White, fontWeight = FontWeight.SemiBold) }
             }
         } else {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
@@ -369,24 +369,24 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(74.dp))
                 Spacer(Modifier.height(18.dp))
                 if (page == 0) {
-                    Text("ایما چیست؟", color = silver, style = MaterialTheme.typography.headlineSmall,
+                    Text(appText("ایما چیست؟", isEnglish)), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(8.dp))
-                    Text("هوشمندی فراتر از کلمات", color = Color(0xFFDCE8FA), style = MaterialTheme.typography.titleMedium,
+                    Text(appText("هوشمندی فراتر از کلمات", isEnglish)), color = Color(0xFFDCE8FA), style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(18.dp))
                     Text(
                         "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nلازم نیست همیشه دستور مشخصی داشته باشی. می‌توانی با ایما صحبت کنی، از اتفاقات روزمره، ایده‌ها و دغدغه‌هایت بگویی. ایما با فعال‌کردن قابلیت شنیدن، صحبت‌هایت را دریافت می‌کند و با اجازه تو، نکات مهم را به خاطر می‌سپارد.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = TextAlign.End)
                 } else {
-                    Text("ایما چه کارهایی انجام می‌دهد؟", color = silver, style = MaterialTheme.typography.headlineSmall,
+                    Text(appText("ایما چه کارهایی انجام می‌دهد؟", isEnglish)), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     Text(
                         "ایما فقط یک پنجره‌ی گفتگو نیست؛ موضوعات را می‌شناسد و آن‌ها را به فضای مناسب می‌برد. می‌توانی برای مدیریت زندگی روزمره، برنامه‌ریزی کارها و هدف‌ها، یادآوری‌ها و همراهی پروژه‌ها از آن کمک بگیری.\n\nدر فضاهای تخصصی، بخش‌هایی برای سفر و طبیعت‌گردی، ورزش، سلامت و تغذیه، امور مالی، روزنگار و حافظه در نظر گرفته شده است.\n\nبرای جست‌وجو و پژوهش، اتاق فکر، اخبار و کشف محتوا؛ و برای خلاقیت، ساخت تصویر و ویدیو، تدوین، موسیقی و پادکست هم ابزارهایی در اختیار داری. اتصال به کامپیوتر و بخش‌های دیگر نیز از فضاهای ایما قابل دسترسی‌اند. بعضی قابلیت‌ها به اتصال سرویس یا تکمیل توسعه نیاز دارند.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp, textAlign = TextAlign.End)
                     Spacer(Modifier.height(20.dp))
-                    Text("تو زندگی کن؛ ایما حواسش هست.", color = silver, style = MaterialTheme.typography.titleLarge,
+                    Text(appText("تو زندگی کن؛ ایما حواسش هست.", isEnglish)), color = silver, style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(24.dp))
@@ -400,14 +400,14 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 if (page == 0) {
                     Button(onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                        shape = RoundedCornerShape(17.dp)) { Text("ادامه", fontWeight = FontWeight.Bold) }
+                        shape = RoundedCornerShape(17.dp)) { Text(appText("ادامه", isEnglish)), fontWeight = FontWeight.Bold) }
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
-                            shape = RoundedCornerShape(17.dp)) { Text("قبلی", color = silver) }
+                            shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", isEnglish)), color = silver) }
                         Button(onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                            shape = RoundedCornerShape(17.dp)) { Text("ورود به ایما", fontWeight = FontWeight.Bold) }
+                            shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", isEnglish)), fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -435,6 +435,103 @@ private fun HomeShortcut(title: String, subtitle: String, icon: androidx.compose
     }
 }
 
+
+private val englishUiText = mapOf(
+    "اول با هم آشنا بشیم" to "Let's get to know each other",
+    "چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت." to "Tell me a little about yourself so your assistant can address you by name and get to know you.",
+    "دوست داری چی صدات کنم؟" to "What should I call you?",
+    "مثلاً نعیم" to "e.g. Alex",
+    "به چه چیزهایی علاقه داری؟ (اختیاری)" to "What are you interested in? (Optional)",
+    "مثلاً طراحی، تکنولوژی، سفر…" to "e.g. design, technology, travel…",
+    "چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)" to "What would you like me to know about you? (Optional)",
+    "شغل، هدف‌ها یا موضوعات موردعلاقه…" to "Work, goals, or topics you enjoy…",
+    "لحن گفت‌وگو" to "Conversation tone",
+    "ذخیره و ورود به برنامه" to "Save and enter the app",
+    "این اطلاعات فقط روی همین گوشی ذخیره می‌شوند و هر زمان می‌توانی تغییرشان بدهی." to "This information is stored only on this phone and can be changed at any time.",
+    "شروع" to "Start",
+    "ایما چیست؟" to "What is EMA?",
+    "هوشمندی فراتر از کلمات" to "Intelligence beyond words",
+    "ایما چه کارهایی انجام می‌دهد؟" to "What can EMA do?",
+    "تو زندگی کن؛ ایما حواسش هست." to "Live your life. EMA has the details covered.",
+    "ادامه" to "Continue",
+    "قبلی" to "Back",
+    "ورود به ایما" to "Enter EMA",
+    "ایما" to "EMA",
+    "فضای شخصی هوشمند" to "Your intelligent personal space",
+    "فضاهای من و ابزارها" to "My spaces & tools",
+    "اتصال به کامپیوتر" to "Connect to PC",
+    "مشخصات حساب من" to "My account",
+    "درباره سازنده" to "About the creator",
+    "خوش‌آمدگویی صوتی" to "Voice welcome",
+    "پخش هنگام ورود به ایما" to "Play when opening EMA",
+    "تصویر آماده ارسال است" to "Image ready to send",
+    "حذف" to "Delete",
+    "＋ عکس" to "＋ Photo",
+    "▶ ویدیو" to "▶ Video",
+    "سلام " to "Hello ",
+    "امروز دوست داری درباره چی صحبت کنیم؟" to "What would you like to talk about today?",
+    "لمس گوی یا نوشتن پیام برای شروع" to "Tap the orb or type a message to begin",
+    "گوی هوشمند ایما" to "EMA smart orb",
+    "تأیید قبل از ثبت" to "Confirm before saving",
+    "هیچ تغییری تا زمان تأیید تو در اطلاعات برنامه انجام نمی‌شود." to "No changes will be made to app data until you confirm.",
+    "تأیید و ثبت" to "Confirm & save",
+    "لغو" to "Cancel",
+    "پخش کامل" to "Play full",
+    "نام نمایشی: " to "Display name: ",
+    "ایمیل ورود: " to "Sign-in email: ",
+    "علایق: " to "Interests: ",
+    "درباره من: " to "About me: ",
+    "لحن پاسخ: " to "Response style: ",
+    "بستن" to "Close",
+    "حافظه ایما" to "EMA memory",
+    "نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند." to "Notes saved here can be used in future conversations to improve responses.",
+    "مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند" to "For example: I prefer concise answers",
+    "ذخیره نکته" to "Save note",
+    "آلبوم تصاویر ساخته‌شده" to "Generated image album",
+    "هنوز تصویری نساخته‌ای. تصاویر بعدی به‌صورت خودکار اینجا ذخیره می‌شوند." to "You haven't created any images yet. Future images will be saved here automatically.",
+    "حذف از آلبوم" to "Remove from album",
+    "گفت‌وگوهای من" to "My conversations",
+    "جست‌وجو در عنوان و متن گفتگوها" to "Search conversation titles and messages",
+    "＋ گفت‌وگوی تازه" to "＋ New chat",
+    "گفت‌وگویی پیدا نشد." to "No conversations found.",
+    "بازکردن" to "Open",
+    "تغییر نام" to "Rename",
+    "بایگانی" to "Archive",
+    "بازگردانی" to "Restore",
+    "حذف گفت‌وگو" to "Delete conversation",
+    "گفت‌وگوی «" to "Conversation “",
+    "انصراف" to "Cancel",
+    "تغییر نام گفت‌وگو" to "Rename conversation",
+    "ذخیره" to "Save",
+    "تنظیم خودکار API" to "Automatic API setup",
+    "اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:" to "Connection details detected. Review before saving:",
+    "آدرس سرور: ${config.baseUrl}" to "Server URL: ${config.baseUrl}",
+    "کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)" to "API key: detected •••••••• (hidden)",
+    "مدل چت: $it" to "Chat model: $it",
+    "مدل تصویر: $it" to "Image model: $it",
+    "مدل ویدیو: $it" to "Video model: $it",
+    "مدل گفتار: $it" to "Speech model: $it",
+    "کلید به‌صورت رمزگذاری‌شده روی گوشی ذخیره می‌شود و متن حاوی آن وارد تاریخچه چت یا درخواست مدل نمی‌شود." to "The key is stored encrypted on this phone and is never included in chat history or model prompts.",
+    "ذخیره امن تنظیمات" to "Save settings securely",
+    "تنظیمات اتصال" to "Connection settings",
+    "درگاه اتصال" to "API provider",
+    "نت‌ارز" to "NetArz",
+    "OpenAI مستقیم" to "Direct OpenAI",
+    "نشانی سرویس (Base URL)" to "Service URL (Base URL)",
+    "نام مدل گفتگو" to "Chat model name",
+    "شناسه مدل ساخت تصویر" to "Image generation model ID",
+    "نوع مدل برای دریافت فهرست" to "Model type to fetch",
+    "مدل‌های دسته انتخاب‌شده؛ روی شناسه بزن تا برای همان قابلیت ذخیره شود:" to "Models for the selected category. Tap an ID to save it for that feature:",
+    "کلید API" to "API key",
+    "پشتیبان‌گیری و بازیابی" to "Backup & restore",
+    "رمز پشتیبان (حداقل ۸ نویسه)" to "Backup password (at least 8 characters)",
+    "خروجی گرفتن" to "Export backup",
+    "بازیابی" to "Restore backup",
+    "خروج از حساب" to "Sign out",
+    "آموزش سریع برنامه" to "Quick app tour"
+)
+private fun appText(value: String, english: Boolean): String = if (english) englishUiText[value] ?: value else value
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NaeemApp(
@@ -447,6 +544,8 @@ fun NaeemApp(
 ) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
+    var appLanguage by remember { mutableStateOf(context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).getString("app_language", "fa") ?: "fa") }
+    val isEnglish = appLanguage == "en"
     val userName = remember { profilePrefs.getString("user_name", "").orEmpty() }
     val userInterests = remember { profilePrefs.getString("user_interests", "").orEmpty() }
     val userAbout = remember { profilePrefs.getString("user_about", "").orEmpty() }
@@ -974,29 +1073,29 @@ fun NaeemApp(
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(52.dp))
                             Column {
-                                Text("ایما", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                                Text("فضای شخصی هوشمند", color = Muted, style = MaterialTheme.typography.labelSmall)
+                                Text(appText("ایما", isEnglish)), color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                                Text(appText("فضای شخصی هوشمند", isEnglish)), color = Muted, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                         HorizontalDivider(color = Color(0x334F6B8C), modifier = Modifier.padding(vertical = 10.dp))
-                        NavigationDrawerItem(label = { Text("فضاهای من و ابزارها") }, selected = false,
+                        NavigationDrawerItem(label = { Text(appText("فضاهای من و ابزارها", isEnglish))) }, selected = false,
                             icon = { Icon(Icons.Default.Apps, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showHub = true } })
-                        NavigationDrawerItem(label = { Text("اتصال به کامپیوتر") }, selected = false,
+                        NavigationDrawerItem(label = { Text(appText("اتصال به کامپیوتر", isEnglish))) }, selected = false,
                             icon = { Icon(Icons.Default.Computer, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showPcControl = true } })
-                        NavigationDrawerItem(label = { Text("مشخصات حساب من") }, selected = false,
+                        NavigationDrawerItem(label = { Text(appText("مشخصات حساب من", isEnglish))) }, selected = false,
                             icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showProfileDetails = true } })
-                        NavigationDrawerItem(label = { Text("درباره سازنده") }, selected = false,
+                        NavigationDrawerItem(label = { Text(appText("درباره سازنده", isEnglish))) }, selected = false,
                             icon = { Icon(Icons.Default.Info, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showCreatorInfo = true } })
                         HorizontalDivider(color = Color(0x334F6B8C), modifier = Modifier.padding(vertical = 10.dp))
                         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Column(Modifier.weight(1f)) {
-                                Text("خوش‌آمدگویی صوتی", color = Color.White, fontWeight = FontWeight.Medium)
-                                Text("پخش هنگام ورود به ایما", color = Muted, style = MaterialTheme.typography.labelSmall)
+                                Text(appText("خوش‌آمدگویی صوتی", isEnglish)), color = Color.White, fontWeight = FontWeight.Medium)
+                                Text(appText("پخش هنگام ورود به ایما", isEnglish)), color = Muted, style = MaterialTheme.typography.labelSmall)
                             }
                             Switch(checked = welcomeAudioEnabled, onCheckedChange = {
                                 welcomeAudioEnabled = it
@@ -1070,8 +1169,8 @@ fun NaeemApp(
                         if (selectedImage != null) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Image(bitmap = selectedImage!!, contentDescription = "تصویر انتخاب‌شده", modifier = Modifier.size(64.dp), contentScale = ContentScale.Crop)
-                                Text("تصویر آماده ارسال است", color = Muted, style = MaterialTheme.typography.labelMedium)
-                                TextButton(onClick = { selectedImage = null; selectedImageBase64 = null }) { Text("حذف", color = Gold) }
+                                Text(appText("تصویر آماده ارسال است", isEnglish)), color = Muted, style = MaterialTheme.typography.labelMedium)
+                                TextButton(onClick = { selectedImage = null; selectedImageBase64 = null }) { Text(appText("حذف", isEnglish)), color = Gold) }
                             }
                         }
                         Row(
@@ -1085,7 +1184,7 @@ fun NaeemApp(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
                             ) {
-                                Text("＋ عکس", color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                                Text(appText("＋ عکس", isEnglish)), color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
                             TextButton(
                                 onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } },
@@ -1108,7 +1207,7 @@ fun NaeemApp(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
                             ) {
-                                Text("▶ ویدیو", color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                                Text(appText("▶ ویدیو", isEnglish)), color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
                         }
                         Row(
@@ -1235,7 +1334,7 @@ fun NaeemApp(
                                 },
                                 color = Gold, fontWeight = FontWeight.SemiBold
                             )
-                            Text("گوی هوشمند ایما", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text(appText("گوی هوشمند ایما", isEnglish)), color = Muted, style = MaterialTheme.typography.labelSmall)
                             if (busy) {
                                 LinearProgressIndicator(
                                     Modifier.fillMaxWidth().padding(top = 5.dp),
@@ -1252,15 +1351,15 @@ fun NaeemApp(
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("تأیید قبل از ثبت", color = Gold, fontWeight = FontWeight.Bold)
+                            Text(appText("تأیید قبل از ثبت", isEnglish)), color = Gold, fontWeight = FontWeight.Bold)
                             Text(assistantActionPreview(action), color = Color.White, style = MaterialTheme.typography.bodyMedium)
-                            Text("هیچ تغییری تا زمان تأیید تو در اطلاعات برنامه انجام نمی‌شود.", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text(appText("هیچ تغییری تا زمان تأیید تو در اطلاعات برنامه انجام نمی‌شود.", isEnglish)), color = Muted, style = MaterialTheme.typography.labelSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(
                                     onClick = { confirmPendingAssistantAction() },
                                     colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink),
                                     modifier = Modifier.weight(1f)
-                                ) { Text("تأیید و ثبت") }
+                                ) { Text(appText("تأیید و ثبت", isEnglish))) }
                                 OutlinedButton(
                                     onClick = {
                                         assistantRouter.cancel(action.id)
@@ -1268,7 +1367,7 @@ fun NaeemApp(
                                         messages.add(ChatMessage("عملیات لغو شد و چیزی ثبت نشد.", false))
                                     },
                                     modifier = Modifier.weight(1f)
-                                ) { Text("لغو", color = Color.White) }
+                                ) { Text(appText("لغو", isEnglish)), color = Color.White) }
                             }
                         }
                     }
@@ -1303,7 +1402,7 @@ fun NaeemApp(
                                             TextButton(onClick = { playAnswer(msg.text) }) {
                                                 Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Gold)
                                                 Spacer(Modifier.width(5.dp))
-                                                Text("پخش کامل", color = Gold)
+                                                Text(appText("پخش کامل", isEnglish)), color = Gold)
                                             }
                                             if (speechPlaying) {
                                                 IconButton(onClick = { pauseOrResumeSpeech() }) {
@@ -1327,21 +1426,21 @@ fun NaeemApp(
         }
         if (showProfileDetails) {
             AlertDialog(onDismissRequest = { showProfileDetails = false }, containerColor = Panel,
-                title = { Text("مشخصات حساب من", color = Gold) },
+                title = { Text(appText("مشخصات حساب من", isEnglish)), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("نام نمایشی: " + userName.ifBlank { "ثبت نشده" }, color = Color.White)
-                        Text("ایمیل ورود: " + userEmail.ifBlank { "در دسترس نیست" }, color = Color.White)
-                        Text("علایق: " + userInterests.ifBlank { "ثبت نشده" }, color = Muted)
-                        Text("درباره من: " + userAbout.ifBlank { "ثبت نشده" }, color = Muted)
-                        Text("لحن پاسخ: " + responseStyle, color = Muted)
+                        Text(appText("نام نمایشی: ", isEnglish)) + userName.ifBlank { "ثبت نشده" }, color = Color.White)
+                        Text(appText("ایمیل ورود: ", isEnglish)) + userEmail.ifBlank { "در دسترس نیست" }, color = Color.White)
+                        Text(appText("علایق: ", isEnglish)) + userInterests.ifBlank { "ثبت نشده" }, color = Muted)
+                        Text(appText("درباره من: ", isEnglish)) + userAbout.ifBlank { "ثبت نشده" }, color = Muted)
+                        Text(appText("لحن پاسخ: ", isEnglish)) + responseStyle, color = Muted)
                     }
                 },
-                confirmButton = { TextButton(onClick = { showProfileDetails = false }) { Text("بستن", color = Gold) } })
+                confirmButton = { TextButton(onClick = { showProfileDetails = false }) { Text(appText("بستن", isEnglish)), color = Gold) } })
         }
         if (showCreatorInfo) {
             AlertDialog(onDismissRequest = { showCreatorInfo = false }, containerColor = Panel,
-                title = { Text("درباره سازنده", color = Gold) },
+                title = { Text(appText("درباره سازنده", isEnglish)), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(72.dp))
@@ -1350,7 +1449,7 @@ fun NaeemApp(
                         Text("EMA ASI PLATFORM", color = Color(0xFF9EBBE5), style = MaterialTheme.typography.labelMedium)
                     }
                 },
-                confirmButton = { TextButton(onClick = { showCreatorInfo = false }) { Text("بستن", color = Gold) } })
+                confirmButton = { TextButton(onClick = { showCreatorInfo = false }) { Text(appText("بستن", isEnglish)), color = Gold) } })
         }
 
         if (tutorialStep >= 0) {
@@ -1602,15 +1701,15 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { showMemory = false },
                 containerColor = Panel,
-                title = { Text("حافظه ایما", color = Gold) },
+                title = { Text(appText("حافظه ایما", isEnglish)), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(value = memoryDraft, onValueChange = { memoryDraft = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند") })
+                        Text(appText("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", isEnglish)), color = Muted, style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(value = memoryDraft, onValueChange = { memoryDraft = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(appText("مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند", isEnglish))) })
                         memories.forEach { item ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(item, modifier = Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.bodySmall)
-                                TextButton(onClick = { dataStore.deleteMemory(item); memories = dataStore.memories() }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                                TextButton(onClick = { dataStore.deleteMemory(item); memories = dataStore.memories() }) { Text(appText("حذف", isEnglish)), color = Color(0xFFFF8B80)) }
                             }
                         }
                     }
@@ -1618,9 +1717,9 @@ fun NaeemApp(
                 confirmButton = {
                     TextButton(onClick = {
                         if (memoryDraft.isNotBlank()) { dataStore.addMemory(memoryDraft); memories = dataStore.memories(); memoryDraft = "" }
-                    }) { Text("ذخیره نکته", color = Gold) }
+                    }) { Text(appText("ذخیره نکته", isEnglish)), color = Gold) }
                 },
-                dismissButton = { TextButton(onClick = { showMemory = false }) { Text("بستن", color = Muted) } }
+                dismissButton = { TextButton(onClick = { showMemory = false }) { Text(appText("بستن", isEnglish)), color = Muted) } }
             )
         }
 
@@ -1628,10 +1727,10 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { showAlbum = false },
                 containerColor = Panel,
-                title = { Text("آلبوم تصاویر ساخته‌شده", color = Gold) },
+                title = { Text(appText("آلبوم تصاویر ساخته‌شده", isEnglish)), color = Gold) },
                 text = {
                     if (albumImages.isEmpty()) {
-                        Text("هنوز تصویری نساخته‌ای. تصاویر بعدی به‌صورت خودکار اینجا ذخیره می‌شوند.", color = Muted)
+                        Text(appText("هنوز تصویری نساخته‌ای. تصاویر بعدی به‌صورت خودکار اینجا ذخیره می‌شوند.", isEnglish)), color = Muted)
                     } else {
                         LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             gridItems(albumImages) { item ->
@@ -1640,14 +1739,14 @@ fun NaeemApp(
                                     Column {
                                         bitmap?.let { Image(bitmap = it, contentDescription = item.prompt, modifier = Modifier.fillMaxWidth().height(120.dp), contentScale = ContentScale.Crop) }
                                         Text(item.prompt, color = Color.White, maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
-                                        TextButton(onClick = { dataStore.deleteImage(item); albumImages = dataStore.images() }) { Text("حذف از آلبوم", color = Color(0xFFFF8B80)) }
+                                        TextButton(onClick = { dataStore.deleteImage(item); albumImages = dataStore.images() }) { Text(appText("حذف از آلبوم", isEnglish)), color = Color(0xFFFF8B80)) }
                                     }
                                 }
                             }
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = { showAlbum = false }) { Text("بستن", color = Gold) } }
+                confirmButton = { TextButton(onClick = { showAlbum = false }) { Text(appText("بستن", isEnglish)), color = Gold) } }
             )
         }
 
@@ -1658,7 +1757,7 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { showConversationManager = false },
                 containerColor = Panel,
-                title = { Text("گفت‌وگوهای من", color = Gold) },
+                title = { Text(appText("گفت‌وگوهای من", isEnglish)), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         OutlinedTextField(
@@ -1666,7 +1765,7 @@ fun NaeemApp(
                             onValueChange = { conversationSearch = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            placeholder = { Text("جست‌وجو در عنوان و متن گفتگوها") }
+                            placeholder = { Text(appText("جست‌وجو در عنوان و متن گفتگوها", isEnglish))) }
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Button(
@@ -1676,13 +1775,13 @@ fun NaeemApp(
                                     pendingAssistantAction = null
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)
-                            ) { Text("＋ گفت‌وگوی تازه") }
+                            ) { Text(appText("＋ گفت‌وگوی تازه", isEnglish))) }
                             TextButton(onClick = { showArchivedConversations = !showArchivedConversations; conversationRefresh++ }) {
                                 Text(if (showArchivedConversations) "نمایش فعال‌ها" else "بایگانی‌شده‌ها", color = Gold)
                             }
                         }
                         if (visibleThreads.isEmpty()) {
-                            Text("گفت‌وگویی پیدا نشد.", color = Muted)
+                            Text(appText("گفت‌وگویی پیدا نشد.", isEnglish)), color = Muted)
                         } else {
                             LazyColumn(
                                 modifier = Modifier.heightIn(max = 340.dp),
@@ -1700,23 +1799,23 @@ fun NaeemApp(
                                                         activeConversationId = thread.id
                                                         showConversationManager = false
                                                         pendingAssistantAction = null
-                                                    }) { Text("بازکردن", color = Gold) }
+                                                    }) { Text(appText("بازکردن", isEnglish)), color = Gold) }
                                                     TextButton(onClick = {
                                                         renameConversationId = thread.id
                                                         renameConversationDraft = thread.title
-                                                    }) { Text("تغییر نام", color = Color.White) }
+                                                    }) { Text(appText("تغییر نام", isEnglish)), color = Color.White) }
                                                     TextButton(onClick = {
                                                         conversationStore.archive(thread.id, true)
                                                         activeConversationId = conversationStore.activeId()
                                                         conversationRefresh++
-                                                    }) { Text("بایگانی", color = Muted) }
+                                                    }) { Text(appText("بایگانی", isEnglish)), color = Muted) }
                                                 } else {
                                                     TextButton(onClick = {
                                                         conversationStore.archive(thread.id, false)
                                                         conversationRefresh++
-                                                    }) { Text("بازگردانی", color = Gold) }
+                                                    }) { Text(appText("بازگردانی", isEnglish)), color = Gold) }
                                                 }
-                                                TextButton(onClick = { deleteConversationTarget = thread }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                                                TextButton(onClick = { deleteConversationTarget = thread }) { Text(appText("حذف", isEnglish)), color = Color(0xFFFF8B80)) }
                                             }
                                         }
                                     }
@@ -1725,7 +1824,7 @@ fun NaeemApp(
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = { showConversationManager = false }) { Text("بستن", color = Gold) } }
+                confirmButton = { TextButton(onClick = { showConversationManager = false }) { Text(appText("بستن", isEnglish)), color = Gold) } }
             )
         }
 
@@ -1733,17 +1832,17 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { deleteConversationTarget = null },
                 containerColor = Panel,
-                title = { Text("حذف گفت‌وگو", color = Gold) },
-                text = { Text("گفت‌وگوی «" + target.title + "» و تاریخچهٔ آن برای همیشه حذف شود؟", color = Color.White) },
+                title = { Text(appText("حذف گفت‌وگو", isEnglish)), color = Gold) },
+                text = { Text(appText("گفت‌وگوی «", isEnglish)) + target.title + "» و تاریخچهٔ آن برای همیشه حذف شود؟", color = Color.White) },
                 confirmButton = {
                     TextButton(onClick = {
                         conversationStore.delete(target.id)
                         if (target.id == activeConversationId) activeConversationId = conversationStore.activeId()
                         conversationRefresh++
                         deleteConversationTarget = null
-                    }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                    }) { Text(appText("حذف", isEnglish)), color = Color(0xFFFF8B80)) }
                 },
-                dismissButton = { TextButton(onClick = { deleteConversationTarget = null }) { Text("انصراف", color = Muted) } }
+                dismissButton = { TextButton(onClick = { deleteConversationTarget = null }) { Text(appText("انصراف", isEnglish)), color = Muted) } }
             )
         }
 
@@ -1751,7 +1850,7 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { renameConversationId = null },
                 containerColor = Panel,
-                title = { Text("تغییر نام گفت‌وگو", color = Gold) },
+                title = { Text(appText("تغییر نام گفت‌وگو", isEnglish)), color = Gold) },
                 text = {
                     OutlinedTextField(
                         value = renameConversationDraft,
@@ -1765,9 +1864,9 @@ fun NaeemApp(
                         renameConversationId?.let { conversationStore.rename(it, renameConversationDraft) }
                         renameConversationId = null
                         conversationRefresh++
-                    }) { Text("ذخیره", color = Gold) }
+                    }) { Text(appText("ذخیره", isEnglish)), color = Gold) }
                 },
-                dismissButton = { TextButton(onClick = { renameConversationId = null }) { Text("انصراف", color = Muted) } }
+                dismissButton = { TextButton(onClick = { renameConversationId = null }) { Text(appText("انصراف", isEnglish)), color = Muted) } }
             )
         }
 
@@ -1775,17 +1874,17 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { pendingApiConfig = null },
                 containerColor = Panel,
-                title = { Text("تنظیم خودکار API", color = Gold) },
+                title = { Text(appText("تنظیم خودکار API", isEnglish)), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:", color = Color.White)
+                        Text(appText("اطلاعات اتصال شناسایی شد. قبل از ذخیره مرور کن:", isEnglish)), color = Color.White)
                         Text("آدرس سرور: ${config.baseUrl}", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall)
-                        Text("کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
-                        config.chatModel?.let { Text("مدل چت: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
-                        config.imageModel?.let { Text("مدل تصویر: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
-                        config.videoModel?.let { Text("مدل ویدیو: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
-                        config.speechModel?.let { Text("مدل گفتار: $it", color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
-                        Text("کلید به‌صورت رمزگذاری‌شده روی گوشی ذخیره می‌شود و متن حاوی آن وارد تاریخچه چت یا درخواست مدل نمی‌شود.", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
+                        Text(appText("کلید API: شناسایی شد •••••••• (نمایش داده نمی‌شود)", isEnglish)), color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
+                        config.chatModel?.let { Text(appText("مدل چت: $it", isEnglish)), color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        config.imageModel?.let { Text(appText("مدل تصویر: $it", isEnglish)), color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        config.videoModel?.let { Text(appText("مدل ویدیو: $it", isEnglish)), color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        config.speechModel?.let { Text(appText("مدل گفتار: $it", isEnglish)), color = Color(0xFFDCE3ED), style = MaterialTheme.typography.bodySmall) }
+                        Text(appText("کلید به‌صورت رمزگذاری‌شده روی گوشی ذخیره می‌شود و متن حاوی آن وارد تاریخچه چت یا درخواست مدل نمی‌شود.", isEnglish)), color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 confirmButton = {
@@ -1801,10 +1900,10 @@ fun NaeemApp(
                         selected.chatModel?.let { store.saveModelFor("chat", it) }
                         providerTestStatus = "تنظیمات API با موفقیت روی گوشی ذخیره شد."
                         pendingApiConfig = null
-                    }) { Text("ذخیره امن تنظیمات", color = Gold) }
+                    }) { Text(appText("ذخیره امن تنظیمات", isEnglish)), color = Gold) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pendingApiConfig = null }) { Text("لغو", color = Muted) }
+                    TextButton(onClick = { pendingApiConfig = null }) { Text(appText("لغو", isEnglish)), color = Muted) }
                 }
             )
         }
@@ -1813,22 +1912,33 @@ fun NaeemApp(
             AlertDialog(
                 onDismissRequest = { showSettings = false },
                 containerColor = Panel,
-                title = { Text("تنظیمات اتصال", color = Gold) },
+                title = { Text(appText("تنظیمات اتصال", isEnglish)), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("درگاه اتصال")
+                        Text("App language / زبان برنامه", color = Gold, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(selected = appLanguage == "fa", onClick = {
+                                appLanguage = "fa"
+                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "fa").apply()
+                            }, label = { Text("فارسی") })
+                            FilterChip(selected = appLanguage == "en", onClick = {
+                                appLanguage = "en"
+                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "en").apply()
+                            }, label = { Text("English") })
+                        }
+                        Text(appText(appText("درگاه اتصال", isEnglish)), isEnglish))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text("نت‌ارز", color = Gold) }
+                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text(appText("نت‌ارز", isEnglish)), color = Gold) }
                             OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }
                             OutlinedButton(onClick = { switchApiProvider("https://api.gapgpt.ir/v1"); model = "gpt-4o-mini" }) { Text("GapGPT", color = Gold) }
                         }
-                        Text("نشانی سرویس (Base URL)")
+                        Text(appText("نشانی سرویس (Base URL)", isEnglish)))
                         OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
-                        Text("نام مدل گفتگو")
+                        Text(appText("نام مدل گفتگو", isEnglish)))
                         OutlinedTextField(model, { model = it }, singleLine = true)
-                        Text("شناسه مدل ساخت تصویر")
+                        Text(appText("شناسه مدل ساخت تصویر", isEnglish)))
                         OutlinedTextField(imageModel, { imageModel = it }, singleLine = true)
-                        Text("نوع مدل برای دریافت فهرست")
+                        Text(appText("نوع مدل برای دریافت فهرست", isEnglish)))
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1859,7 +1969,7 @@ fun NaeemApp(
                         }
                         if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                         if (availableModels.isNotEmpty()) {
-                            Text("مدل‌های دسته انتخاب‌شده؛ روی شناسه بزن تا برای همان قابلیت ذخیره شود:", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            Text(appText("مدل‌های دسته انتخاب‌شده؛ روی شناسه بزن تا برای همان قابلیت ذخیره شود:", isEnglish)), color = Muted, style = MaterialTheme.typography.labelSmall)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 availableModels.take(30).forEach { modelId ->
                                     TextButton(onClick = {
@@ -1872,18 +1982,18 @@ fun NaeemApp(
                                 }
                             }
                         }
-                        Text("کلید API")
+                        Text(appText("کلید API", isEnglish)))
                         OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
                         Text("هشدار امنیتی: رمزگذاری گوشی مفید است، اما طبق توصیه نت‌ارز کلید API نباید در نسخه عمومی اپ قرار بگیرد. برای انتشار امن باید درخواست‌ها از سرور واسط اختصاصی عبور کنند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD28A))
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
-                        Text("پشتیبان‌گیری و بازیابی", color = Gold, fontWeight = FontWeight.SemiBold)
+                        Text(appText("پشتیبان‌گیری و بازیابی", isEnglish)), color = Gold, fontWeight = FontWeight.SemiBold)
                         Text("از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(
                             value = backupPassphrase,
                             onValueChange = { backupPassphrase = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("رمز پشتیبان (حداقل ۸ نویسه)") },
+                            label = { Text(appText("رمز پشتیبان (حداقل ۸ نویسه)", isEnglish))) },
                             visualTransformation = PasswordVisualTransformation()
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1891,12 +2001,12 @@ fun NaeemApp(
                                 onClick = { backupExportLauncher.launch("EMA-Backup.json") },
                                 enabled = backupPassphrase.length >= 8,
                                 modifier = Modifier.weight(1f)
-                            ) { Text("خروجی گرفتن", color = Gold) }
+                            ) { Text(appText("خروجی گرفتن", isEnglish)), color = Gold) }
                             OutlinedButton(
                                 onClick = { backupImportLauncher.launch(arrayOf("application/json", "text/json")) },
                                 enabled = backupPassphrase.length >= 8,
                                 modifier = Modifier.weight(1f)
-                            ) { Text("بازیابی", color = Gold) }
+                            ) { Text(appText("بازیابی", isEnglish)), color = Gold) }
                         }
                         if (backupStatus.isNotBlank()) Text(backupStatus, color = if (backupStatus.contains("موفق")) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                     }
@@ -1908,12 +2018,12 @@ fun NaeemApp(
                         store.saveModelFor("chat", model)
                         store.saveModelFor("image", imageModel)
                         showSettings = false
-                    }) { Text("ذخیره", color = Gold) }
+                    }) { Text(appText("ذخیره", isEnglish)), color = Gold) }
                 },
                 dismissButton = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { showSettings = false; onSignOut() }) { Text("خروج از حساب", color = Color(0xFFFFA6A0)) }
-                        TextButton(onClick = { showSettings = false }) { Text("انصراف") }
+                        TextButton(onClick = { showSettings = false; onSignOut() }) { Text(appText("خروج از حساب", isEnglish)), color = Color(0xFFFFA6A0)) }
+                        TextButton(onClick = { showSettings = false }) { Text(appText("انصراف", isEnglish))) }
                     }
                 }
             )
@@ -2207,7 +2317,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
             Card(Modifier.align(Alignment.Center).fillMaxWidth().widthIn(max = 480.dp).padding(horizontal = 18.dp).heightIn(max = 560.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = SupraGlass.Glass), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF66758D).copy(alpha = 0.65f))) {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("آموزش سریع برنامه", color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
+                        Text(appText("آموزش سریع برنامه", isEnglish)), color = Color(0xFFDCE3ED), fontWeight = FontWeight.Bold)
                         Text(listOf("مرحله یک از چهار", "مرحله دو از چهار", "مرحله سه از چهار", "مرحله چهار از چهار")[step.coerceIn(0, 3)], color = Color(0xFF9EACC0), style = MaterialTheme.typography.labelMedium)
                     }
                     LinearProgressIndicator(progress = { (step + 1).toFloat() / guidedTourItems.size }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Color(0xFF9CB9F4), trackColor = Color(0xFF303847))
@@ -2215,7 +2325,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, onPrevious: () -> U
                     Text(item.title, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(item.description, color = Color(0xFFB8C2CE), style = MaterialTheme.typography.bodySmall, lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.35)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        if (step > 0) OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f)) { Text("قبلی") }
+                        if (step > 0) OutlinedButton(onClick = onPrevious, modifier = Modifier.weight(1f)) { Text(appText("قبلی", isEnglish))) }
                         Button(onClick = onNext, modifier = Modifier.weight(1.5f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE3ED), contentColor = Color(0xFF111722)), shape = RoundedCornerShape(14.dp)) {
                             Text(if (step == guidedTourItems.lastIndex) "پایان و ورود" else "بعدی")
                         }
