@@ -569,7 +569,22 @@ private val englishUiText = mapOf(
     "خروجی گرفتن" to "Export backup",
     "بازیابی" to "Restore backup",
     "خروج از حساب" to "Sign out",
-    "آموزش سریع برنامه" to "Quick app tour"
+    "آموزش سریع برنامه" to "Quick app tour",
+    "✦ تصویر روشن" to "✦ Image mode on",
+    "✦ ساخت تصویر" to "✦ Create image",
+    "جست‌وجو روشن" to "Search on",
+    "⌕ جست‌وجوی عمیق" to "⌕ Deep search",
+    "توضیح تصویری که می‌خواهی بسازم…" to "Describe the image you want to create…",
+    "حالت مکالمه صوتی فعاله…" to "Voice conversation is active…",
+    "پیامت رو بنویس…" to "Write your message…",
+    "دوست من" to "there",
+    "در حال صحبت با تو" to "Speaking with you",
+    "در حال شنیدن صدای تو" to "Listening to you",
+    "در حال جست‌وجو و بررسی منابع…" to "Searching and reviewing sources…",
+    "در حال ساخت تصویر…" to "Creating your image…",
+    "دارم فکر می‌کنم…" to "Thinking…",
+    "حالت مکالمه فعال است" to "Voice conversation is active",
+    "شما" to "You"
 )
 private fun appText(value: String, english: Boolean): String {
     if (!english) return value
@@ -1247,7 +1262,7 @@ fun NaeemApp(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
                             ) {
-                                Text(if (imageMode) "✦ تصویر روشن" else "✦ ساخت تصویر", color = if (imageMode) Color(0xFFD4D9E0) else Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                                Text(appText(if (imageMode) "✦ تصویر روشن" else "✦ ساخت تصویر", isEnglish), color = if (imageMode) Color(0xFFD4D9E0) else Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
                             TextButton(
                                 onClick = { searchMode = !searchMode },
@@ -1255,7 +1270,7 @@ fun NaeemApp(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
                             ) {
-                                Text(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
+                                Text(appText(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", isEnglish), color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
                             }
                             TextButton(
                                 onClick = { showVideoDevelopment = true },
@@ -1288,7 +1303,7 @@ fun NaeemApp(
                             OutlinedTextField(
                                 value = prompt, onValueChange = { prompt = it },
                                 modifier = Modifier.weight(1f).onGloballyPositioned { inputTargetBounds = it.boundsInWindow() },
-                                placeholder = { Text(if (imageMode) "توضیح تصویری که می‌خواهی بسازم…" else if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", color = Muted) },
+                                placeholder = { Text(appText(if (imageMode) "توضیح تصویری که می‌خواهی بسازم…" else if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", isEnglish), color = Muted) },
                                 maxLines = 4, shape = RoundedCornerShape(22.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
@@ -1546,6 +1561,7 @@ fun NaeemApp(
                 Box(Modifier.fillMaxSize()) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
                     ModuleScreenBackdrop("hub") { FeatureHub(
+                        isEnglish = isEnglish,
                         onClose = { showHub = false },
                         onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
                         onHealth = { showHub = false; showHealth = true },
