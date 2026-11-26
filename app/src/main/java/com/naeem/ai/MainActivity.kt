@@ -779,11 +779,10 @@ fun NaeemApp(
     val client = remember { ChatClient() }
     suspend fun sendChat(text: String, image: String? = null): String {
         val gateway = BuildConfig.CHAT_GATEWAY_URL.trim()
-        return if (gateway.isNotBlank()) {
-            client.sendViaGateway(gateway, chatAccessToken, model, text, image)
-        } else {
-            client.send(baseUrl, model, apiKey, text, image)
+        check(gateway.isNotBlank()) {
+            "درگاه امن EMA هنوز برای این نسخه فعال نشده است. تا زمان اتصال سرور، ارسال مستقیم کلید API از برنامه غیرفعال است."
         }
+        return client.sendViaGateway(gateway, chatAccessToken, model, text, image)
     }
     val imageClient = remember { ImageGenerationClient() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
