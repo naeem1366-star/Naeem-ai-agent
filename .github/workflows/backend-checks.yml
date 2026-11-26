@@ -30,6 +30,8 @@ jobs:
         run: npm install
       - name: TypeScript typecheck
         run: npm run typecheck
+      - name: Validate admin console HTML and JavaScript
+        run: python scripts/validate_admin_html.py
 
   d1-migrations:
     runs-on: ubuntu-latest
