@@ -5,7 +5,7 @@ plugins {
     id 'com.google.devtools.ksp'
 }
 
-def chatGatewayUrl = providers.gradleProperty('CHAT_GATEWAY_URL').orElse(providers.environmentVariable('CHAT_GATEWAY_URL')).getOrElse('https://ifloyzpvgjgmneqgcggu.supabase.co/functions/v1/ema-api')
+def chatGatewayUrl = providers.gradleProperty('CHAT_GATEWAY_URL').orElse(providers.environmentVariable('CHAT_GATEWAY_URL')).getOrElse('https://ifloyzpvgjgmneqgcggu.supabase.co/functions/v1/smooth-service')
 
 android {
     namespace 'com.naeem.ai'
