@@ -115,7 +115,7 @@ fun VideoCreatorDashboard(onClose: () -> Unit, initialPrompt: String = "") {
         }
         if (prompt.isNotBlank()) {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Ima video prompt", prompt.trim()))
+            clipboard.setPrimaryClip(ClipData.newPlainText("EMA ASI PLATFORM video prompt", prompt.trim()))
         }
         runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PIXVERSE_URL)))
