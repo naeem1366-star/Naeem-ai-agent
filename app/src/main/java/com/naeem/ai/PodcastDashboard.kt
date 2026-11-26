@@ -55,7 +55,7 @@ private val freePodcastFeeds = listOf(
 private class PodcastFeedReader {
     private val http=OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(25,TimeUnit.SECONDS).build()
     suspend fun load(feed:PodcastFeed):List<PodcastEpisode> = withContext(Dispatchers.IO) {
-        val request=Request.Builder().url(feed.url).header("User-Agent","Ima-Podcast/1.0").build()
+        val request=Request.Builder().url(feed.url).header("User-Agent","EMA-ASI-PLATFORM-Podcast/1.0").build()
         http.newCall(request).execute().use { response ->
             if(!response.isSuccessful) error("فید پاسخ نداد: HTTP \${response.code}")
             val xml=response.body?.string().orEmpty()
