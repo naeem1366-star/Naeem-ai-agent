@@ -137,6 +137,7 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
 }
 @Composable
 fun FeatureHub(
+    isEnglish: Boolean = false,
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onPodcast:()->Unit,onVideo:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onJournal:()->Unit,onTrail:()->Unit,onSocial:()->Unit,
