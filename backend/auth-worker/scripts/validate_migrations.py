@@ -18,6 +18,8 @@ assert "subscription_credit_percent" in columns("billing_settings")
 assert "provider_replenishment_percent" not in columns("billing_settings")
 assert "subscription_credit_grant_id" in columns("provider_replenishment_allocations")
 assert "ai_credit_percent" in columns("subscription_plans")
+assert "billing_unit" in columns("pricing_rules")
+assert "unit_price_usd" in columns("pricing_rules")
 
 tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 required = {
