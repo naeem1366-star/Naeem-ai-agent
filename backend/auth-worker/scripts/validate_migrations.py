@@ -114,3 +114,47 @@ allocation_row = db.execute("SELECT allocated_toman, subscription_credit_grant_i
 assert allocation_row == (credit, grant)
 print("OK one-time 50% subscription credit + provider allocation settlement")
 
+
+
+# Exercise prepaid AI reservation, partial refund, and insufficient-balance protection.
+reserve_amount = 10_000
+db.execute(
+    "UPDATE users SET wallet_balance_toman = wallet_balance_toman - ? WHERE id='test-user' AND wallet_balance_toman >= ?",
+    (reserve_amount, reserve_amount),
+)
+assert db.execute("SELECT changes()").fetchone()[0] == 1
+db.execute(
+    "INSERT INTO wallet_transactions (id,user_id,type,amount_toman,balance_after_toman,description,reference,created_at) SELECT 'chat-reserve-tx',id,'ai_reserve',-?,wallet_balance_toman,'reserve','ai-reserve:test-chat',? FROM users WHERE id='test-user' AND changes()=1",
+    (reserve_amount, now),
+)
+db.execute(
+    "INSERT INTO usage_reservations (id,user_id,feature,model,reserved_toman,settled_toman,status,created_at,updated_at) SELECT 'test-chat','test-user','chat','gpt-4o-mini',?,0,'reserved',?,? WHERE EXISTS (SELECT 1 FROM wallet_transactions WHERE reference='ai-reserve:test-chat')",
+    (reserve_amount, now, now),
+)
+refund_amount = 4_000
+db.execute(
+    "UPDATE users SET wallet_balance_toman = wallet_balance_toman + ? WHERE id='test-user' AND EXISTS (SELECT 1 FROM usage_reservations WHERE id='test-chat' AND status='reserved')",
+    (refund_amount,),
+)
+db.execute(
+    "INSERT INTO wallet_transactions (id,user_id,type,amount_toman,balance_after_toman,description,reference,created_at) SELECT 'chat-settle-tx',id,'ai_settlement',?,wallet_balance_toman,'settlement','ai-settlement:test-chat',? FROM users WHERE id='test-user' AND changes()=1",
+    (refund_amount, now),
+)
+db.execute(
+    "UPDATE usage_reservations SET status='settled',settled_toman=?,updated_at=? WHERE id='test-chat' AND status='reserved' AND EXISTS (SELECT 1 FROM wallet_transactions WHERE reference='ai-settlement:test-chat')",
+    (reserve_amount-refund_amount, now),
+)
+db.execute(
+    "INSERT INTO provider_cost_ledger (id,usage_reservation_id,user_id,provider,provider_cost_microusd,exchange_rate_toman,markup_bps,user_charge_toman,created_at) VALUES ('test-cost','test-chat','test-user','netarz',100000,50000,3000,6000,?)",
+    (now,),
+)
+assert db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0] == credit-reserve_amount+refund_amount
+assert db.execute("SELECT status,settled_toman FROM usage_reservations WHERE id='test-chat'").fetchone() == ("settled", 6000)
+
+# Insufficient credit must never drive the balance negative.
+db.execute(
+    "UPDATE users SET wallet_balance_toman = wallet_balance_toman - 999999999 WHERE id='test-user' AND wallet_balance_toman >= 999999999"
+)
+assert db.execute("SELECT changes()").fetchone()[0] == 0
+assert db.execute("SELECT wallet_balance_toman FROM users WHERE id='test-user'").fetchone()[0] == credit-reserve_amount+refund_amount
+print("OK prepaid AI reserve, settlement refund, and insufficient-balance protection")
