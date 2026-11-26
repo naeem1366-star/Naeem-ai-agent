@@ -123,6 +123,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
                         Text((if(order.purpose=="subscription") if(isEnglish) "Subscription" else "اشتراک" else if(isEnglish) "AI wallet top-up" else "شارژ کیف پول")+" · "+when(order.status) {
                             "paid" -> if(isEnglish) "Paid" else "پرداخت تأیید شد"
                             "rejected" -> if(isEnglish) "Rejected" else "رد شد"
+                            "receipt_submitted" -> if(isEnglish) "Receipt submitted · awaiting review" else "رسید ثبت شده · در انتظار بررسی مدیر"
                             else -> if(isEnglish) "Pending" else "در انتظار بررسی"
                         },color=accent)
                         if(order.rejectionReason.isNotBlank()) Text(order.rejectionReason,color=Color(0xFFFFB2A8))
@@ -136,7 +137,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
                                     finally { workingOrder="" }
                                 }
                             },enabled=workingOrder.isEmpty() && receiptDrafts[order.id].orEmpty().trim().length>=3) { Text(if(isEnglish) "Submit receipt" else "ثبت رسید") }
-                        } else if(order.status=="pending" && order.receiptSubmitted) Text(if(isEnglish) "Receipt submitted · awaiting review" else "رسید ثبت شده · در انتظار بررسی مدیر",color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
+                        } else if(order.status=="receipt_submitted" || (order.status=="pending" && order.receiptSubmitted)) Text(if(isEnglish) "Receipt submitted · awaiting review" else "رسید ثبت شده · در انتظار بررسی مدیر",color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
                     }
                 }
             }
