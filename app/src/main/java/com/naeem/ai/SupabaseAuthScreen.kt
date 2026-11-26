@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSession) -> Unit) {
+fun SupabaseAuthScreen(auth: SupabaseAuthClient, isEnglish: Boolean = false, onAuthenticated: (SupabaseSession) -> Unit) {
     var mode by remember { mutableStateOf("login") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -52,9 +52,9 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
             Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما",
                 modifier = Modifier.size(104.dp), contentScale = ContentScale.Fit)
             Text("EMA ASI PLATFORM", color = Color(0xFFB9C5D5), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-            Text(when (mode) { "signup" -> "ساخت حساب کاربری"; "recovery" -> "بازیابی رمز عبور"; else -> "ورود به حساب" },
+            Text(if (isEnglish) when (mode) { "signup" -> "Create account"; "recovery" -> "Reset password"; else -> "Sign in" } else when (mode) { "signup" -> "ساخت حساب کاربری"; "recovery" -> "بازیابی رمز عبور"; else -> "ورود به حساب" },
                 color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("با ایمیل و رمز عبور وارد فضای شخصی خودت شو", color = Color(0xFFB9C5D5), fontSize = 13.sp)
+            Text(if (isEnglish) "Sign in to your personal space with your email and password" else "با ایمیل و رمز عبور وارد فضای شخصی خودت شو", color = Color(0xFFB9C5D5), fontSize = 13.sp)
             Spacer(Modifier.height(8.dp))
             val authFieldColors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White, unfocusedTextColor = Color(0xFFF1F4F8),
@@ -65,30 +65,30 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
                 cursorColor = Color(0xFFB7D2FF)
             )
             OutlinedTextField(value = email, onValueChange = { email = it; message = "" }, modifier = Modifier.fillMaxWidth(),
-                singleLine = true, label = { Text("ایمیل") }, placeholder = { Text("name@example.com") },
+                singleLine = true, label = { Text(if (isEnglish) "Email" else "ایمیل") }, placeholder = { Text("name@example.com") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(16.dp), colors = authFieldColors)
             if (!isRecovery) OutlinedTextField(value = password, onValueChange = { password = it; message = "" },
-                modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("رمز عبور") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(if (isEnglish) "Password" else "رمز عبور") },
                 visualTransformation = PasswordVisualTransformation(), shape = RoundedCornerShape(16.dp), colors = authFieldColors)
             if (isSignup) OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it; message = "" },
-                modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("تکرار رمز عبور") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(if (isEnglish) "Confirm password" else "تکرار رمز عبور") },
                 visualTransformation = PasswordVisualTransformation(), shape = RoundedCornerShape(16.dp), colors = authFieldColors)
             if (message.isNotBlank()) Text(message, color = if (isError) Color(0xFFFF9C9C) else Color(0xFF9ED8B0), fontSize = 13.sp)
             Button(onClick = {
                 if (busy) return@Button
                 val cleanEmail = email.trim()
                 when {
-                    !android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches() -> { message = "ایمیل معتبر وارد کن."; isError = true }
+                    !android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches() -> { message = if (isEnglish) "Enter a valid email address." else "ایمیل معتبر وارد کن."; isError = true }
                     isRecovery -> {
                         busy = true
                         scope.launch {
-                            try { auth.sendPasswordReset(cleanEmail); message = "اگر این ایمیل ثبت شده باشد، لینک بازیابی برایش ارسال می‌شود."; isError = false }
-                            catch (e: Exception) { message = e.message ?: "ارسال لینک بازیابی انجام نشد."; isError = true }
+                            try { auth.sendPasswordReset(cleanEmail); message = if (isEnglish) "If this email is registered, a password reset link will be sent." else "اگر این ایمیل ثبت شده باشد، لینک بازیابی برایش ارسال می‌شود."; isError = false }
+                            catch (e: Exception) { message = e.message ?: if (isEnglish) "Could not send the reset link." else "ارسال لینک بازیابی انجام نشد."; isError = true }
                             finally { busy = false }
                         }
                     }
-                    isSignup && password.length < 8 -> { message = "رمز عبور باید حداقل ۸ نویسه داشته باشد."; isError = true }
-                    isSignup && password != confirmPassword -> { message = "تکرار رمز عبور با رمز اصلی یکسان نیست."; isError = true }
+                    isSignup && password.length < 8 -> { message = if (isEnglish) "Password must be at least 8 characters." else "رمز عبور باید حداقل ۸ نویسه داشته باشد."; isError = true }
+                    isSignup && password != confirmPassword -> { message = if (isEnglish) "Passwords do not match." else "تکرار رمز عبور با رمز اصلی یکسان نیست."; isError = true }
                     else -> {
                         busy = true
                         scope.launch {
@@ -97,9 +97,9 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
                                 if (result.session != null) onAuthenticated(result.session)
                                 else {
                                     mode = "login"; password = ""; confirmPassword = ""
-                                    message = "حساب ساخته شد. ایمیلت را تأیید کن و بعد وارد شو."; isError = false
+                                    message = if (isEnglish) "Account created. Verify your email, then sign in." else "حساب ساخته شد. ایمیلت را تأیید کن و بعد وارد شو."; isError = false
                                 }
-                            } catch (e: Exception) { message = e.message ?: "ارتباط با سرویس ورود برقرار نشد."; isError = true }
+                            } catch (e: Exception) { message = e.message ?: if (isEnglish) "Could not connect to the sign-in service." else "ارتباط با سرویس ورود برقرار نشد."; isError = true }
                             finally { busy = false }
                         }
                     }
@@ -107,14 +107,14 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
             }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SupraGlass.Ice, contentColor = Color(0xFF071426))) {
                 if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF101B2B), strokeWidth = 2.dp)
-                else Text(when (mode) { "signup" -> "ساخت حساب"; "recovery" -> "ارسال لینک بازیابی"; else -> "ورود" }, fontWeight = FontWeight.Bold)
+                else Text(if (isEnglish) when (mode) { "signup" -> "Create account"; "recovery" -> "Send reset link"; else -> "Sign in" } else when (mode) { "signup" -> "ساخت حساب"; "recovery" -> "ارسال لینک بازیابی"; else -> "ورود" }, fontWeight = FontWeight.Bold)
             }
             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                if (mode != "login") TextButton(onClick = { mode = "login"; message = ""; password = ""; confirmPassword = "" }) { Text("بازگشت به ورود") }
+                if (mode != "login") TextButton(onClick = { mode = "login"; message = ""; password = ""; confirmPassword = "" }) { Text(if (isEnglish) "Back to sign in" else "بازگشت به ورود") }
                 else {
-                    TextButton(onClick = { mode = "signup"; message = "" }) { Text("ساخت حساب جدید") }
+                    TextButton(onClick = { mode = "signup"; message = "" }) { Text(if (isEnglish) "Create account" else "ساخت حساب جدید") }
                     Text("•", color = Color(0xFF9EADC2))
-                    TextButton(onClick = { mode = "recovery"; message = "" }) { Text("فراموشی رمز") }
+                    TextButton(onClick = { mode = "recovery"; message = "" }) { Text(if (isEnglish) "Forgot password?" else "فراموشی رمز") }
                 }
             }
         }
