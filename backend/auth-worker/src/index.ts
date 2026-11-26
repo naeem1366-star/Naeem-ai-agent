@@ -664,7 +664,16 @@ async function adminOverview(request: Request, env: Env): Promise<Response> {
   const active = await env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE status = 'active'").first<any>();
   const wallet = await env.DB.prepare("SELECT COALESCE(SUM(wallet_balance_toman),0) AS total FROM users").first<any>();
   const topups = await env.DB.prepare("SELECT COALESCE(SUM(amount_toman),0) AS total FROM wallet_transactions WHERE type = 'topup'").first<any>();
-  const usage = await env.DB.prepare("SELECT COUNT(*) AS requests, COALESCE(SUM(charge_toman),0) AS charged, COALESCE(SUM(provider_cost_usd),0) AS provider_cost_usd FROM usage_events").first<any>();
+  const [usage, billing, subscriptionRevenue, activeSubscriptions] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) AS requests, COALESCE(SUM(charge_toman),0) AS charged, COALESCE(SUM(provider_cost_usd),0) AS provider_cost_usd FROM usage_events").first<any>(),
+    env.DB.prepare("SELECT usd_to_toman FROM billing_settings WHERE id = 1").first<any>(),
+    env.DB.prepare("SELECT COALESCE(SUM(amount_toman),0) AS total FROM payment_orders WHERE purpose = 'subscription' AND status = 'paid'").first<any>(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM subscriptions WHERE status = 'active' AND expires_at > ?").bind(Math.floor(Date.now()/1000)).first<any>()
+  ]);
+  const usdToToman = Math.max(0, Number(billing?.usd_to_toman || 0));
+  const providerCostToman = Math.round(Number(usage?.provider_cost_usd || 0) * usdToToman);
+  const aiGrossMarginToman = Math.round(Number(usage?.charged || 0) - providerCostToman);
+  const collectedToman = Math.round(Number(topups?.total || 0) + Number(subscriptionRevenue?.total || 0));
   let provider: any = null;
   if (env.GISOO_MANAGEMENT_KEY) {
     try {
@@ -672,7 +681,24 @@ async function adminOverview(request: Request, env: Env): Promise<Response> {
       provider = { status: account.status, balanceUsd: account.balance?.usd_display || account.balance?.usd || null, spentUsd: account.totals?.spent_usd || null };
     } catch { provider = { status: "unavailable" }; }
   }
-  return json({ users: users?.count || 0, activeUsers: active?.count || 0, walletLiabilityToman: wallet?.total || 0, topupsToman: topups?.total || 0, usage: { requests: usage?.requests || 0, chargedToman: usage?.charged || 0, providerCostUsd: usage?.provider_cost_usd || 0 }, provider });
+  return json({
+    users: users?.count || 0,
+    activeUsers: active?.count || 0,
+    activeSubscriptions: activeSubscriptions?.count || 0,
+    walletLiabilityToman: wallet?.total || 0,
+    topupsToman: topups?.total || 0,
+    subscriptionRevenueToman: subscriptionRevenue?.total || 0,
+    collectedToman,
+    usdToToman,
+    usage: {
+      requests: usage?.requests || 0,
+      chargedToman: usage?.charged || 0,
+      providerCostUsd: usage?.provider_cost_usd || 0,
+      providerCostToman,
+      estimatedGrossMarginToman: aiGrossMarginToman
+    },
+    provider
+  });
 }
 
 async function adminUsers(request: Request, env: Env): Promise<Response> {
