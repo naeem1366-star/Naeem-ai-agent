@@ -75,9 +75,6 @@ async function authenticatedUser(request: Request, env: Env): Promise<AuthUser |
   await env.DB.prepare("INSERT INTO users (id, phone, email, created_at, last_login_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET email = excluded.email, last_login_at = excluded.last_login_at")
     .bind(identity.id, internalMarker, identity.email, now, now).run();
   const account = await env.DB.prepare("SELECT id, phone, email, status FROM users WHERE id = ?").bind(identity.id).first<AuthUser>();
-  if (account?.status === "active" && env.GISOO_MANAGEMENT_KEY && env.KEY_ENCRYPTION_SECRET) {
-    await provisionProviderKey(env, identity.id, identity.email).catch(() => undefined);
-  }
   return account;
 }
 
@@ -150,20 +147,15 @@ function decodeBase64Url(value: string): Uint8Array {
   return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 
-async function decryptProviderSecret(cipher: string, iv: string, master: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(master));
-  const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["decrypt"]);
-  const clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv: decodeBase64Url(iv) }, key, decodeBase64Url(cipher));
-  return new TextDecoder().decode(clear);
-}
 
 async function chatCompletion(request: Request, env: Env): Promise<Response> {
   const user = await authenticatedUser(request, env);
   if (!user || user.status !== "active") return json({ error: { code: "UNAUTHORIZED", message: "برای استفاده از چت ابتدا وارد حساب شو." } }, 401);
 
-  const contentLength = Number(request.headers.get("Content-Length") || "0");
-  if (contentLength > 5_000_000) return json({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
-  const body = await request.json().catch(() => null) as any;
+  const rawBody = await request.text();
+  if (encoder.encode(rawBody).length > 5_000_000) return json({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
+  let body: any = null;
+  try { body = JSON.parse(rawBody); } catch { return json({ error: { code: "INVALID_JSON", message: "ساختار JSON درخواست معتبر نیست." } }, 400); }
   if (!body || !Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 80) {
     return json({ error: { code: "INVALID_REQUEST", message: "ساختار درخواست گفتگو معتبر نیست." } }, 400);
   }
