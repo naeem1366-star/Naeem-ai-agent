@@ -41,10 +41,10 @@ fun SupabaseAuthScreen(auth: SupabaseAuthClient, onAuthenticated: (SupabaseSessi
         Image(
             painter = painterResource(R.drawable.bg_mountain),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f }.blur(10.dp),
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.58f }.blur(5.dp),
             contentScale = ContentScale.Crop
         )
-        Box(Modifier.fillMaxSize().background(Color(0x99050B16)))
+        Box(Modifier.fillMaxSize().background(Color(0x77050B16)))
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             SupraGlassPanel(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp), radius = 28.dp) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 22.dp, vertical = 28.dp),
