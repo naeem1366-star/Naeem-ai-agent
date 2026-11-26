@@ -969,6 +969,9 @@ fun NaeemApp(
                             }
                         }
                         HorizontalDivider(color = Color(0x334F6B8C), modifier = Modifier.padding(vertical = 10.dp))
+                        NavigationDrawerItem(label = { Text("فضاهای من و ابزارها") }, selected = false,
+                            icon = { Icon(Icons.Default.Apps, contentDescription = null) },
+                            onClick = { scope.launch { drawerState.close(); showHub = true } })
                         NavigationDrawerItem(label = { Text("اتصال به کامپیوتر") }, selected = false,
                             icon = { Icon(Icons.Default.Computer, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showPcControl = true } })
@@ -1018,6 +1021,9 @@ fun NaeemApp(
                         }
                     },
                     actions = {
+                        IconButton(onClick = { showHub = true }) {
+                            Icon(Icons.Default.Apps, contentDescription = "فضاهای من و ابزارها", tint = Gold)
+                        }
                         IconButton(onClick = {
                             conversationStore.save(activeConversationId, messages)
                             activeConversationId = conversationStore.create()
