@@ -1005,7 +1005,7 @@ fun NaeemApp(
                             })
                         }
                         Spacer(Modifier.weight(1f))
-                        Text("IMA • Naeem AI Studio", color = Color(0xFF7186A3),
+                        Text("EMA ASI PLATFORM", color = Color(0xFF7186A3),
                             style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(12.dp))
                     }
                 }
@@ -1347,7 +1347,7 @@ fun NaeemApp(
                         Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(72.dp))
                         Text("Naeem AI Studio", color = Color.White, fontWeight = FontWeight.Bold)
                         Text("ایما با طراحی و توسعه نعیم دهقانی ساخته شده؛ یک دستیار هوشمند برای گفت‌وگو، خلاقیت، پژوهش و مدیریت فضاهای شخصی.", color = Muted, textAlign = TextAlign.Center)
-                        Text("IMA • نسخه 2.0", color = Color(0xFF9EBBE5), style = MaterialTheme.typography.labelMedium)
+                        Text("EMA ASI PLATFORM", color = Color(0xFF9EBBE5), style = MaterialTheme.typography.labelMedium)
                     }
                 },
                 confirmButton = { TextButton(onClick = { showCreatorInfo = false }) { Text("بستن", color = Gold) } })
@@ -1888,7 +1888,7 @@ fun NaeemApp(
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                onClick = { backupExportLauncher.launch("Ima-Backup.json") },
+                                onClick = { backupExportLauncher.launch("EMA-Backup.json") },
                                 enabled = backupPassphrase.length >= 8,
                                 modifier = Modifier.weight(1f)
                             ) { Text("خروجی گرفتن", color = Gold) }
@@ -1928,7 +1928,7 @@ private fun ThinkingOrb(
     active: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
-    val motion = rememberInfiniteTransition(label = "ima-glass-orb")
+    val motion = rememberInfiniteTransition(label = "ema-glass-orb")
     val rotation by motion.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
