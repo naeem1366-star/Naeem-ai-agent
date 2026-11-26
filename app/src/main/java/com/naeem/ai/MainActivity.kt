@@ -330,7 +330,7 @@ private fun UserProfileSetup(isEnglish: Boolean = false, onSave: (String, String
     var name by remember { mutableStateOf("") }
     var interests by remember { mutableStateOf("") }
     var about by remember { mutableStateOf("") }
-    var style by remember { mutableStateOf("صمیمی و طبیعی") }
+    var style by remember { mutableStateOf(if (isEnglish) "Friendly & natural" else "صمیمی و طبیعی") }
     val silver = Color(0xFFE0E5EC)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
@@ -417,15 +417,17 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                         fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(18.dp))
                     Text(
-                        "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nلازم نیست همیشه دستور مشخصی داشته باشی. می‌توانی با ایما صحبت کنی، از اتفاقات روزمره، ایده‌ها و دغدغه‌هایت بگویی. ایما با فعال‌کردن قابلیت شنیدن، صحبت‌هایت را دریافت می‌کند و با اجازه تو، نکات مهم را به خاطر می‌سپارد.",
-                        color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = TextAlign.End)
+                        if (isEnglish) "EMA is inspired by understanding intent beyond literal words. You do not always need a precise command. Talk about your day, ideas, and concerns. With listening enabled, EMA can hear you and, with your permission, remember useful details."
+                        else "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nلازم نیست همیشه دستور مشخصی داشته باشی. می‌توانی با ایما صحبت کنی، از اتفاقات روزمره، ایده‌ها و دغدغه‌هایت بگویی. ایما با فعال‌کردن قابلیت شنیدن، صحبت‌هایت را دریافت می‌کند و با اجازه تو، نکات مهم را به خاطر می‌سپارد.",
+                        color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
                 } else {
                     Text(appText("ایما چه کارهایی انجام می‌دهد؟", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "ایما فقط یک پنجره‌ی گفتگو نیست؛ موضوعات را می‌شناسد و آن‌ها را به فضای مناسب می‌برد. می‌توانی برای مدیریت زندگی روزمره، برنامه‌ریزی کارها و هدف‌ها، یادآوری‌ها و همراهی پروژه‌ها از آن کمک بگیری.\n\nدر فضاهای تخصصی، بخش‌هایی برای سفر و طبیعت‌گردی، ورزش، سلامت و تغذیه، امور مالی، روزنگار و حافظه در نظر گرفته شده است.\n\nبرای جست‌وجو و پژوهش، اتاق فکر، اخبار و کشف محتوا؛ و برای خلاقیت، ساخت تصویر و ویدیو، تدوین، موسیقی و پادکست هم ابزارهایی در اختیار داری. اتصال به کامپیوتر و بخش‌های دیگر نیز از فضاهای ایما قابل دسترسی‌اند. بعضی قابلیت‌ها به اتصال سرویس یا تکمیل توسعه نیاز دارند.",
-                        color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp, textAlign = TextAlign.End)
+                        if (isEnglish) "EMA is more than a chat window. It organizes tasks into dedicated spaces for everyday planning, goals, reminders, and projects.\n\nExplore areas for travel, outdoor activities, sports, health, nutrition, finance, journaling, and memory.\n\nYou can also use research, news discovery, image and video creation, editing, music, podcasts, and PC connectivity. Some features may require an external service or further development."
+                        else "ایما فقط یک پنجره‌ی گفتگو نیست؛ موضوعات را می‌شناسد و آن‌ها را به فضای مناسب می‌برد. می‌توانی برای مدیریت زندگی روزمره، برنامه‌ریزی کارها و هدف‌ها، یادآوری‌ها و همراهی پروژه‌ها از آن کمک بگیری.\n\nدر فضاهای تخصصی، بخش‌هایی برای سفر و طبیعت‌گردی، ورزش، سلامت و تغذیه، امور مالی، روزنگار و حافظه در نظر گرفته شده است.\n\nبرای جست‌وجو و پژوهش، اتاق فکر، اخبار و کشف محتوا؛ و برای خلاقیت، ساخت تصویر و ویدیو، تدوین، موسیقی و پادکست هم ابزارهایی در اختیار داری. اتصال به کامپیوتر و بخش‌های دیگر نیز از فضاهای ایما قابل دسترسی‌اند. بعضی قابلیت‌ها به اتصال سرویس یا تکمیل توسعه نیاز دارند.",
+                        color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp, textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
                     Spacer(Modifier.height(20.dp))
                     Text(appText("تو زندگی کن؛ ایما حواسش هست.", isEnglish), color = silver, style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
