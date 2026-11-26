@@ -522,6 +522,31 @@ async function adminReviewPayment(request: Request, env: Env, orderId: string): 
   return json({ success: true, status: "paid", creditedToman: credit, balanceToman: balance?.wallet_balance_toman || 0, subscription: createdSubscription });
 }
 
+async function adminProviderAllocations(request: Request, env: Env): Promise<Response> {
+  if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
+  const status = new URL(request.url).searchParams.get("status") || "reserved";
+  if (!["reserved", "transferred", "cancelled", "all"].includes(status)) return json({ error: "INVALID_STATUS" }, 400);
+  const rows = await env.DB.prepare(
+    "SELECT a.id, a.payment_order_id, a.provider, a.gross_subscription_toman, a.allocation_percent, a.allocated_toman, a.status, a.provider_topup_reference, a.transferred_at, a.created_at, u.email, p.name AS plan_name FROM provider_replenishment_allocations a JOIN payment_orders po ON po.id = a.payment_order_id JOIN users u ON u.id = po.user_id LEFT JOIN subscription_plans p ON p.id = po.subscription_plan_id WHERE (? = 'all' OR a.status = ?) ORDER BY a.created_at DESC LIMIT 200"
+  ).bind(status, status).all();
+  return json({ allocations: rows.results || [] });
+}
+
+async function adminMarkProviderTransfer(request: Request, env: Env, allocationId: string): Promise<Response> {
+  const admin = await adminUser(request, env);
+  if (!admin) return json({ error: "ADMIN_ONLY" }, 403);
+  const body = await request.json().catch(() => null) as any;
+  const reference = typeof body?.providerTopupReference === "string" ? body.providerTopupReference.trim().slice(0, 160) : "";
+  if (reference.length < 3) return json({ error: "PROVIDER_TOPUP_REFERENCE_REQUIRED" }, 400);
+  const now = Math.floor(Date.now() / 1000);
+  const result = await env.DB.batch([
+    env.DB.prepare("UPDATE provider_replenishment_allocations SET status = 'transferred', provider_topup_reference = ?, transferred_at = ?, updated_at = ? WHERE id = ? AND status = 'reserved'").bind(reference, now, now, allocationId),
+    env.DB.prepare("INSERT INTO admin_audit_logs (id, admin_user_id, action, target_user_id, details, created_at) SELECT ?, ?, 'provider_allocation_transferred', po.user_id, ?, ? FROM provider_replenishment_allocations a JOIN payment_orders po ON po.id = a.payment_order_id WHERE a.id = ? AND a.status = 'transferred' AND a.provider_topup_reference = ? AND a.transferred_at = ?").bind(crypto.randomUUID(), admin.id, JSON.stringify({ allocationId, providerTopupReference: reference }), now, allocationId, reference, now)
+  ]);
+  if ((result[0]?.meta?.changes || 0) !== 1) return json({ error: "ALLOCATION_NOT_FOUND_OR_ALREADY_PROCESSED" }, 409);
+  return json({ success: true, status: "transferred", providerTopupReference: reference });
+}
+
 async function adminBillingSettings(request: Request, env: Env): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   const [settings, plans, pricing] = await Promise.all([
@@ -727,6 +752,9 @@ export default {
       const receiptMatch = url.pathname.match(/^\/v1\/billing\/orders\/([^/]+)\/receipt$/);
       if (request.method === "POST" && receiptMatch) return withHeaders(await submitPaymentReceipt(request, env, receiptMatch[1]), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/payments") return withHeaders(await adminPayments(request, env), headers);
+      if (request.method === "GET" && url.pathname === "/v1/admin/provider-allocations") return withHeaders(await adminProviderAllocations(request, env), headers);
+      const providerTransferMatch = url.pathname.match(/^\\/v1\\/admin\\/provider-allocations\\/([^/]+)\\/transfer$/);
+      if (request.method === "POST" && providerTransferMatch) return withHeaders(await adminMarkProviderTransfer(request, env, providerTransferMatch[1]), headers);
       const paymentReviewMatch = url.pathname.match(/^\/v1\/admin\/payments\/([^/]+)\/review$/);
       if (request.method === "POST" && paymentReviewMatch) return withHeaders(await adminReviewPayment(request, env, paymentReviewMatch[1]), headers);
       if (request.method === "POST" && url.pathname === "/v1/chat/completions") return withHeaders(await chatCompletion(request, env), headers);
