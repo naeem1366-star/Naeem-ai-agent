@@ -2006,37 +2006,61 @@ private fun ThinkingOrb(
             drawCircle(cyan.copy(alpha = 0.26f), radius * 0.105f, Offset(c.x + px, c.y + py))
         }
 
-        // Deep, translucent glass core with a cool luminous inner volume.
+        // Smooth luminous glass sphere: no internal moving strands.
+        // A cool bright core fades into a deep blue edge for stronger spherical depth.
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFFECFAFF), Color(0xFF8CDDF2), Color(0xFF416D9D),
-                    Color(0xFF1C3153), Color(0xFF101B31)),
-                Offset(c.x - radius * 0.34f, c.y - radius * 0.43f), radius * 1.62f
+                colorStops = arrayOf(
+                    0.00f to Color(0xFFF5FDFF),
+                    0.20f to Color(0xFFBCEFFF),
+                    0.48f to Color(0xFF70BFE0),
+                    0.76f to Color(0xFF315783),
+                    1.00f to Color(0xFF101B32)
+                ),
+                center = Offset(c.x - radius * 0.34f, c.y - radius * 0.42f),
+                radius = radius * 1.58f
             ), radius, c
         )
+        // Soft internal light gives the glass a translucent, illuminated volume.
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0x66FFFFFF), Color(0x338DEBFF),
-                    Color(0x1495BFFF), Color.Transparent),
-                Offset(c.x - radius * 0.28f, c.y - radius * 0.36f), radius * 1.18f
+                listOf(Color(0x66DDF8FF), Color(0x2299E9FF), Color.Transparent),
+                Offset(c.x - radius * 0.18f, c.y + radius * 0.18f),
+                radius * 1.12f
             ), radius * 0.96f, c
         )
-
-        // Slow internal currents, rotating in opposite directions.
-        for (strand in 0..2) {
-            val path = Path()
-            val phase = Math.toRadians((rotation * (if (strand == 1) -0.72f else 0.48f) + strand * 118f).toDouble()).toFloat()
-            for (i in 0..180) {
-                val t = i / 180f * (Math.PI * 2.0).toFloat()
-                val x = c.x + kotlin.math.sin(t * 1.12f + phase) * radius * (0.70f - strand * 0.10f)
-                val y = c.y + kotlin.math.sin(t * 2.0f + phase * 0.72f) *
-                    kotlin.math.cos(t * 0.52f - phase) * radius * 0.66f
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-            val tint = when (strand) { 0 -> ice; 1 -> cyan; else -> lavender }
-            drawPath(path, tint.copy(alpha = 0.22f), style = Stroke(width = 5.dp.toPx()))
-            drawPath(path, tint.copy(alpha = 0.84f), style = Stroke(width = 1.55.dp.toPx()))
-        }
+        // Broad upper-left specular reflection.
+        drawOval(
+            Brush.linearGradient(
+                listOf(Color(0xBFFFFFFF), Color(0x55E8FAFF), Color(0x00E8FAFF)),
+                start = Offset(c.x - radius * 0.72f, c.y - radius * 0.82f),
+                end = Offset(c.x + radius * 0.10f, c.y - radius * 0.12f)
+            ),
+            topLeft = Offset(c.x - radius * 0.68f, c.y - radius * 0.78f),
+            size = androidx.compose.ui.geometry.Size(radius * 0.92f, radius * 0.43f)
+        )
+        // Fine curved reflections and a subtle illuminated glass rim.
+        drawArc(
+            Brush.sweepGradient(
+                listOf(Color.Transparent, Color(0xD9FFFFFF), Color(0x667DEBFF), Color.Transparent),
+                c
+            ),
+            startAngle = 202f, sweepAngle = 108f, useCenter = false,
+            topLeft = Offset(c.x - radius * 0.91f, c.y - radius * 0.91f),
+            size = androidx.compose.ui.geometry.Size(radius * 1.82f, radius * 1.82f),
+            style = Stroke(width = 2.8.dp.toPx())
+        )
+        drawArc(
+            Color(0x667BE5FF), startAngle = 22f, sweepAngle = 72f, useCenter = false,
+            topLeft = Offset(c.x - radius * 0.86f, c.y - radius * 0.86f),
+            size = androidx.compose.ui.geometry.Size(radius * 1.72f, radius * 1.72f),
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+        // Small sharp glints make the surface read as polished glass.
+        drawCircle(Color.White.copy(alpha = 0.92f), radius * 0.065f,
+            Offset(c.x - radius * 0.43f, c.y - radius * 0.57f))
+        drawCircle(Color.White.copy(alpha = 0.48f), radius * 0.026f,
+            Offset(c.x + radius * 0.49f, c.y + radius * 0.16f))
 
         // Re-draw the near halves of both orbital ribbons over the glass core.
         // The far halves remain behind it, creating a clear 3D wrap-around effect.
