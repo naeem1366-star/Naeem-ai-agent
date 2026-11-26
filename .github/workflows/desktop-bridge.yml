@@ -1,9 +1,9 @@
-name: Windows Desktop Bridge
+name: EMA ASI PLATFORM Windows Bridge
 
 on:
   workflow_dispatch:
   push:
-    branches: ["feature/pc-bridge-mvp", "feature/v2-foundation"]
+    branches: ["feature/pc-bridge-mvp", "feature/v2-foundation", "feature/ema-asi-platform"]
   pull_request:
     branches: ["feature/v2-foundation"]
 
@@ -34,15 +34,15 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: NaeemAI-DesktopBridge-Setup-alpha1
+          name: EMA-ASI-Desktop-Bridge-Setup-alpha1
           path: desktop-bridge/installer-output/NaeemAI-DesktopBridge-Setup-alpha1.exe
           if-no-files-found: error
       - name: Publish Windows installer download
         if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pc-bridge-mvp'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: desktop-bridge-alpha1
-          name: Naeem AI Desktop Bridge alpha1
+          tag_name: ema-desktop-bridge-alpha1
+          name: EMA ASI Desktop Bridge alpha1
           prerelease: true
           overwrite_files: true
           files: desktop-bridge/installer-output/NaeemAI-DesktopBridge-Setup-alpha1.exe
