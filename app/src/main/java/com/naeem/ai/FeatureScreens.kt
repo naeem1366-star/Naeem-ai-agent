@@ -339,13 +339,13 @@ fun FeatureHub(
     }
     var centerIndex by remember { mutableIntStateOf(0) }
     LaunchedEffect(query, filtered.size) { centerIndex = 0 }
-    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides (if (isEnglish) androidx.compose.ui.unit.LayoutDirection.Ltr else androidx.compose.ui.unit.LayoutDirection.Rtl)) {
     Column(Modifier.fillMaxSize().background(Color.Transparent).padding(horizontal=18.dp, vertical=14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f), horizontalAlignment=Alignment.End){
+            Column(Modifier.weight(1f), horizontalAlignment=if (isEnglish) Alignment.Start else Alignment.End){
                 Text("EMA ASI PLATFORM  /  SPACES",color=gold.copy(alpha=.82f),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.Bold)
                 Text(hubText("فضاهای من", "My spaces"),color=Color.White,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                Text(hubText("ابزارها و فضاهای ایما را انتخاب کن.", "Choose an EMA space or tool."),color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                Text(hubText("ابزارها و فضاهای ایما را انتخاب کن.", "Choose an EMA space or tool."),color=Color(0xFFAAB2BD),style=MaterialTheme.typography.bodySmall,textAlign=if(isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End)
             }
             IconButton(onClick={showFeatureMap=true}){Icon(Icons.Default.AccountTree,null,tint=gold)}
             IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=gold)}
@@ -353,9 +353,9 @@ fun FeatureHub(
         Surface(modifier=Modifier.fillMaxWidth(),color=SupraGlass.Glass,shape=RoundedCornerShape(18.dp),
             border=androidx.compose.foundation.BorderStroke(1.dp,SupraGlass.Edge)){
             Row(Modifier.padding(13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(11.dp)){
-                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp),horizontalAlignment=Alignment.End){
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp),horizontalAlignment=if(isEnglish) Alignment.Start else Alignment.End){
                     Text(hubText("مغز هوشمند ایما", "EMA intelligent core"),color=Color(0xFFE0E6EE),fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
-                    Text(hubText("وقتی گفتگو یا میکروفون را فعال می‌کنی، ایما موضوع را تشخیص می‌دهد و اطلاعات را به فضای مرتبط هدایت می‌کند؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", "When you chat or use the microphone, EMA identifies the topic and routes information to the relevant space. Important changes are made only with your confirmation."),color=Color(0xFFADB7C4),style=MaterialTheme.typography.bodySmall,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                    Text(hubText("وقتی گفتگو یا میکروفون را فعال می‌کنی، ایما موضوع را تشخیص می‌دهد و اطلاعات را به فضای مرتبط هدایت می‌کند؛ ثبت یا تغییر اطلاعات مهم با تأیید تو انجام می‌شود.", "When you chat or use the microphone, EMA identifies the topic and routes information to the relevant space. Important changes are made only with your confirmation."),color=Color(0xFFADB7C4),style=MaterialTheme.typography.bodySmall,textAlign=if(isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End)
                 }
                 Icon(Icons.Default.Hub,null,tint=Color(0xFFE0E6EE),modifier=Modifier.size(27.dp))
             }
