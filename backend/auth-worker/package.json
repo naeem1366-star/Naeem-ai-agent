@@ -6,8 +6,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create naeem-ai-auth",
-    "db:migrate:local": "wrangler d1 execute naeem-ai-auth --local --file=./schema.sql",
-    "db:migrate:remote": "wrangler d1 execute naeem-ai-auth --remote --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 migrations apply naeem-ai-auth --local",
+    "db:migrate:remote": "wrangler d1 migrations apply naeem-ai-auth --remote",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
