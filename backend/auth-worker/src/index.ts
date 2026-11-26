@@ -527,7 +527,7 @@ async function adminBillingSettings(request: Request, env: Env): Promise<Respons
   const [settings, plans, pricing] = await Promise.all([
     env.DB.prepare("SELECT * FROM billing_settings WHERE id = 1").first<any>(),
     env.DB.prepare("SELECT id, name, duration_days, price_toman, enabled, ai_credit_percent FROM subscription_plans ORDER BY duration_days").all(),
-    env.DB.prepare("SELECT id, model, feature, markup_bps, enabled, input_price_per_million_usd, output_price_per_million_usd FROM pricing_rules ORDER BY feature, model").all()
+    env.DB.prepare("SELECT id, model, feature, markup_bps, enabled, input_price_per_million_usd, output_price_per_million_usd, billing_unit, unit_price_usd FROM pricing_rules ORDER BY feature, model").all()
   ]);
   return json({ settings: settings || null, plans: plans.results || [], pricingRules: pricing.results || [] });
 }
@@ -578,18 +578,22 @@ async function adminUpdateBillingSettings(request: Request, env: Env): Promise<R
       const modelName = typeof rule?.model === "string" ? rule.model.trim().slice(0, 120) : "";
       const featureName = typeof rule?.feature === "string" ? rule.feature.trim().slice(0, 40) : "chat";
       const enabled = rule?.enabled === undefined ? 1 : (rule.enabled === true || rule.enabled === 1 ? 1 : 0);
+      const billingUnit = typeof rule?.billingUnit === "string" ? rule.billingUnit : "tokens";
+      const unitPrice = Number(rule?.unitPriceUsd ?? 0);
       if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0 || input > 100000 || output > 100000 ||
-          !modelName || !["chat", "vision", "image", "audio", "video", "music"].includes(featureName)) {
+          !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 100000 ||
+          !["tokens", "million_characters", "second", "request", "minute"].includes(billingUnit) ||
+          !modelName || !["chat", "vision", "image", "audio_tts", "audio_stt", "video", "music"].includes(featureName)) {
         return json({ error: "INVALID_MODEL_PRICING" }, 400);
       }
       if (typeof rule?.id === "string" && !rule.id.startsWith("new:")) {
         statements.push(env.DB.prepare(
-          "UPDATE pricing_rules SET input_price_per_million_usd = ?, output_price_per_million_usd = ?, enabled = ?, updated_at = ? WHERE id = ?"
-        ).bind(String(input), String(output), enabled, Math.floor(Date.now()/1000), rule.id));
+          "UPDATE pricing_rules SET input_price_per_million_usd = ?, output_price_per_million_usd = ?, enabled = ?, billing_unit = ?, unit_price_usd = ?, updated_at = ? WHERE id = ?"
+        ).bind(String(input), String(output), enabled, billingUnit, String(unitPrice), Math.floor(Date.now()/1000), rule.id));
       } else {
         statements.push(env.DB.prepare(
-          "INSERT INTO pricing_rules (id, model, feature, markup_bps, enabled, updated_at, input_price_per_million_usd, output_price_per_million_usd) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(model) DO UPDATE SET feature = excluded.feature, markup_bps = excluded.markup_bps, enabled = excluded.enabled, updated_at = excluded.updated_at, input_price_per_million_usd = excluded.input_price_per_million_usd, output_price_per_million_usd = excluded.output_price_per_million_usd"
-        ).bind(crypto.randomUUID(), modelName, featureName, markup, enabled, Math.floor(Date.now()/1000), String(input), String(output)));
+          "INSERT INTO pricing_rules (id, model, feature, markup_bps, enabled, updated_at, input_price_per_million_usd, output_price_per_million_usd, billing_unit, unit_price_usd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(model) DO UPDATE SET feature = excluded.feature, markup_bps = excluded.markup_bps, enabled = excluded.enabled, updated_at = excluded.updated_at, input_price_per_million_usd = excluded.input_price_per_million_usd, output_price_per_million_usd = excluded.output_price_per_million_usd, billing_unit = excluded.billing_unit, unit_price_usd = excluded.unit_price_usd"
+        ).bind(crypto.randomUUID(), modelName, featureName, markup, enabled, Math.floor(Date.now()/1000), String(input), String(output), billingUnit, String(unitPrice)));
       }
     }
   }
