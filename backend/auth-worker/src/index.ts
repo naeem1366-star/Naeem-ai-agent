@@ -239,9 +239,10 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
     });
   }
 
-  const responseData = await env.DB.prepare(
+  const usage = (() => { try { return JSON.parse(raw).usage || {}; } catch { return {}; } })();
+  await env.DB.prepare(
     "INSERT INTO usage_events (id, user_id, feature, model, input_tokens, output_tokens, provider_cost_usd, charge_toman, status, created_at) VALUES (?, ?, 'chat', ?, ?, ?, '0', 0, 'success', ?)"
-  ).bind(crypto.randomUUID(), user.id, selectedModel, Number((JSON.parse(raw).usage || {}).prompt_tokens || 0), Number((JSON.parse(raw).usage || {}).completion_tokens || 0), now).run().catch(() => null);
+  ).bind(crypto.randomUUID(), user.id, selectedModel, Number(usage.prompt_tokens || 0), Number(usage.completion_tokens || 0), now).run().catch(() => undefined);
   return new Response(raw, { status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "X-IMA-Chat-Provider": selectedModel === primaryModel ? "primary" : "secondary" } });
 }
 
