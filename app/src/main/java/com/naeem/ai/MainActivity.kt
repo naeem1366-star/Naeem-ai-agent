@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -290,10 +291,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Transparent)) {
         if (page == -1) {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                listOf(Color(0x88050B16), Color(0x33050B16), Color(0x99050B16))
-            )))
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f }.blur(10.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x99050B16)))
             Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 24.dp).offset(y = (-8).dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما",
@@ -316,10 +315,8 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
             }
         } else {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                listOf(Color(0x88050B16), Color(0x33050B16), Color(0x99050B16))
-            )))
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f }.blur(10.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x99050B16)))
             Column(Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 26.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
