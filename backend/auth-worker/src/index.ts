@@ -172,7 +172,11 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
 
   const now = Math.floor(Date.now() / 1000);
   const period = new Date().toISOString().slice(0, 7);
-  const limit = Math.max(1, Math.min(10000, Number(env.CHAT_FREE_MONTHLY_REQUESTS || "50")));
+  const configuredFreeLimit = Number(env.CHAT_FREE_MONTHLY_REQUESTS ?? "0");
+  const limit = Number.isFinite(configuredFreeLimit) ? Math.max(0, Math.min(10000, Math.floor(configuredFreeLimit))) : 0;
+  if (limit === 0) {
+    return json({ error: { code: "PAID_WALLET_REQUIRED", message: "اعتبار رایگان برای حساب جدید فعال نیست. پس از فعال‌شدن کیف پول و پرداخت، از اعتبار حساب استفاده کن." } }, 402);
+  }
   const reserve = await env.DB.prepare(
     "UPDATE users SET chat_free_period = ?, chat_free_used = CASE WHEN chat_free_period = ? THEN chat_free_used + 1 ELSE 1 END WHERE id = ? AND status = 'active' AND (chat_free_period != ? OR chat_free_used < ?)"
   ).bind(period, period, user.id, period, limit).run();
