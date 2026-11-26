@@ -88,6 +88,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
@@ -110,8 +111,38 @@ private fun ModuleScreenBackdrop(
     module: String,
     content: @Composable () -> Unit
 ) {
-    // Module identity is expressed through content, while every space shares the same glass universe.
-    SupraGlassBackdrop { content() }
+    val palette = when (module.lowercase()) {
+        "finance", "markets" -> listOf(Color(0xFF071A22), Color(0xFF102D3C), Color(0xFF111A2C))
+        "health", "sports", "trail" -> listOf(Color(0xFF071D1B), Color(0xFF123A35), Color(0xFF101B2A))
+        "travel" -> listOf(Color(0xFF0A1D35), Color(0xFF173C59), Color(0xFF161D32))
+        "music", "podcast" -> listOf(Color(0xFF1B1230), Color(0xFF34234A), Color(0xFF10172B))
+        "discover", "news" -> listOf(Color(0xFF101C35), Color(0xFF243657), Color(0xFF111827))
+        "journal", "wrapped" -> listOf(Color(0xFF241B25), Color(0xFF3B2B3B), Color(0xFF171B2B))
+        "games" -> listOf(Color(0xFF17142E), Color(0xFF2D2752), Color(0xFF10172A))
+        "social" -> listOf(Color(0xFF1B172C), Color(0xFF3A2846), Color(0xFF111827))
+        "hub" -> listOf(Color(0xFF0A1B30), Color(0xFF1C3450), Color(0xFF10182A))
+        else -> listOf(Color(0xFF0A1728), Color(0xFF1A2C45), Color(0xFF101827))
+    }
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(palette))) {
+        Canvas(Modifier.fillMaxSize()) {
+            val glow = when (module.lowercase()) {
+                "finance", "markets" -> Color(0xFF35C7B5)
+                "health", "sports", "trail" -> Color(0xFF55D6A5)
+                "travel" -> Color(0xFF55B8E8)
+                "music", "podcast" -> Color(0xFFB68BFF)
+                "discover", "news" -> Color(0xFF82AFFF)
+                "journal", "wrapped" -> Color(0xFFFFB47A)
+                "games" -> Color(0xFF9D8CFF)
+                "social" -> Color(0xFFE18CCB)
+                else -> Color(0xFF82B8F4)
+            }
+            val point = Offset(size.width * 0.78f, size.height * 0.18f)
+            drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = 0.20f), glow.copy(alpha = 0.06f), Color.Transparent), point, size.maxDimension * 0.82f), size.maxDimension * 0.82f, point)
+            val second = Offset(size.width * 0.12f, size.height * 0.78f)
+            drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent), second, size.maxDimension * 0.58f), size.maxDimension * 0.58f, second)
+        }
+        content()
+    }
 }
 
 private val NaeemPersianFont = FontFamily(
@@ -224,6 +255,7 @@ class MainActivity : FragmentActivity() {
                             store,
                             onExternalActivityStarted = {},
                             onExternalActivityReturned = {},
+                            userEmail = authSession.value?.email.orEmpty(),
                             onSignOut = {
                                 authScope.launch {
                                     auth.signOut()
@@ -246,10 +278,11 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
     var about by remember { mutableStateOf("") }
     var style by remember { mutableStateOf("صمیمی و طبیعی") }
     val silver = Color(0xFFE0E5EC)
-    Box(
-        Modifier.fillMaxSize().background(Color.Transparent),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.34f }.blur(12.dp),
+            contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Color(0xAA050B16)))
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -395,7 +428,8 @@ fun NaeemApp(
     store: SecureConfigStore,
     onExternalActivityStarted: () -> Unit,
     onExternalActivityReturned: () -> Unit,
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit = {},
+    userEmail: String = ""
 ) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
@@ -411,6 +445,13 @@ fun NaeemApp(
     var menuTargetBounds by remember { mutableStateOf(Rect.Zero) }
     var showSettings by remember { mutableStateOf(false) }
     var showPcControl by remember { mutableStateOf(false) }
+    var showProfileDetails by remember { mutableStateOf(false) }
+    var showCreatorInfo by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    var welcomeAudioEnabled by remember {
+        mutableStateOf(context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
+            .getBoolean("welcome_audio_enabled", true))
+    }
     var baseUrl by remember { mutableStateOf(store.baseUrl()) }
     var model by remember { mutableStateOf(store.model()) }
     var apiKey by remember { mutableStateOf(store.apiKeyFor(store.baseUrl()).ifBlank { store.apiKey() }) }
@@ -784,6 +825,13 @@ fun NaeemApp(
     }
     SideEffect { startVoiceCapture = beginListening }
 
+    LaunchedEffect(Unit) {
+        if (welcomeAudioEnabled && apiKey.isNotBlank()) {
+            delay(850)
+            if (!busy && !speechPlaying) playAnswer("به ایما خوش آمدید. خوشحالم که دوباره اینجایی. هر وقت آماده‌ای، از من چیزی بپرس یا با صدای خودت صحبت کن.")
+        }
+    }
+
     fun sendMessage(speakAnswer: Boolean = false) {
         val question = prompt.trim()
         val imageToSend = selectedImageBase64
@@ -859,6 +907,11 @@ fun NaeemApp(
         onDispose { conversationStore.save(activeConversationId, messages) }
     }
 
+    val chatFlow = rememberInfiniteTransition(label = "chat-flow")
+    val chatFlowPosition by chatFlow.animateFloat(0f, 1f,
+        infiniteRepeatable(tween(7200, easing = LinearEasing), RepeatMode.Reverse),
+        label = "chat-flow-position")
+
     MaterialTheme(
         typography = naeemTypography(),
         colorScheme = darkColorScheme(
@@ -881,6 +934,54 @@ fun NaeemApp(
                 }
             }
         }
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = true,
+            drawerContent = {
+                ModalDrawerSheet(
+                    modifier = Modifier.width(304.dp),
+                    drawerContainerColor = Color(0xFF0B1728),
+                    drawerContentColor = Color(0xFFEAF1FC)
+                ) {
+                    Column(Modifier.fillMaxHeight().padding(horizontal = 14.dp, vertical = 18.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(52.dp))
+                            Column {
+                                Text("ایما", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                                Text("فضای شخصی هوشمند", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        HorizontalDivider(color = Color(0x334F6B8C), modifier = Modifier.padding(vertical = 10.dp))
+                        NavigationDrawerItem(label = { Text("اتصال به کامپیوتر") }, selected = false,
+                            icon = { Icon(Icons.Default.Computer, contentDescription = null) },
+                            onClick = { scope.launch { drawerState.close(); showPcControl = true } })
+                        NavigationDrawerItem(label = { Text("مشخصات حساب من") }, selected = false,
+                            icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
+                            onClick = { scope.launch { drawerState.close(); showProfileDetails = true } })
+                        NavigationDrawerItem(label = { Text("درباره سازنده") }, selected = false,
+                            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            onClick = { scope.launch { drawerState.close(); showCreatorInfo = true } })
+                        HorizontalDivider(color = Color(0x334F6B8C), modifier = Modifier.padding(vertical = 10.dp))
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(Modifier.weight(1f)) {
+                                Text("خوش‌آمدگویی صوتی", color = Color.White, fontWeight = FontWeight.Medium)
+                                Text("پخش هنگام ورود به ایما", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Switch(checked = welcomeAudioEnabled, onCheckedChange = {
+                                welcomeAudioEnabled = it
+                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
+                                    .edit().putBoolean("welcome_audio_enabled", it).apply()
+                            })
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text("IMA • Naeem AI Studio", color = Color(0xFF7186A3),
+                            style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(12.dp))
+                    }
+                }
+            }
+        ) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
@@ -893,7 +994,10 @@ fun NaeemApp(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { showHub = true }, modifier = Modifier.onGloballyPositioned { menuTargetBounds = it.boundsInWindow() }) { Icon(Icons.Default.Menu, contentDescription = "همه قابلیت‌ها", tint = Gold) }
+                        IconButton(onClick = { scope.launch { drawerState.open() } },
+                            modifier = Modifier.onGloballyPositioned { menuTargetBounds = it.boundsInWindow() }) {
+                            Icon(Icons.Default.Menu, contentDescription = "باز کردن نوار ابزار", tint = Gold)
+                        }
                     },
                     actions = {
                         IconButton(onClick = {
@@ -1019,18 +1123,18 @@ fun NaeemApp(
                 Modifier.fillMaxSize()
                     .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF070B14), Color(0xFF0B1424), Color(0xFF10182A), Color(0xFF080D18))
+                        listOf(Color(0xFF070B14), Color(0xFF0B1424), Color(0xFF14263D), Color(0xFF080D18))
                     )
                 )
                     .drawBehind {
                         drawCircle(
                             Brush.radialGradient(
                                 listOf(Color(0x334B8DCE), Color(0x183B68A8), Color.Transparent),
-                                center = Offset(size.width * 0.5f, size.height * 0.24f),
+                                center = Offset(size.width * 0.5f, size.height * (0.92f - chatFlowPosition * 0.50f)),
                                 radius = size.height * 0.92f
                             ),
                             radius = size.height * 0.92f,
-                            center = Offset(size.width * 0.5f, size.height * 0.24f)
+                            center = Offset(size.width * 0.5f, size.height * (0.92f - chatFlowPosition * 0.50f))
                         )
                     }
                     .padding(padding)
@@ -1183,6 +1287,35 @@ fun NaeemApp(
                     }
                 }
             }
+        }
+
+        }
+        if (showProfileDetails) {
+            AlertDialog(onDismissRequest = { showProfileDetails = false }, containerColor = Panel,
+                title = { Text("مشخصات حساب من", color = Gold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("نام نمایشی: " + userName.ifBlank { "ثبت نشده" }, color = Color.White)
+                        Text("ایمیل ورود: " + userEmail.ifBlank { "در دسترس نیست" }, color = Color.White)
+                        Text("علایق: " + userInterests.ifBlank { "ثبت نشده" }, color = Muted)
+                        Text("درباره من: " + userAbout.ifBlank { "ثبت نشده" }, color = Muted)
+                        Text("لحن پاسخ: " + responseStyle, color = Muted)
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showProfileDetails = false }) { Text("بستن", color = Gold) } })
+        }
+        if (showCreatorInfo) {
+            AlertDialog(onDismissRequest = { showCreatorInfo = false }, containerColor = Panel,
+                title = { Text("درباره سازنده", color = Gold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(72.dp))
+                        Text("Naeem AI Studio", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("ایما با طراحی و توسعه نعیم دهقانی ساخته شده؛ یک دستیار هوشمند برای گفت‌وگو، خلاقیت، پژوهش و مدیریت فضاهای شخصی.", color = Muted, textAlign = TextAlign.Center)
+                        Text("IMA • نسخه 2.0", color = Color(0xFF9EBBE5), style = MaterialTheme.typography.labelMedium)
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showCreatorInfo = false }) { Text("بستن", color = Gold) } })
         }
 
         if (tutorialStep >= 0) {
@@ -1771,11 +1904,11 @@ private fun ThinkingOrb(
     Canvas(orbModifier) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension * 0.335f * pulse
-        val glowRadius = radius * 1.85f
+        val glowRadius = radius * 2.15f
 
         drawCircle(
-            Brush.radialGradient(listOf(blue.copy(alpha = 0.30f), violet.copy(alpha = 0.12f), Color.Transparent),
-                center, glowRadius), glowRadius, center
+            Brush.radialGradient(listOf(blue.copy(alpha = 0.44f), violet.copy(alpha = 0.22f), Color.Transparent),
+                center, glowRadius * 1.18f), glowRadius, center
         )
 
         // Moving luminous waves extending from behind the glass sphere.
@@ -1803,7 +1936,7 @@ private fun ThinkingOrb(
         // Transparent glass body with layered cool light, matching the app's section palette.
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF6E9CCB), Color(0xFF273C68), Color(0xFF151B36), Color(0xFF090D19)),
+                listOf(Color(0xFF8DBFE8), Color(0xFF385A88), Color(0xFF1B2948), Color(0xFF0B1222)),
                 Offset(center.x - radius * 0.28f, center.y - radius * 0.38f), radius * 1.55f
             ), radius, center
         )
@@ -1841,7 +1974,7 @@ private fun ThinkingOrb(
         // Glass rim and shifting specular highlights.
         drawCircle(
             Brush.sweepGradient(listOf(blue, violet, rose, mint, blue), center),
-            radius, center, style = Stroke(width = 3.dp.toPx())
+            radius, center, style = Stroke(width = 4.dp.toPx())
         )
         drawCircle(Color.White.copy(alpha = 0.72f), radius * 0.035f,
             Offset(center.x - radius * 0.42f, center.y - radius * 0.53f))
