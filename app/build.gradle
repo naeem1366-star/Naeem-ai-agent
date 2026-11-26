@@ -20,7 +20,7 @@ android {
         targetSdk 35
         versionCode 31
         versionName '2.0.0-alpha28'
-        buildConfigField 'String', 'CHAT_GATEWAY_URL', '\"' + chatGatewayUrl.replace('\\', '\\\\').replace('\"', '\\\"') + '\"'
+        buildConfigField 'String', 'CHAT_GATEWAY_URL', '"' + chatGatewayUrl.replace('\\', '\\\\').replace('"', '\\"') + '"'
     }
 
     buildFeatures {
