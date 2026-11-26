@@ -164,10 +164,9 @@ private val NaeemPersianFont = FontFamily(
     Font(R.font.vazirmatn_bold, FontWeight.Bold)
 )
 
-private fun naeemTypography(): Typography {
+private fun naeemTypography(isEnglish: Boolean = false): Typography {
     val base = Typography()
-    fun persian(style: androidx.compose.ui.text.TextStyle) =
-        style.copy(fontFamily = NaeemPersianFont, textDirection = TextDirection.ContentOrRtl)
+    fun persian(style: androidx.compose.ui.text.TextStyle) = style.copy(fontFamily = if (isEnglish) FontFamily.Default else NaeemPersianFont, textDirection = if (isEnglish) TextDirection.Ltr else TextDirection.ContentOrRtl)
     return Typography(
         displayLarge = persian(base.displayLarge),
         displayMedium = persian(base.displayMedium),
@@ -249,6 +248,7 @@ class MainActivity : FragmentActivity() {
                         }
                     } else if (!introCompleted.value) {
                         AppIntegrationIntro(
+                            isEnglish = appLanguage.value == "en",
                             onEnter = {
                                 introCompleted.value = true
                             }
@@ -260,7 +260,7 @@ class MainActivity : FragmentActivity() {
                     } else if (authSession.value == null) {
                         SupabaseAuthScreen(auth) { session -> authSession.value = session }
                     } else if (!profileCompleted.value) {
-                        UserProfileSetup(onSave = { name, interests, about, style ->
+                        UserProfileSetup(isEnglish = appLanguage.value == "en", onSave = { name, interests, about, style ->
                             profilePrefs.edit()
                                 .putString("user_name", name)
                                 .putString("user_interests", interests)
@@ -326,7 +326,7 @@ private fun AppLanguageSelection(selectedLanguage: String, onLanguageSelected: (
 }
 
 @Composable
-private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
+private fun UserProfileSetup(isEnglish: Boolean = false, onSave: (String, String, String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var interests by remember { mutableStateOf("") }
     var about by remember { mutableStateOf("") }
@@ -343,8 +343,8 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             ThinkingOrb(diameter = 132.dp, active = true)
-            Text(appText("اول با هم آشنا بشیم", false), color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(appText("چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت.", false), color = Color(0xFFB0BAC6), style = MaterialTheme.typography.bodyMedium)
+            Text(appText("اول با هم آشنا بشیم", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(appText("چند مورد کوتاه بگو تا دستیار با اسم خودت صدات کنه و بهتر بشناسدت.", isEnglish), color = Color(0xFFB0BAC6), style = MaterialTheme.typography.bodyMedium)
             val profileFieldColors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White, unfocusedTextColor = Color(0xFFF1F4F8),
                 focusedContainerColor = Color(0x1AFFFFFF), unfocusedContainerColor = Color(0x12FFFFFF),
@@ -353,25 +353,25 @@ private fun UserProfileSetup(onSave: (String, String, String, String) -> Unit) {
                 focusedPlaceholderColor = Color(0xFF9EADC2), unfocusedPlaceholderColor = Color(0xFF9EADC2),
                 cursorColor = Color(0xFFB7D2FF)
             )
-            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(appText("دوست داری چی صدات کنم؟", false)) }, placeholder = { Text(appText("مثلاً نعیم", false)) }, colors = profileFieldColors)
-            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("به چه چیزهایی علاقه داری؟ (اختیاری)", false)) }, placeholder = { Text(appText("مثلاً طراحی، تکنولوژی، سفر…", false)) }, minLines = 2, colors = profileFieldColors)
-            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)", false)) }, placeholder = { Text(appText("شغل، هدف‌ها یا موضوعات موردعلاقه…", false)) }, minLines = 2, colors = profileFieldColors)
-            Text(appText("لحن گفت‌وگو", false), color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
+            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(appText("دوست داری چی صدات کنم؟", isEnglish)) }, placeholder = { Text(appText("مثلاً نعیم", isEnglish)) }, colors = profileFieldColors)
+            OutlinedTextField(value = interests, onValueChange = { interests = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("به چه چیزهایی علاقه داری؟ (اختیاری)", isEnglish)) }, placeholder = { Text(appText("مثلاً طراحی، تکنولوژی، سفر…", isEnglish)) }, minLines = 2, colors = profileFieldColors)
+            OutlinedTextField(value = about, onValueChange = { about = it }, modifier = Modifier.fillMaxWidth(), label = { Text(appText("چه چیزی خوبه درباره‌ات بدونم؟ (اختیاری)", isEnglish)) }, placeholder = { Text(appText("شغل، هدف‌ها یا موضوعات موردعلاقه…", isEnglish)) }, minLines = 2, colors = profileFieldColors)
+            Text(appText("لحن گفت‌وگو", isEnglish), color = silver, modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Medium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم").forEach { option ->
+                if (isEnglish) listOf("Friendly & natural", "Formal & precise", "Short & direct") else listOf("صمیمی و طبیعی", "رسمی و دقیق", "کوتاه و مستقیم").forEach { option ->
                     FilterChip(selected = style == option, onClick = { style = option }, label = { Text(option, style = MaterialTheme.typography.labelSmall) })
                 }
             }
             Button(onClick = { if (name.isNotBlank()) onSave(name.trim(), interests.trim(), about.trim(), style) }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = silver, contentColor = Color(0xFF101318)), shape = RoundedCornerShape(17.dp)) {
-                Text(appText("ذخیره و ورود به برنامه", false), fontWeight = FontWeight.Bold)
+                Text(appText("ذخیره و ورود به برنامه", isEnglish), fontWeight = FontWeight.Bold)
             }
-            Text(appText("این اطلاعات فقط روی همین گوشی ذخیره می‌شوند و هر زمان می‌توانی تغییرشان بدهی.", false), color = Color(0xFF8995A5), style = MaterialTheme.typography.labelSmall)
+            Text(appText("این اطلاعات فقط روی همین گوشی ذخیره می‌شوند و هر زمان می‌توانی تغییرشان بدهی.", isEnglish), color = Color(0xFF8995A5), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
 @Composable
-private fun AppIntegrationIntro(onEnter: () -> Unit) {
+private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit) {
     var page by remember { mutableIntStateOf(-1) }
     val silver = Color(0xFFE8EDF5)
     val muted = Color(0xFFB9C5D5)
@@ -398,7 +398,7 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 shape = RoundedCornerShape(18.dp), color = Color(0x773A5676), contentColor = Color.White,
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x889DBDE5)),
                 tonalElevation = 0.dp, shadowElevation = 0.dp) {
-                Box(contentAlignment = Alignment.Center) { Text(appText("شروع", false), color = Color.White, fontWeight = FontWeight.SemiBold) }
+                Box(contentAlignment = Alignment.Center) { Text(appText("شروع", isEnglish), color = Color.White, fontWeight = FontWeight.SemiBold) }
             }
         } else {
             Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
@@ -410,24 +410,24 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(74.dp))
                 Spacer(Modifier.height(18.dp))
                 if (page == 0) {
-                    Text(appText("ایما چیست؟", false), color = silver, style = MaterialTheme.typography.headlineSmall,
+                    Text(appText("ایما چیست؟", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(8.dp))
-                    Text(appText("هوشمندی فراتر از کلمات", false), color = Color(0xFFDCE8FA), style = MaterialTheme.typography.titleMedium,
+                    Text(appText("هوشمندی فراتر از کلمات", isEnglish), color = Color(0xFFDCE8FA), style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(18.dp))
                     Text(
                         "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nلازم نیست همیشه دستور مشخصی داشته باشی. می‌توانی با ایما صحبت کنی، از اتفاقات روزمره، ایده‌ها و دغدغه‌هایت بگویی. ایما با فعال‌کردن قابلیت شنیدن، صحبت‌هایت را دریافت می‌کند و با اجازه تو، نکات مهم را به خاطر می‌سپارد.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = TextAlign.End)
                 } else {
-                    Text(appText("ایما چه کارهایی انجام می‌دهد؟", false), color = silver, style = MaterialTheme.typography.headlineSmall,
+                    Text(appText("ایما چه کارهایی انجام می‌دهد؟", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     Text(
                         "ایما فقط یک پنجره‌ی گفتگو نیست؛ موضوعات را می‌شناسد و آن‌ها را به فضای مناسب می‌برد. می‌توانی برای مدیریت زندگی روزمره، برنامه‌ریزی کارها و هدف‌ها، یادآوری‌ها و همراهی پروژه‌ها از آن کمک بگیری.\n\nدر فضاهای تخصصی، بخش‌هایی برای سفر و طبیعت‌گردی، ورزش، سلامت و تغذیه، امور مالی، روزنگار و حافظه در نظر گرفته شده است.\n\nبرای جست‌وجو و پژوهش، اتاق فکر، اخبار و کشف محتوا؛ و برای خلاقیت، ساخت تصویر و ویدیو، تدوین، موسیقی و پادکست هم ابزارهایی در اختیار داری. اتصال به کامپیوتر و بخش‌های دیگر نیز از فضاهای ایما قابل دسترسی‌اند. بعضی قابلیت‌ها به اتصال سرویس یا تکمیل توسعه نیاز دارند.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp, textAlign = TextAlign.End)
                     Spacer(Modifier.height(20.dp))
-                    Text(appText("تو زندگی کن؛ ایما حواسش هست.", false), color = silver, style = MaterialTheme.typography.titleLarge,
+                    Text(appText("تو زندگی کن؛ ایما حواسش هست.", isEnglish), color = silver, style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(24.dp))
@@ -441,14 +441,14 @@ private fun AppIntegrationIntro(onEnter: () -> Unit) {
                 if (page == 0) {
                     Button(onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                        shape = RoundedCornerShape(17.dp)) { Text(appText("ادامه", false), fontWeight = FontWeight.Bold) }
+                        shape = RoundedCornerShape(17.dp)) { Text(appText("ادامه", isEnglish), fontWeight = FontWeight.Bold) }
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
-                            shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", false), color = silver) }
+                            shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", isEnglish), color = silver) }
                         Button(onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                            shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", false), fontWeight = FontWeight.Bold) }
+                            shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", isEnglish), fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -1103,7 +1103,7 @@ fun NaeemApp(
             drawerState = drawerState,
             gesturesEnabled = true,
             drawerContent = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                CompositionLocalProvider(LocalLayoutDirection provides if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl) {
                 ModalDrawerSheet(
                     modifier = Modifier.width(304.dp),
                     drawerContainerColor = Color(0xFF0B1728),
