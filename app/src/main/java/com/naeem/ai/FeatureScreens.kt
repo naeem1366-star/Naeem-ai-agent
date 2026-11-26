@@ -207,7 +207,93 @@ fun FeatureHub(
         "اتصال به کامپیوتر" to "Connect to computer", "کنترل رایانه از گوشی" to "Control your PC from your phone",
         "کیف پول و اشتراک" to "Wallet & subscription", "اعتبار AI و پلن حرفه‌ای" to "AI credit & Professional plan"
     )
-    val displayEntries = if (isEnglish) entries.map { it.copy(title = englishNames[it.title] ?: it.title, subtitle = englishNames[it.subtitle] ?: it.subtitle) } else entries
+    val englishContent = mapOf(
+        "سفر و هم‌سفرها" to Triple(
+            "Tell EMA your destination, dates, companions, or budget. It extracts trip details, asks about missing information, and shows a summary for your approval before saving or changing anything.",
+            "AI-assisted trip planning", "Connected"),
+        "Naeem Trail" to Triple(
+            "Describe your route and destination in chat. Automatic route recording, analysis, and offline map support are still being completed.",
+            "Trail guidance integration", "In development"),
+        "باشگاه ورزش" to Triple(
+            "Describe a workout by text or voice. EMA identifies the activity, duration, and distance, asks when details are unclear, and saves it to your sports history after confirmation.",
+            "AI-assisted workout logging", "Connected"),
+        "نبض بازار" to Triple(
+            "Review asset prices and rank cryptocurrencies by 24-hour and 7-day trends, trading volume, market cap, and volatility. Each idea includes reasons and risks; the final decision is yours.",
+            "Live market data and crypto screening; no profit guarantee", "Live data"),
+        "اتاق فکر" to Triple(
+            "Explore ideas with different thinking perspectives, search the web, and turn the results into a project and actionable steps.",
+            "Configured AI model and in-app web research", "Available"),
+        "به آینده وارد شو" to Triple(
+            "Choose from 12 thought experiments, from a council of critics and your future self to parallel worlds, unsolved cases, creative chaos, and a command room.",
+            "Experiences use the configured model; persistent memory and independent scheduling are not yet implemented", "Partially available"),
+        "اخبار مهم" to Triple(
+            "The planned news service gathers important stories from reliable sources, removes duplicates, ranks them by topic and impact, and presents clear summaries with sources and publication times.",
+            "Live news aggregation", "Not implemented yet"),
+        "یادآور دارو" to Triple(
+            "Set a reminder time for each medication and receive a daily notification on your phone.",
+            "Local reminders with phone notifications", "Available"),
+        "نوت‌بوک" to Triple(
+            "Add tasks with a date and time, review your list, and remove completed items.",
+            "Local storage and scheduled notifications", "Available"),
+        "دفتر مالی" to Triple(
+            "Tell EMA what you spent or earned. It extracts the amount, date, and category, asks about unclear details, and records the entry after your confirmation.",
+            "AI-assisted finance logging", "Connected"),
+        "روایت هفته و ماه" to Triple(
+            "Review the last seven days or the current month. Saved finance and workout records, along with categorized daily notes, appear in the report. Summaries use stored data only.",
+            "Finance, sports, and journal summaries", "Available"),
+        "روزنگار من" to Triple(
+            "Review everything you save in chat or send to a dedicated space, organized in chronological order.",
+            "Standalone journal", "Available"),
+        "سلامت و تغذیه" to Triple(
+            "Tell EMA what you ate and how much. Food entries are saved in your health log; unknown foods remain unestimated rather than receiving guessed calories. Cycle tracking is available in this dashboard.",
+            "Food logging from chat; other health tools are in development", "Partially available"),
+        "حافظه هوشمند" to Triple(
+            "When you ask EMA to remember something, it prepares the note for your review and saves it only after your approval for use in future chats.",
+            "AI-assisted memory", "Connected"),
+        "آلبوم تصاویر" to Triple(
+            "Describe or refine an image in chat. EMA prepares the request for the image tool, and generated images are kept in this album for browsing and management.",
+            "Image tool connected; album management in this space", "Available"),
+        "بازی‌ها" to Triple(
+            "AI games can explain roles, create puzzles, and guide play. Charades is currently available; other story-based games are still in development.",
+            "AI-connected games", "In development"),
+        "سینما" to Triple(
+            "Tell EMA your taste or mood. It can suggest films, introduce them without spoilers, or analyze their style and story. Search and saved items live in the Cinema space.",
+            "AI recommendations and analysis", "Available"),
+        "پادکست" to Triple(
+            "Find free podcasts from public feeds, play episodes inside EMA, save favorites, and add public RSS feeds.",
+            "Free public feeds; no paid subscription required", "Available"),
+        "استودیو ایما" to Triple(
+            "Import several videos, preview them, rearrange clips, and export a single MP4 on your phone. Advanced editing tools are still in development.",
+            "On-device editing and export; no API required", "Basic editing available"),
+        "ویدیوساز حرفه‌ای" to Triple(
+            "Generate videos from text or images with cinematic models such as Kling, Seedance, and Gemini Omni. Model, duration, resolution, and aspect ratio options become available when the API is connected.",
+            "Interface ready; provider connection requires configuration", "Connection pending"),
+        "موسیقی" to Triple(
+            "Tell EMA the mood, genre, or artist you like. It can suggest music and help search and preview tracks in this space.",
+            "Recommendations through chat", "Available"),
+        "تحلیل اینستاگرام" to Triple(
+            "Enter account statistics to review engagement, views, and content performance and receive growth suggestions. Automatic account analysis requires official Meta authorization.",
+            "Manual analysis ready; official connection requires Meta setup", "Partially available"),
+        "تنظیمات" to Triple(
+            "Manage AI connection settings, service address, model, and privacy options. Provider credentials should be handled securely.",
+            "AI connection and privacy center", "Available"),
+        "اتصال به کامپیوتر" to Triple(
+            "Run EMA Desktop Bridge on your computer, check its connection here, and send permitted commands securely from your phone.",
+            "Requires EMA Desktop Bridge on your computer", "Setup required"),
+        "کیف پول و اشتراک" to Triple(
+            "Check AI credit, create top-up orders, purchase a Professional plan, and track payment receipts. AI credit and subscription duration are independent.",
+            "Server-side wallet and payment orders", "Connected")
+    )
+    val displayEntries = if (isEnglish) entries.map { entry ->
+        val copy = englishContent[entry.title]
+        entry.copy(
+            title = englishNames[entry.title] ?: entry.title,
+            subtitle = englishNames[entry.subtitle] ?: entry.subtitle,
+            detail = copy?.first ?: entry.detail,
+            aiRole = copy?.second ?: entry.aiRole,
+            aiStatus = copy?.third ?: entry.aiStatus
+        )
+    } else entries
     fun hubText(fa: String, en: String) = if (isEnglish) en else fa
 
     if (showFeatureMap) {
@@ -222,7 +308,7 @@ fun FeatureHub(
     val champagne=SupraGlass.Silver
     val hubBg=SupraGlass.Night
     selectedEntry?.let { entry ->
-        CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+        CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides if (isEnglish) androidx.compose.ui.unit.LayoutDirection.Ltr else androidx.compose.ui.unit.LayoutDirection.Rtl) {
             AlertDialog(
                 onDismissRequest = { selectedEntry = null },
                 containerColor = Color(0xFF101B2B),
@@ -230,11 +316,11 @@ fun FeatureHub(
                 textContentColor = Color(0xFFB8C2CE),
                 title = { Text(entry.title, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.End) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.End) {
-                        Text(entry.detail, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = if (isEnglish) Alignment.Start else Alignment.End) {
+                        Text(entry.detail, style = MaterialTheme.typography.bodyMedium, textAlign = if (isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End)
                         Divider(color = Color(0xFF3B4551))
-                        Text(hubText("ارتباط با مغز هوشمند", "AI integration"), color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.End)
-                        Text(entry.aiRole, style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                        Text(hubText("ارتباط با مغز هوشمند", "AI integration"), color = Color(0xFFE0E6EE), fontWeight = FontWeight.SemiBold, textAlign = if (isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End)
+                        Text(entry.aiRole, style = MaterialTheme.typography.bodySmall, textAlign = if (isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End)
                         Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(10.dp)) {
                             Text(entry.aiStatus, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color(0xFFD4DCE6), style = MaterialTheme.typography.labelSmall)
                         }
@@ -276,7 +362,7 @@ fun FeatureHub(
         }
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,
-            textStyle=androidx.compose.ui.text.TextStyle(textAlign=androidx.compose.ui.text.style.TextAlign.End),
+            textStyle=androidx.compose.ui.text.TextStyle(textAlign=if(isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End),
             shape=RoundedCornerShape(16.dp),placeholder={Text(hubText("جست‌وجو در فضاها…", "Search spaces…"))},
             leadingIcon={Icon(Icons.Default.Search,null,tint=gold)},
             colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=gold,unfocusedBorderColor=SupraGlass.Edge,
