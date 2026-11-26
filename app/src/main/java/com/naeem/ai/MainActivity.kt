@@ -2046,7 +2046,7 @@ fun NaeemApp(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            listOf("chat" to "چت", "image" to "تصویر", "audio_tts" to "متن به صدا", "audio_stt" to "صدا به متن", "video" to "ویدیو", "music" to "موسیقی", "embedding" to "حافظه").forEach { (type, label) ->
+                            listOf("chat" to if (isEnglish) "Chat" else "چت", "image" to if (isEnglish) "Image" else "تصویر", "audio_tts" to if (isEnglish) "Text to speech" else "متن به صدا", "audio_stt" to if (isEnglish) "Speech to text" else "صدا به متن", "video" to if (isEnglish) "Video" else "ویدیو", "music" to if (isEnglish) "Music" else "موسیقی", "embedding" to if (isEnglish) "Memory" else "حافظه").forEach { (type, label) ->
                                 FilterChip(selected = selectedModelType == type, onClick = { selectedModelType = type; availableModels = emptyList(); providerTestStatus = "" }, label = { Text(label) })
                             }
                         }
@@ -2068,7 +2068,7 @@ fun NaeemApp(
                             enabled = !testingProvider && apiKey.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (testingProvider) "در حال آزمایش اتصال…" else "آزمایش اتصال و دریافت مدل‌ها")
+                            Text(if (testingProvider) { if (isEnglish) "Testing connection…" else "در حال آزمایش اتصال…" } else { if (isEnglish) "Test connection & load models" else "آزمایش اتصال و دریافت مدل‌ها" })
                         }
                         if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
                         if (availableModels.isNotEmpty()) {
@@ -2078,7 +2078,7 @@ fun NaeemApp(
                                     TextButton(onClick = {
                                         store.saveModelFor(selectedModelType, modelId)
                                         when (selectedModelType) { "chat" -> model = modelId; "image" -> imageModel = modelId }
-                                        providerTestStatus = "مدل $modelId برای دسته $selectedModelType ذخیره شد."
+                                        providerTestStatus = if (isEnglish) "Model $modelId saved for $selectedModelType." else "مدل $modelId برای دسته $selectedModelType ذخیره شد."
                                     }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                                         Text(modelId, color = if ((selectedModelType == "chat" && model == modelId) || (selectedModelType == "image" && imageModel == modelId) || store.modelFor(selectedModelType) == modelId) Gold else Color.White, style = MaterialTheme.typography.labelSmall)
                                     }
@@ -2087,10 +2087,10 @@ fun NaeemApp(
                         }
                         Text(appText("کلید API", isEnglish))
                         OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
-                        Text("هشدار امنیتی: رمزگذاری گوشی مفید است، اما طبق توصیه نت‌ارز کلید API نباید در نسخه عمومی اپ قرار بگیرد. برای انتشار امن باید درخواست‌ها از سرور واسط اختصاصی عبور کنند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD28A))
+                        Text(if (isEnglish) "Security: device encryption helps, but a provider API key must not be embedded in a public app. Production requests should go through EMA\u0027s secure server gateway." else "هشدار امنیتی: رمزگذاری گوشی مفید است، اما کلید API نباید در نسخه عمومی اپ قرار بگیرد. برای انتشار امن، درخواست‌ها باید از سرور واسط اختصاصی ایما عبور کنند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD28A))
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(appText("پشتیبان‌گیری و بازیابی", isEnglish), color = Gold, fontWeight = FontWeight.SemiBold)
-                        Text("از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Text(if (isEnglish) "Creates an encrypted backup of finance, workouts, trips, memory, conversations, and the image album. Keep the password safe; recovery is impossible without it." else "از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(
                             value = backupPassphrase,
                             onValueChange = { backupPassphrase = it },
