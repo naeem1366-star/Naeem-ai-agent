@@ -211,6 +211,8 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
+        val languageChosen = mutableStateOf(appPrefs.getBoolean("language_selected", false))
+        val appLanguage = mutableStateOf(if (languageChosen.value) appPrefs.getString("app_language", "en") ?: "en" else "en")
         introCompleted.value = false
 
         setContent {
@@ -219,7 +221,7 @@ class MainActivity : FragmentActivity() {
                 authSession.value = withContext(Dispatchers.IO) { auth.restoreSession() }
                 authReady.value = true
             }
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            CompositionLocalProvider(LocalLayoutDirection provides if (appLanguage.value == "en") LayoutDirection.Ltr else LayoutDirection.Rtl) {
                 MaterialTheme(
                     colorScheme = darkColorScheme(
                         primary = SupraGlass.Ice,
@@ -236,10 +238,16 @@ class MainActivity : FragmentActivity() {
                         outline = Color(0x667DAFE4),
                         surfaceTint = SupraGlass.Ice
                     ),
-                    typography = naeemTypography()
+                    typography = naeemTypography(appLanguage.value == "en")
                 ) {
                     SupraGlassBackdrop {
-                    if (!introCompleted.value) {
+                    if (!languageChosen.value) {
+                        AppLanguageSelection(selectedLanguage = appLanguage.value) { language ->
+                            appLanguage.value = language
+                            appPrefs.edit().putString("app_language", language).putBoolean("language_selected", true).apply()
+                            languageChosen.value = true
+                        }
+                    } else if (!introCompleted.value) {
                         AppIntegrationIntro(
                             onEnter = {
                                 introCompleted.value = true
@@ -278,6 +286,39 @@ class MainActivity : FragmentActivity() {
                         )
                     }
                     }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun AppLanguageSelection(selectedLanguage: String, onLanguageSelected: (String) -> Unit) {
+    var choice by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
+    val english = choice == "en"
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Image(painter = painterResource(R.drawable.bg_mountain), contentDescription = null,
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.58f }.blur(5.dp),
+            contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Color(0x88050B16)))
+        Card(Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xE6102035))) {
+            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "EMA",
+                    modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
+                Text(if (english) "Choose your language" else "زبان برنامه را انتخاب کن",
+                    color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FilterChip(selected = choice == "en", onClick = { choice = "en" },
+                        modifier = Modifier.weight(1f), label = { Text("English") })
+                    FilterChip(selected = choice == "fa", onClick = { choice = "fa" },
+                        modifier = Modifier.weight(1f), label = { Text("فارسی") })
+                }
+                Button(onClick = { onLanguageSelected(choice) }, modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(16.dp)) {
+                    Text(if (english) "Continue" else "ادامه")
                 }
             }
         }
@@ -544,7 +585,7 @@ fun NaeemApp(
 ) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
-    var appLanguage by remember { mutableStateOf(context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).getString("app_language", "fa") ?: "fa") }
+    var appLanguage by remember { mutableStateOf(context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).getString("app_language", "en") ?: "en") }
     val isEnglish = appLanguage == "en"
     val userName = remember { profilePrefs.getString("user_name", "").orEmpty() }
     val userInterests = remember { profilePrefs.getString("user_interests", "").orEmpty() }
@@ -1919,11 +1960,11 @@ fun NaeemApp(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(selected = appLanguage == "fa", onClick = {
                                 appLanguage = "fa"
-                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "fa").apply()
+                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "fa").putBoolean("language_selected", true).apply()
                             }, label = { Text("فارسی") })
                             FilterChip(selected = appLanguage == "en", onClick = {
                                 appLanguage = "en"
-                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "en").apply()
+                                context.getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE).edit().putString("app_language", "en").putBoolean("language_selected", true).apply()
                             }, label = { Text("English") })
                         }
                         Text(appText("درگاه اتصال", isEnglish))
