@@ -1,6 +1,6 @@
 # ایما
 
-Ima — a Persian-first intelligent assistant built with Kotlin and Jetpack Compose.
+EMA ASI PLATFORM — a Persian-first intelligent assistant built with Kotlin and Jetpack Compose.
 
 ## Included
 
@@ -12,7 +12,7 @@ Ima — a Persian-first intelligent assistant built with Kotlin and Jetpack Comp
 
 ## Build
 
-GitHub Actions builds the debug APK on pushes to `main` and on manual workflow dispatch. The APK is uploaded as an artifact named `Ima-debug`.
+GitHub Actions builds the debug APK on pushes to `main` and on manual workflow dispatch. The APK is uploaded as an artifact named `EMA ASI PLATFORM-debug`.
 
 ## Current limitations
 
