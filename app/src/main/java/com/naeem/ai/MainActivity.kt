@@ -220,7 +220,7 @@ class MainActivity : FragmentActivity() {
                 authSession.value = withContext(Dispatchers.IO) { auth.restoreSession() }
                 authReady.value = true
             }
-            CompositionLocalProvider(LocalLayoutDirection provides if (appLanguage.value == "en") LayoutDirection.Ltr else LayoutDirection.Rtl) {
+            CompositionLocalProvider(LocalLayoutDirection provides (if (appLanguage.value == "en") LayoutDirection.Ltr else LayoutDirection.Rtl)) {
                 MaterialTheme(
                     colorScheme = darkColorScheme(
                         primary = SupraGlass.Ice,
@@ -1105,7 +1105,7 @@ fun NaeemApp(
             drawerState = drawerState,
             gesturesEnabled = true,
             drawerContent = {
-                CompositionLocalProvider(LocalLayoutDirection provides if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl) {
+                CompositionLocalProvider(LocalLayoutDirection provides (if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl)) {
                 ModalDrawerSheet(
                     modifier = Modifier.width(304.dp),
                     drawerContainerColor = Color(0xFF0B1728),
