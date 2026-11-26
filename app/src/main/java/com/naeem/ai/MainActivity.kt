@@ -210,7 +210,7 @@ class MainActivity : FragmentActivity() {
         val profilePrefs = getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE)
         val appPrefs = getSharedPreferences("naeem_app_state", Context.MODE_PRIVATE)
         val profileCompleted = mutableStateOf(profilePrefs.getBoolean("profile_completed", false))
-        val languageChosen = mutableStateOf(appPrefs.getBoolean("language_selected", false))
+        val languageChosen = mutableStateOf(false)
         val appLanguage = mutableStateOf(if (languageChosen.value) appPrefs.getString("app_language", "en") ?: "en" else "en")
         introCompleted.value = false
 
@@ -308,6 +308,11 @@ private fun AppLanguageSelection(selectedLanguage: String, onLanguageSelected: (
                 verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "EMA",
                     modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
+                Text("تو زندگی کن؛ ایما حواسش هست.", color = Color.White,
+                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center)
+                Text("Live your life; EMA has your back.", color = Color(0xFFB9D8FF),
+                    style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = { onLanguageSelected("en") }, modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(16.dp)) {
