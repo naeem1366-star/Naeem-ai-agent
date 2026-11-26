@@ -589,6 +589,33 @@ async function adminUpdateBillingSettings(request: Request, env: Env): Promise<R
   return await adminBillingSettings(request, env);
 }
 
+async function adminSetAiBilling(request: Request, env: Env): Promise<Response> {
+  if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
+  const body = await request.json().catch(() => null) as any;
+  if (typeof body?.enabled !== "boolean") return json({ error: "INVALID_ENABLED_VALUE" }, 400);
+  if (body.enabled) {
+    const settings = await env.DB.prepare("SELECT usd_to_toman FROM billing_settings WHERE id = 1").first<any>();
+    const primaryModel = env.CHAT_PRIMARY_MODEL || "gpt-4o-mini";
+    if (!env.CHAT_PRIMARY_API_KEY || !(env.CHAT_PRIMARY_BASE_URL || "https://netarz.ir/api/ai/v1").startsWith("https://") || Number(settings?.usd_to_toman) <= 0) {
+      return json({ error: "BILLING_PREREQUISITES_MISSING" }, 409);
+    }
+    const primary = await env.DB.prepare("SELECT input_price_per_million_usd, output_price_per_million_usd FROM pricing_rules WHERE model = ? AND feature = 'chat' AND enabled = 1").bind(primaryModel).first<any>();
+    if (!primary || Number(primary.input_price_per_million_usd) <= 0 || Number(primary.output_price_per_million_usd) <= 0) {
+      return json({ error: "PRIMARY_MODEL_PRICING_MISSING", model: primaryModel }, 409);
+    }
+    const secondaryModel = env.CHAT_SECONDARY_MODEL || primaryModel;
+    if (env.CHAT_SECONDARY_API_KEY && secondaryModel !== primaryModel) {
+      const secondary = await env.DB.prepare("SELECT input_price_per_million_usd, output_price_per_million_usd FROM pricing_rules WHERE model = ? AND feature = 'chat' AND enabled = 1").bind(secondaryModel).first<any>();
+      if (!secondary || Number(secondary.input_price_per_million_usd) <= 0 || Number(secondary.output_price_per_million_usd) <= 0) {
+        return json({ error: "SECONDARY_MODEL_PRICING_MISSING", model: secondaryModel }, 409);
+      }
+    }
+  }
+  await env.DB.prepare("UPDATE billing_settings SET ai_billing_enabled = ?, updated_at = ? WHERE id = 1")
+    .bind(body.enabled ? 1 : 0, Math.floor(Date.now()/1000)).run();
+  return json({ success: true, aiBillingEnabled: body.enabled });
+}
+
 async function adminOverview(request: Request, env: Env): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   const users = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<any>();
@@ -687,6 +714,7 @@ export default {
       if (request.method === "POST" && paymentReviewMatch) return withHeaders(await adminReviewPayment(request, env, paymentReviewMatch[1]), headers);
       if (request.method === "POST" && url.pathname === "/v1/chat/completions") return withHeaders(await chatCompletion(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/wallet") return withHeaders(await walletSummary(request, env), headers);
+      if (request.method === "POST" && url.pathname === "/v1/admin/billing/ai-enabled") return withHeaders(await adminSetAiBilling(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/billing/settings") return withHeaders(await adminBillingSettings(request, env), headers);
       if (request.method === "PATCH" && url.pathname === "/v1/admin/billing/settings") return withHeaders(await adminUpdateBillingSettings(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/admin/overview") return withHeaders(await adminOverview(request, env), headers);
