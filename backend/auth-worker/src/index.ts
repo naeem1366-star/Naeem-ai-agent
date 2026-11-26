@@ -15,6 +15,7 @@ interface Env {
   CHAT_SECONDARY_MODEL?: string;
   CHAT_SECONDARY_API_KEY?: string;
   CHAT_FREE_MONTHLY_REQUESTS?: string;
+  CHAT_GLOBAL_MONTHLY_REQUESTS?: string;
   ASSETS?: Fetcher;
 }
 
@@ -180,6 +181,21 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
     return json({ error: { code: "CHAT_QUOTA_EXHAUSTED", message: "سهمیه رایگان این ماه تمام شده است. برای ادامه، اعتبار حساب را افزایش بده." }, quota: { limit, used: usage?.chat_free_period === period ? usage.chat_free_used : 0, period } }, 402);
   }
 
+  const globalLimit = Math.max(1, Math.min(1000000, Number(env.CHAT_GLOBAL_MONTHLY_REQUESTS || "5000")));
+  const globalReserve = await env.DB.prepare(
+    "INSERT INTO chat_global_usage (period, request_count, updated_at) VALUES (?, 1, ?) ON CONFLICT(period) DO UPDATE SET request_count = request_count + 1, updated_at = excluded.updated_at WHERE request_count < ?"
+  ).bind(period, now, globalLimit).run();
+  if ((globalReserve.meta?.changes || 0) !== 1) {
+    await env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id).run();
+    return json({ error: { code: "CHAT_CAPACITY_REACHED", message: "ظرفیت رایگان این ماه فعلاً تکمیل شده است. بعداً دوباره تلاش کن." } }, 503);
+  }
+  const refundReservation = async () => {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id),
+      env.DB.prepare("UPDATE chat_global_usage SET request_count = CASE WHEN request_count > 0 THEN request_count - 1 ELSE 0 END, updated_at = ? WHERE period = ?").bind(Math.floor(Date.now() / 1000), period)
+    ]);
+  };
+
   const payload = { ...body, model: primaryModel, stream: false };
   delete (payload as any).user;
   const tryProvider = async (base: string, key: string, model: string): Promise<Response> => {
@@ -219,13 +235,13 @@ async function chatCompletion(request: Request, env: Env): Promise<Response> {
   }
 
   if (!upstream) {
-    await env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id).run();
+    await refundReservation();
     return json({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "در حال حاضر سرویس گفتگو پاسخگو نیست. سهمیه‌ات کسر نشد؛ کمی بعد دوباره تلاش کن.", primary: primaryFailure } }, 503);
   }
 
   const raw = await upstream.text();
   if (!upstream.ok) {
-    await env.DB.prepare("UPDATE users SET chat_free_used = CASE WHEN chat_free_period = ? AND chat_free_used > 0 THEN chat_free_used - 1 ELSE chat_free_used END WHERE id = ?").bind(period, user.id).run();
+    await refundReservation();
     return new Response(raw || JSON.stringify({ error: { message: "خطا در سرویس گفتگو" } }), {
       status: upstream.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
     });
