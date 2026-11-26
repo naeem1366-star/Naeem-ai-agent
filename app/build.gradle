@@ -1,11 +1,11 @@
-def chatGatewayUrl = providers.gradleProperty('CHAT_GATEWAY_URL').orElse(providers.environmentVariable('CHAT_GATEWAY_URL')).getOrElse('')
-
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.devtools.ksp'
 }
+
+def chatGatewayUrl = providers.gradleProperty('CHAT_GATEWAY_URL').orElse(providers.environmentVariable('CHAT_GATEWAY_URL')).getOrElse('')
 
 android {
     namespace 'com.naeem.ai'
@@ -17,14 +17,12 @@ android {
         targetSdk 35
         versionCode 28
         versionName '2.0.0-alpha25'
+        buildConfigField 'String', 'CHAT_GATEWAY_URL', '\"' + chatGatewayUrl.replace('\\', '\\\\').replace('\"', '\\\"') + '\"'
     }
 
     buildFeatures {
         compose true
         buildConfig true
-    }
-    defaultConfig {
-        buildConfigField 'String', 'CHAT_GATEWAY_URL', '\"' + chatGatewayUrl.replace('\\', '\\\\').replace('\"', '\\\"') + '\"'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
