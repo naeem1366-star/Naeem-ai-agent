@@ -33,6 +33,8 @@ public sealed class BridgeForm : Form
     private readonly PictureBox _pairingQr = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White, Margin = new Padding(180, 3, 180, 3) };
     private readonly CheckBox _allowControl = new();
     private readonly Button _copyFingerprint = new();
+    private readonly ComboBox _languageSelector = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130 };
+    private bool _english;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly string _pin = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
     private readonly string _token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
@@ -48,7 +50,7 @@ public sealed class BridgeForm : Form
 
     public BridgeForm()
     {
-        Text = "Naeem AI — اتصال امن به کامپیوتر";
+        Text = "EMA ASI PLATFORM — Desktop Bridge";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(640, 700);
         Size = new Size(700, 760);
@@ -78,8 +80,17 @@ public sealed class BridgeForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var title = new Label { Text = "اتصال گوشی به کامپیوتر", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(225, 232, 242), TextAlign = ContentAlignment.MiddleRight };
-        layout.Controls.Add(title, 0, 0);
+        var topBar = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var title = new Label { Text = "اتصال گوشی به کامپیوتر", Tag = "اتصال گوشی به کامپیوتر", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.FromArgb(225, 232, 242), TextAlign = ContentAlignment.MiddleRight };
+        var languageLabel = new Label { Text = "زبان / Language", Dock = DockStyle.Left, Width = 112, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(185, 198, 218) };
+        _languageSelector.Items.AddRange(new object[] { "فارسی", "English" });
+        _languageSelector.SelectedIndex = 0;
+        _languageSelector.Dock = DockStyle.Left;
+        _languageSelector.SelectedIndexChanged += (_, _) => ApplyLanguage();
+        topBar.Controls.Add(title);
+        topBar.Controls.Add(_languageSelector);
+        topBar.Controls.Add(languageLabel);
+        layout.Controls.Add(topBar, 0, 0);
         layout.Controls.Add(MakeLabel("کد جفت‌سازی (در برنامه گوشی وارد کن):", 10), 0, 1);
         _pinLabel.Text = _pin;
         _pinLabel.Dock = DockStyle.Fill;
@@ -97,23 +108,27 @@ public sealed class BridgeForm : Form
         layout.Controls.Add(MakeLabel("برای اتصال سریع، این کد را با دوربین گوشی اسکن کن:", 10), 0, 5);
         layout.Controls.Add(_pairingQr, 0, 6);
         _copyFingerprint.Text = "کپی اثر انگشت";
+        _copyFingerprint.Tag = "کپی اثر انگشت";
         _copyFingerprint.Dock = DockStyle.Fill;
         _copyFingerprint.BackColor = Color.FromArgb(48, 65, 90);
         _copyFingerprint.ForeColor = Color.White;
         _copyFingerprint.FlatStyle = FlatStyle.Flat;
-        _copyFingerprint.Click += (_, _) => { Clipboard.SetText(_fingerprint); _statusLabel.Text = "اثر انگشت کپی شد."; };
+        _copyFingerprint.Click += (_, _) => { Clipboard.SetText(_fingerprint); SetStatus("اثر انگشت کپی شد.", "Fingerprint copied."); };
         layout.Controls.Add(_copyFingerprint, 0, 7);
-        _ipLabel.Text = "نشانی شبکه: " + GetLocalIPv4ForDisplay() + "   |   درگاه: " + Port;
+        _ipLabel.Tag = "network";
+        UpdateNetworkLabel();
         _ipLabel.Dock = DockStyle.Fill;
         _ipLabel.TextAlign = ContentAlignment.MiddleRight;
         _ipLabel.ForeColor = Color.FromArgb(185, 198, 218);
         layout.Controls.Add(_ipLabel, 0, 8);
         _allowControl.Text = "اجازه کنترل ماوس و صفحه‌کلید از گوشی (برای امنیت، پیش‌فرض خاموش است)";
+        _allowControl.Tag = _allowControl.Text;
         _allowControl.Dock = DockStyle.Fill;
         _allowControl.ForeColor = Color.FromArgb(255, 218, 155);
         _allowControl.CheckedChanged += (_, _) => _controlEnabled = _allowControl.Checked;
         layout.Controls.Add(_allowControl, 0, 9);
-        _statusLabel.Text = "در حال راه‌اندازی سرویس محلی امن…";
+        _statusLabel.Tag = "starting";
+        SetStatus("در حال راه‌اندازی سرویس محلی امن…", "Starting secure local service…");
         _statusLabel.Dock = DockStyle.Fill;
         _statusLabel.TextAlign = ContentAlignment.MiddleRight;
         _statusLabel.ForeColor = Color.FromArgb(160, 220, 180);
@@ -122,6 +137,7 @@ public sealed class BridgeForm : Form
         note.Dock = DockStyle.Fill;
         layout.Controls.Add(note, 0, 11);
         Controls.Add(layout);
+        ApplyLanguage();
 
         Shown += async (_, _) => await StartServicesAsync();
         FormClosing += async (_, _) => await StopServicesAsync();
@@ -129,9 +145,59 @@ public sealed class BridgeForm : Form
 
     private static Label MakeLabel(string text, float size) => new()
     {
-        Text = text, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight,
+        Text = text, Tag = text, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight,
         ForeColor = Color.FromArgb(185, 198, 218), Font = new Font("Segoe UI", size)
     };
+
+ 
+    private static readonly Dictionary<string, string> EnglishText = new()
+    {
+        ["اتصال گوشی به کامپیوتر"] = "Connect Phone to Computer",
+        ["کد جفت‌سازی (در برنامه گوشی وارد کن):"] = "Pairing code (enter it in the phone app):",
+        ["اثر انگشت گواهی امنیتی (برای تأیید همین کامپیوتر):"] = "Security certificate fingerprint (verify this computer):",
+        ["برای اتصال سریع، این کد را با دوربین گوشی اسکن کن:"] = "Scan this code with your phone camera to pair quickly:",
+        ["کپی اثر انگشت"] = "Copy fingerprint",
+        ["اجازه کنترل ماوس و صفحه‌کلید از گوشی (برای امنیت، پیش‌فرض خاموش است)"] = "Allow mouse and keyboard control from phone (disabled by default for security)",
+        ["فقط شبکه محلی • بدون سرور ابری • برای توقف اتصال، این پنجره را ببند."] = "Local network only • No cloud server • Close this window to stop the connection.",
+    };
+
+    private void ApplyLanguage()
+    {
+        _english = _languageSelector.SelectedIndex == 1;
+        RightToLeft = _english ? RightToLeft.No : RightToLeft.Yes;
+        ApplyLanguageToControls(Controls);
+        UpdateNetworkLabel();
+        if (_statusLabel.Tag is string statusKey)
+        {
+            if (statusKey == "starting") SetStatus("در حال راه‌اندازی سرویس محلی امن…", "Starting secure local service…");
+        }
+    }
+
+    private void ApplyLanguageToControls(Control.ControlCollection controls)
+    {
+        foreach (Control control in controls)
+        {
+            if (control.Tag is string original && EnglishText.TryGetValue(original, out var translated))
+                control.Text = _english ? translated : original;
+            if (control.HasChildren) ApplyLanguageToControls(control.Controls);
+            if (control == _ipLabel) UpdateNetworkLabel();
+        }
+    }
+
+    private void UpdateNetworkLabel()
+    {
+        _ipLabel.Text = _english
+            ? $"Network address: {GetLocalIPv4ForDisplay()}   |   Port: {Port}"
+            : $"نشانی شبکه: {GetLocalIPv4ForDisplay()}   |   درگاه: {Port}";
+        _ipLabel.TextAlign = _english ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleRight;
+    }
+
+    private void SetStatus(string persian, string english)
+    {
+        if (IsDisposed) return;
+        _statusLabel.Tag = "dynamic";
+        _statusLabel.Text = _english ? english : persian;
+    }
 
     private static string FormatFingerprint(string value) => string.Join(":", Enumerable.Range(0, value.Length / 2).Select(i => value.Substring(i * 2, 2)));
 
@@ -157,7 +223,7 @@ public sealed class BridgeForm : Form
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = "ساخت کد اتصال ناموفق بود: " + ex.Message;
+            SetStatus("ساخت کد اتصال ناموفق بود: " + ex.Message, "Could not create pairing code: " + ex.Message);
         }
     }
 
@@ -193,12 +259,12 @@ public sealed class BridgeForm : Form
             RefreshPairingQr(localAddress.ToString());
             _discovery = new UdpClient(DiscoveryPort) { EnableBroadcast = true };
             _ = Task.Run(() => DiscoveryLoopAsync(_shutdown.Token));
-            _statusLabel.Text = "سرویس فعال است. گوشی را به همین مودم/شبکه وصل کن و «جست‌وجوی کامپیوتر» را بزن.";
+            SetStatus("سرویس فعال است. گوشی را به همین مودم/شبکه وصل کن و «جست‌وجوی کامپیوتر» را بزن.", "Service is running. Connect your phone to the same Wi-Fi network and tap “Find Computer”.");
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = "راه‌اندازی ناموفق: " + ex.Message;
-            MessageBox.Show(this, ex.ToString(), "خطای راه‌اندازی", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SetStatus("راه‌اندازی ناموفق: " + ex.Message, "Startup failed: " + ex.Message);
+            MessageBox.Show(this, ex.ToString(), _english ? "Startup error" : "خطای راه‌اندازی", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -487,7 +553,7 @@ public sealed class BridgeForm : Form
     private void UpdateStatus()
     {
         if (IsDisposed || !IsHandleCreated) return;
-        BeginInvoke(new Action(() => _statusLabel.Text = $"سرویس فعال • دستگاه‌های متصل: {_connectedClients} • کنترل: {(_controlEnabled ? "روشن" : "خاموش")}"));
+        BeginInvoke(new Action(() => SetStatus($"سرویس فعال • دستگاه‌های متصل: {_connectedClients} • کنترل: {(_controlEnabled ? "روشن" : "خاموش")}", $"Service active • Connected devices: {_connectedClients} • Control: {(_controlEnabled ? "ON" : "OFF")}")));
     }
 
     private async Task StopServicesAsync()
