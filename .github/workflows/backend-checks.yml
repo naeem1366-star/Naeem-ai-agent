@@ -1,0 +1,42 @@
+name: EMA backend checks
+on:
+  push:
+    branches: ["feature/ema-asi-platform"]
+    paths:
+      - "backend/auth-worker/**"
+      - ".github/workflows/backend-checks.yml"
+  pull_request:
+    branches: ["feature/ema-asi-platform"]
+    paths:
+      - "backend/auth-worker/**"
+      - ".github/workflows/backend-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/auth-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Worker dependencies
+        run: npm install
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+  d1-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Apply all D1 migrations to an in-memory SQLite database
+        run: python backend/auth-worker/scripts/validate_migrations.py
