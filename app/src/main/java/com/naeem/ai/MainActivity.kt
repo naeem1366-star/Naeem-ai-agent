@@ -464,7 +464,7 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
     }
 }
 private val Ink = SupraGlass.Night
-private val Panel = SupraGlass.Glass
+private val Panel = Color(0xFF14263B)
 private val Gold = SupraGlass.Ice
 private val Muted = SupraGlass.Muted
 
@@ -532,6 +532,11 @@ private val englishUiText = mapOf(
     "درباره من: " to "About me: ",
     "لحن پاسخ: " to "Response style: ",
     "بستن" to "Close",
+    "صمیمی و طبیعی" to "Friendly & natural",
+    "رسمی و دقیق" to "Formal & precise",
+    "کوتاه و مستقیم" to "Brief & direct",
+    "ثبت نشده" to "Not provided",
+    "در دسترس نیست" to "Unavailable",
     "حافظه ایما" to "EMA memory",
     "نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند." to "Notes saved here can be used in future conversations to improve responses.",
     "مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند" to "For example: I prefer concise answers",
@@ -784,7 +789,7 @@ fun NaeemApp(
     suspend fun sendChat(text: String, image: String? = null): String {
         val gateway = BuildConfig.CHAT_GATEWAY_URL.trim()
         check(gateway.isNotBlank()) {
-            "درگاه امن EMA هنوز برای این نسخه فعال نشده است. تا زمان اتصال سرور، ارسال مستقیم کلید API از برنامه غیرفعال است."
+            if (isEnglish) "The EMA secure chat gateway is not configured in this build. The API key saved in Connection Settings is for local provider tools and cannot replace the server gateway." else "نشانی درگاه امن چت ایما در این نسخه تنظیم نشده است. کلید API ذخیره‌شده در تنظیمات گوشی جایگزین درگاه سرور نیست؛ ابتدا باید سرور EMA منتشر و به برنامه متصل شود."
         }
         return client.sendViaGateway(gateway, chatAccessToken, model, text, image)
     }
@@ -1498,7 +1503,7 @@ fun NaeemApp(
         }
         }
         if (showProfileDetails) {
-            AlertDialog(onDismissRequest = { showProfileDetails = false }, containerColor = Panel,
+            AlertDialog(onDismissRequest = { showProfileDetails = false }, containerColor = Color(0xFF14263B),
                 title = { Text(appText("مشخصات حساب من", isEnglish), color = Gold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1506,7 +1511,7 @@ fun NaeemApp(
                         Text("${appText("ایمیل ورود: ", isEnglish)}${userEmail.ifBlank { appText("در دسترس نیست", isEnglish) }}", color = Color.White)
                         Text("${appText("علایق: ", isEnglish)}${userInterests.ifBlank { appText("ثبت نشده", isEnglish) }}", color = Muted)
                         Text("${appText("درباره من: ", isEnglish)}${userAbout.ifBlank { appText("ثبت نشده", isEnglish) }}", color = Muted)
-                        Text("${appText("لحن پاسخ: ", isEnglish)}$responseStyle", color = Muted)
+                        Text("${appText("لحن پاسخ: ", isEnglish)}${appText(responseStyle, isEnglish)}", color = Muted)
                     }
                 },
                 confirmButton = { TextButton(onClick = { showProfileDetails = false }) { Text(appText("بستن", isEnglish), color = Gold) } })
@@ -1518,7 +1523,7 @@ fun NaeemApp(
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "لوگوی ایما", modifier = Modifier.size(72.dp))
                         Text("Naeem AI Studio", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("ایما با طراحی و توسعه نعیم دهقانی ساخته شده؛ یک دستیار هوشمند برای گفت‌وگو، خلاقیت، پژوهش و مدیریت فضاهای شخصی.", color = Muted, textAlign = TextAlign.Center)
+                        Text(if (isEnglish) "EMA is designed and developed by Naeem Dehghani — an intelligent companion for conversation, creativity, research, and managing personal spaces." else "ایما با طراحی و توسعه نعیم دهقانی ساخته شده؛ یک دستیار هوشمند برای گفت‌وگو، خلاقیت، پژوهش و مدیریت فضاهای شخصی.", color = Muted, textAlign = TextAlign.Center)
                         Text("EMA ASI PLATFORM", color = Color(0xFF9EBBE5), style = MaterialTheme.typography.labelMedium)
                     }
                 },
@@ -1992,7 +1997,7 @@ fun NaeemApp(
                         selected.videoModel?.let { store.saveModelFor("video", it) }
                         selected.speechModel?.let { store.saveModelFor("audio_tts", it) }
                         selected.chatModel?.let { store.saveModelFor("chat", it) }
-                        providerTestStatus = "تنظیمات API با موفقیت روی گوشی ذخیره شد."
+                        providerTestStatus = if (isEnglish) "Provider settings were saved on this device. Secure chat still requires the EMA server gateway." else "تنظیمات سرویس روی گوشی ذخیره شد؛ چت امن همچنان به درگاه سرور ایما نیاز دارد."
                         pendingApiConfig = null
                     }) { Text(appText("ذخیره امن تنظیمات", isEnglish), color = Gold) }
                 },
