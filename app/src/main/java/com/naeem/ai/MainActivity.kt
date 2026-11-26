@@ -258,7 +258,7 @@ class MainActivity : FragmentActivity() {
                             CircularProgressIndicator(color = SupraGlass.Ice)
                         }
                     } else if (authSession.value == null) {
-                        SupabaseAuthScreen(auth) { session -> authSession.value = session }
+                        SupabaseAuthScreen(auth, isEnglish = appLanguage.value == "en") { session -> authSession.value = session }
                     } else if (!profileCompleted.value) {
                         UserProfileSetup(isEnglish = appLanguage.value == "en", onSave = { name, interests, about, style ->
                             profilePrefs.edit()
