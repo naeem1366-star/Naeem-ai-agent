@@ -486,7 +486,8 @@ async function adminReviewPayment(request: Request, env: Env, orderId: string): 
   if (decision === "reject") {
     const result = await env.DB.batch([
       env.DB.prepare("UPDATE payment_orders SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, rejection_reason = ? WHERE id = ? AND status = 'pending'").bind(admin.id, now, note, orderId),
-      env.DB.prepare("UPDATE manual_payment_reviews SET status = 'rejected', admin_note = ?, reviewed_by = ?, reviewed_at = ? WHERE payment_order_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'rejected' AND reviewed_by = ? AND reviewed_at = ?)").bind(note, admin.id, now, orderId, orderId, admin.id, now)
+      env.DB.prepare("UPDATE manual_payment_reviews SET status = 'rejected', admin_note = ?, reviewed_by = ?, reviewed_at = ? WHERE payment_order_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'rejected' AND reviewed_by = ? AND reviewed_at = ?)").bind(note, admin.id, now, orderId, orderId, admin.id, now),
+      env.DB.prepare("INSERT INTO admin_audit_logs (id, admin_user_id, action, target_user_id, details, created_at) SELECT ?, ?, 'payment_rejected', user_id, ?, ? FROM payment_orders WHERE id = ? AND status = 'rejected' AND reviewed_by = ? AND reviewed_at = ?").bind(crypto.randomUUID(), admin.id, JSON.stringify({ orderId, note }), now, orderId, admin.id, now)
     ]);
     if ((result[0]?.meta?.changes || 0) !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
     return json({ success: true, status: "rejected" });
@@ -510,7 +511,8 @@ async function adminReviewPayment(request: Request, env: Env, orderId: string): 
     env.DB.prepare("INSERT INTO subscription_credit_grants (id, subscription_id, user_id, gross_price_toman, credit_percent, credit_amount_toman, wallet_transaction_id, created_at) SELECT ?, s.id, s.user_id, s.paid_amount_toman, ?, s.ai_credit_granted_toman, ?, ? FROM subscriptions s WHERE s.payment_order_id = ? AND s.id = ?").bind(grantId, percent, walletTxId, now, orderId, subscriptionId),
     env.DB.prepare("INSERT INTO provider_replenishment_allocations (id, payment_order_id, provider, gross_subscription_toman, allocation_percent, allocated_toman, status, subscription_credit_grant_id, created_at, updated_at) SELECT ?, po.id, 'netarz', po.amount_toman, ?, ?, 'reserved', ?, ?, ? FROM payment_orders po JOIN subscriptions s ON s.payment_order_id = po.id WHERE po.id = ? AND po.purpose = 'subscription' AND po.status = 'paid' AND s.id = ?")
       .bind(allocationId, percent, credit, grantId, now, now, orderId, subscriptionId),
-    env.DB.prepare("UPDATE manual_payment_reviews SET status = 'approved', admin_note = ?, reviewed_by = ?, reviewed_at = ? WHERE payment_order_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'paid' AND reviewed_by = ? AND reviewed_at = ?)").bind(note, admin.id, now, orderId, orderId, admin.id, now)
+    env.DB.prepare("UPDATE manual_payment_reviews SET status = 'approved', admin_note = ?, reviewed_by = ?, reviewed_at = ? WHERE payment_order_id = ? AND EXISTS (SELECT 1 FROM payment_orders WHERE id = ? AND status = 'paid' AND reviewed_by = ? AND reviewed_at = ?)").bind(note, admin.id, now, orderId, orderId, admin.id, now),
+    env.DB.prepare("INSERT INTO admin_audit_logs (id, admin_user_id, action, target_user_id, details, created_at) SELECT ?, ?, 'payment_approved', user_id, ?, ? FROM payment_orders WHERE id = ? AND status = 'paid' AND reviewed_by = ? AND reviewed_at = ?").bind(crypto.randomUUID(), admin.id, JSON.stringify({ orderId, creditToman: credit, purpose: order.purpose }), now, orderId, admin.id, now)
   ]);
   if ((results[0]?.meta?.changes || 0) !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
   const balance = await env.DB.prepare("SELECT wallet_balance_toman FROM users WHERE id = ?").bind(order.user_id).first<any>();
