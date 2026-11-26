@@ -308,17 +308,15 @@ private fun AppLanguageSelection(selectedLanguage: String, onLanguageSelected: (
                 verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Image(painter = painterResource(R.drawable.ic_brain_mark), contentDescription = "EMA",
                     modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
-                Text(if (english) "Choose your language" else "زبان برنامه را انتخاب کن",
-                    color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilterChip(selected = choice == "en", onClick = { choice = "en" },
-                        modifier = Modifier.weight(1f), label = { Text("English") })
-                    FilterChip(selected = choice == "fa", onClick = { choice = "fa" },
-                        modifier = Modifier.weight(1f), label = { Text("فارسی") })
-                }
-                Button(onClick = { onLanguageSelected(choice) }, modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp)) {
-                    Text(if (english) "Continue" else "ادامه")
+                    Button(onClick = { onLanguageSelected("en") }, modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(16.dp)) {
+                        Text("English")
+                    }
+                    Button(onClick = { onLanguageSelected("fa") }, modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(16.dp)) {
+                        Text("فارسی")
+                    }
                 }
             }
         }
