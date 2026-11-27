@@ -1,4 +1,4 @@
-export type PublicMarket = "crypto" | "fx_reference" | "global_stock" | "commodities" | "iran_stock";
+export type PublicMarket = "crypto" | "fx_reference" | "global_stock" | "commodities" | "iran_stock" | "iran_local";
 
 type Quote = {
   symbol: string;
@@ -80,6 +80,26 @@ async function frankfurterQuotes(): Promise<Quote[]> {
   });
 }
 
+
+async function tgjuQuotes(): Promise<Quote[]> {
+  const url = "https://call1.tgju.org/ajax.json";
+  const data = await getJson(url);
+  const current = data?.current || {};
+  const items: Array<[string, string, number]> = [
+    ["price_dollar_rl", "USD free market (Iran)", 10],
+    ["geram18", "18K gold gram (Iran)", 10],
+    ["sekee", "Emami coin (Iran)", 10],
+    ["ons", "Gold ounce", 1],
+  ];
+  return items.flatMap(([key, name, divisor]) => {
+    const raw = safeNumber(current?.[key]?.p);
+    if (raw === null) return [];
+    const isOunce = key === "ons";
+    return [quote(key, name, "iran_local", raw / divisor, isOunce ? "USD/oz" : "Toman",
+      null, nowSeconds(), "TGJU public feed (unofficial)", url)];
+  });
+}
+
 async function iranStockQuotes(): Promise<Quote[]> {
   const url = "https://cdn.tsetmc.com/api/MarketData/GetMarketOverview/0";
   const data = await getJson(url, { "referer": "https://www.tsetmc.com/", "origin": "https://www.tsetmc.com" });
@@ -109,7 +129,7 @@ const MARKET_SYMBOLS: Record<"global_stock" | "commodities", Array<{ symbol: str
 };
 
 export async function publicMarketSnapshot(market: string): Promise<Response> {
-  const allowed: PublicMarket[] = ["crypto", "fx_reference", "global_stock", "commodities", "iran_stock"];
+  const allowed: PublicMarket[] = ["crypto", "fx_reference", "global_stock", "commodities", "iran_stock", "iran_local"];
   if (!allowed.includes(market as PublicMarket)) {
     return Response.json({ error: "UNSUPPORTED_PUBLIC_MARKET", supported: allowed }, { status: 422 });
   }
@@ -122,7 +142,7 @@ export async function publicMarketSnapshot(market: string): Promise<Response> {
     } else if (market === "fx_reference") {
       try { quotes = await frankfurterQuotes(); sourceStatus.frankfurter = "ok"; }
       catch (error) { sourceStatus.frankfurter = error instanceof Error ? error.message : "unavailable"; }
-    } else if (market === "iran_stock") {
+    } else if (market === "iran_local") {\n      try { quotes = await tgjuQuotes(); sourceStatus.tgju = "ok"; }\n      catch (error) { sourceStatus.tgju = error instanceof Error ? error.message : "unavailable"; }\n    } else if (market === "iran_stock") {
       try { quotes = await iranStockQuotes(); sourceStatus.tsetmc = "ok"; }
       catch (error) { sourceStatus.tsetmc = error instanceof Error ? error.message : "unavailable"; }
     } else {
