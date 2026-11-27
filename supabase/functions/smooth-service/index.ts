@@ -376,7 +376,7 @@ Deno.serve(async (request: Request) => {
           method: "POST",
           headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ ...payload, model: provider.model }),
-          signal: AbortSignal.timeout(28000),
+          signal: AbortSignal.timeout(85000),
         });
         const text = await response.text();
         if (response.ok) {
