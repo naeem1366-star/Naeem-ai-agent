@@ -1111,6 +1111,8 @@ fun NaeemApp(
                     albumImages = dataStore.images()
                     messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))
                 } else {
+                    val featureForThisMessage = pendingPaidFeature
+                    pendingPaidFeature = null
                     val actionReply = routeAssistantIntent(finalQuestion)
                     if (actionReply != null) {
                         messages.add(ChatMessage(actionReply, false))
@@ -1137,8 +1139,6 @@ fun NaeemApp(
                             val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
                             if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
                         }
-                        val featureForThisMessage = pendingPaidFeature
-                        pendingPaidFeature = null
                         sendChat(memoryAwarePrompt, imageToSend, featureForThisMessage)
                     }
                     messages.add(ChatMessage(answer, false))
