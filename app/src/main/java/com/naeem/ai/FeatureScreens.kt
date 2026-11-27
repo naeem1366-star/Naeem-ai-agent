@@ -143,7 +143,7 @@ fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onPodcast:()->Unit,onVideo:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onJournal:()->Unit,onTrail:()->Unit,onSocial:()->Unit,
-    onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {},onProductLens:()->Unit = {}
+    onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {},onProductLens:()->Unit = {},onMusicCreation:()->Unit = onMusic
 ){
     var query by remember { mutableStateOf("") }
     var hasPaidAccess by remember { mutableStateOf(false) }
@@ -188,6 +188,7 @@ fun FeatureHub(
         Entry("تولید ویدیو رایگان","ساخت ویدیو با هوش مصنوعی","تولید ویدیو از متن یا تصویر","ویدیو را از متن یا تصویر بساز. دسترسی رایگان وابسته به اعتبار و سهمیه‌ی سرویس سازنده است و ممکن است همیشه یا نامحدود در دسترس نباشد؛ از کیف پول ایما برای این بخش کسر نمی‌شود.","سرویس تولید ویدیو با سهمیه‌ی رایگان محدود",Icons.Default.AutoAwesome,onVideo,"تولید ویدیو رایگان هوش مصنوعی عکس به ویدیو text to video image to video Kling Seedance Veo Gemini"),Entry("تولید ویدیو رایگان","ساخت ویدیو با هوش مصنوعی","تولید ویدیو از متن یا تصویر","ویدیو را از متن یا تصویر بساز. دسترسی رایگان وابسته به اعتبار و سهمیه‌ی سرویس سازنده است و ممکن است همیشه یا نامحدود در دسترس نباشد؛ از کیف پول ایما برای این بخش کسر نمی‌شود.","سرویس تولید ویدیو با سهمیه‌ی رایگان محدود",Icons.Default.AutoAwesome,onProfessionalVideo,"تولید ویدیو رایگان هوش مصنوعی عکس به ویدیو text to video image to video Kling Seedance Veo Gemini"),
         Entry("تولید ویدیوی حرفه‌ای","ساخت ویدیو با مدل‌های حرفه‌ای","مدل‌های پیشرفته ویدیوساز","با مدل‌های حرفه‌ای NetArz از متن، تصویر یا ویدیوی مرجع خروجی بساز. مصرف این بخش پولی است و به دسترسی فعال حساب یا اعتبار مجاز نیاز دارد.","هوش مصنوعی پولی NetArz",Icons.Default.MovieFilter,onProfessionalVideo,"تولید ویدیوی حرفه‌ای NetArz Sora Veo video generation"),
         Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی","حال‌وهوا، سبک یا هنرمند موردعلاقه‌ات را در گفتگو بگو؛ مغز هوشمند پیشنهاد می‌دهد و جست‌وجو و پیش‌نمایش موسیقی در همین بخش انجام می‌شود.","پیشنهاد از دستیار: از طریق گفتگو",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
+        Entry("ساخت موسیقی با هوش مصنوعی","تولید آهنگ و جلوه صوتی","ساخت قطعه با مدل‌های حرفه‌ای","موسیقی یا جلوه صوتی را با مدل‌های پولی NetArz بساز؛ جست‌وجو و شنیدن آهنگ‌های موجود در بخش رایگان موسیقی جداست.","هوش مصنوعی پولی NetArz",Icons.Default.GraphicEq,onMusicCreation,"ساخت موسیقی هوش مصنوعی تولید آهنگ Lyria ElevenLabs"),
         Entry("تحلیل اینستاگرام","رشد و عملکرد پیج","اتصال حساب و تحلیل محتوا","آمار پیج را وارد کن تا مغز هوشمند نرخ تعامل، بازدید و عملکرد محتوا را بررسی و برای رشد پیشنهاد بدهد. تحلیل خودکار حساب پس از اتصال رسمی و دریافت مجوزهای Meta ممکن می‌شود.","تحلیل دستی: آماده؛ تحلیل هوشمند با NetArz؛ اتصال رسمی: نیازمند تنظیم Meta",Icons.Default.Insights,onSocial,"اینستاگرام شبکه اجتماعی تحلیل پیج رشد محتوا") ,
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","از اینجا مدل هوش مصنوعی، نشانی سرویس و کلید API را تنظیم می‌کنی؛ این اتصال، مسیر ارتباط مغز هوشمند با گفتگو و ابزارهای برنامه است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال"),
         Entry("اتصال به کامپیوتر","کنترل رایانه از گوشی","اتصال امن به برنامه دسکتاپ ایما","برنامه Desktop Bridge را روی رایانه اجرا کن و از این بخش وضعیت اتصال را ببین و فرمان‌های مجاز را از گوشی ارسال کن.","نیازمند اجرای برنامه دسکتاپ روی رایانه",Icons.Default.Computer,onPcControl,"کامپیوتر رایانه دسکتاپ کنترل از راه دور اتصال PC desktop bridge"),
@@ -308,7 +309,7 @@ fun FeatureHub(
             aiStatus = copy?.third ?: entry.aiStatus
         )
     } else entries
-    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "تحلیل اینستاگرام", "تولید ویدیوی حرفه‌ای")
+    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "تحلیل اینستاگرام", "تولید ویدیوی حرفه‌ای", "ساخت موسیقی با هوش مصنوعی")
     fun isPaid(entry: Entry) = entry.title in paidTitles
     fun hubText(fa: String, en: String) = if (isEnglish) en else fa
 
