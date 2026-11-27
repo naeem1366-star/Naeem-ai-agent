@@ -66,7 +66,7 @@ fun ProductLensDashboard(onClose: () -> Unit, gatewayUrl: String, accessToken: S
      "data:image/jpeg;base64,"+android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP)
     }
     val body=JSONObject().put("image",data).toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-    val request=Request.Builder().url(gatewayUrl.trimEnd('/')+"/v1/vision/product").header("Authorization","Bearer "+accessToken).post(body).build()
+    val request=Request.Builder().url(gatewayUrl.trimEnd('/')+"/v1/vision/product").header("apikey",EmaSupabaseConfig.PUBLISHABLE_KEY).header("Authorization","Bearer "+accessToken).post(body).build()
     val raw=withContext(Dispatchers.IO){client.newCall(request).execute().use { response ->
      val text=response.body?.string().orEmpty()
      if(!response.isSuccessful) throw IllegalStateException(runCatching{JSONObject(text).optJSONObject("error")?.optString("message")}.getOrNull() ?: "خطای سرور "+response.code)
