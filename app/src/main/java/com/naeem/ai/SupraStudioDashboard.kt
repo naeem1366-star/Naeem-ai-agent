@@ -34,9 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.audio.SpeedProvider
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.Composition
@@ -135,7 +133,7 @@ fun SupraStudioDashboard(
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
+    ) { uris: List<Uri> ->
         onExternalActivityReturned()
         uris.forEach { uri ->
             runCatching {
@@ -170,10 +168,6 @@ fun SupraStudioDashboard(
             EditedMediaItem.Builder(clippedItem)
                 .setRemoveAudio(muteOriginalAudio)
                 .setEffects(Effects(emptyList(), listOf(presentation)))
-                .setSpeed(object : SpeedProvider {
-                    override fun getSpeed(presentationTimeUs: Long): Float = clip.speed
-                    override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = C.TIME_UNSET
-                })
                 .build()
         }
         val videoSequence = EditedMediaItemSequence.Builder().addItems(editedItems).build()
@@ -432,7 +426,7 @@ fun SupraStudioDashboard(
                             }, enabled = !exporting, label = { Text("${rate}x") })
                         }
                     }
-                    Text("سرعت انتخابی هم در پیش‌نمایش و هم در خروجی اعمال می‌شود.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.labelSmall)
+                    Text("سرعت انتخابی در پیش‌نمایش اعمال می‌شود؛ اعمال سرعت در فایل خروجی در مرحله بعدی موتور تدوین تکمیل می‌شود.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.labelSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("بی‌صدا کردن صدای اصلی", color = Color.White, style = MaterialTheme.typography.bodyMedium)
