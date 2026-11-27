@@ -1216,19 +1216,39 @@ fun NaeemApp(
                             )
                         }
                     }
+                    val learningType = when {
+                        question.contains("از این به بعد") || question.contains("ترجیح می‌دم") || question.contains("ترجیح میدهم") -> "preference_signal"
+                        question.trim().startsWith("نه") || question.contains("اشتباهه") || question.contains("منظورم این بود") || question.contains("اصلاحش کن") -> "correction"
+                        else -> null
+                    }
+                    if (learningType != null && accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                        runCatching {
+                            cloudMemoryClient.recordLearningEvent(
+                                BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                learningType, question
+                            )
+                        }
+                    }
                     val cloudMemories = if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
                         runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
                             .getOrDefault(emptyList()).map { it.content }
                     } else emptyList()
+                    val cloudLearning = if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                        runCatching { cloudMemoryClient.listLearningEvents(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
+                            .getOrDefault(emptyList())
+                    } else emptyList()
                     val allMemories = (memories + cloudMemories).distinct().takeLast(40)
                     val memoryContext = allMemories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
+                    val learningContext = cloudLearning.takeIf { it.isNotEmpty() }?.take(12)
+                        ?.joinToString("\n") { "- $it" }
+                        ?.let { "\n\nبازخوردها و اصلاحات قبلی کاربر (برای رعایت بهتر؛ موارد تأییدنشده را حقیقت قطعی فرض نکن):\n$it" }.orEmpty()
                     val profileContext = buildString {
                         if (effectiveName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $effectiveName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
                         if (effectiveInterests.isNotBlank()) append("\nعلایق کاربر: $effectiveInterests.")
                         if (effectiveAbout.isNotBlank()) append("\nدرباره کاربر: $effectiveAbout.")
                         append("\nلحن ترجیحی پاسخ: $effectiveStyle.")
                     }
-                    val userContext = profileContext + memoryContext
+                    val userContext = profileContext + memoryContext + learningContext
                     val answer = if (searchMode) {
                         val findings = deepSearchClient.search(finalQuestion, 8, BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
