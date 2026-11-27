@@ -389,7 +389,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,gatewayUrl:String,acce
     LaunchedEffect(gatewayUrl,accessToken){
         if(accessToken.isNotBlank()){
             modelsLoading=true
-            runCatching{api.musicModels()}.onSuccess{found->if(found.isNotEmpty())models=found}
+            runCatching{api.musicModels()}.onSuccess{found->if(found.isNotEmpty()){models=found;if(model !in found)model=found.first()}}
                 .onFailure{status=it.message?: "فهرست مدل‌های NetArz دریافت نشد."}
             modelsLoading=false
         }
