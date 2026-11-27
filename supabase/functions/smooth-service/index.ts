@@ -268,17 +268,16 @@ Deno.serve(async (request: Request) => {
 
       const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1");
       const billing = billingRows?.[0] || {};
-      if (!isAdmin && billing.ai_billing_enabled !== true) {
-        return reply({ error: { code: "AI_BILLING_NOT_ENABLED", message: "سامانه محاسبه و کسر اعتبار هوش مصنوعی هنوز توسط مدیر فعال نشده است." } }, 503);
-      }
       const pricingRows = await serviceFetch(`ema_pricing_rules?select=input_usd_per_million,output_usd_per_million&model=eq.${encodeURIComponent(model)}&enabled=eq.true&limit=1`);
       const pricing = pricingRows?.[0] || null;
       const inputRate = Number(pricing?.input_usd_per_million || 0);
       const outputRate = Number(pricing?.output_usd_per_million || 0);
       const usdToToman = Number(billing.usd_to_toman || 0);
       const markupBps = Math.max(0, Number(billing.markup_bps || 0));
-      if (!isAdmin && (!pricing || inputRate < 0 || outputRate < 0 || (inputRate + outputRate) <= 0 || usdToToman <= 0)) {
-        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "قیمت مدل NetArz یا نرخ تبدیل دلار به تومان در پنل مدیریت تنظیم نشده است." } }, 503);
+      const walletBillingReady = billing.ai_billing_enabled === true && !!pricing &&
+        inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0;
+      if (!isAdmin && !hasActiveSubscription && walletBalance > 0 && !walletBillingReady) {
+        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن اعتبار کیف پول، قیمت مدل NetArz و نرخ تبدیل دلار به تومان باید در پنل مدیریت تنظیم شود." } }, 503);
       }
 
       const maxTokens = Math.max(1, Math.min(1600, Number(body?.max_tokens) || 1200));
@@ -292,9 +291,15 @@ Deno.serve(async (request: Request) => {
         return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
       }
 
-      // Wallet credit is charged per request. An active subscription without wallet credit
-      // is treated as included plan access; provider cost is still recorded below.
-      if (!isAdmin && walletBalance >= reserveToman) {
+      // Prefer per-request wallet billing when configured and sufficiently funded.
+      // An active subscription remains a valid included-access path when wallet billing is not used.
+      if (!isAdmin && walletBalance > 0 && !hasActiveSubscription && !walletBillingReady) {
+        return reply({ error: { code: "AI_BILLING_NOT_ENABLED", message: "سامانه محاسبه و کسر اعتبار هوش مصنوعی هنوز توسط مدیر فعال نشده است." } }, 503);
+      }
+      if (!isAdmin && walletBalance <= 0 && !hasActiveSubscription) {
+        return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
+      }
+      if (!isAdmin && walletBillingReady && walletBalance >= reserveToman) {
         const reservation = await serviceFetch("rpc/ema_reserve_wallet", {
           method: "POST",
           body: JSON.stringify({
@@ -305,7 +310,12 @@ Deno.serve(async (request: Request) => {
             p_model: model,
           }),
         });
-        if (!reservation?.ok) {
+        if (reservation?.ok) {
+          reservationId = String(reservation.reservation_id || "");
+          if (!reservationId) {
+            return reply({ error: { code: "AI_RESERVATION_FAILED", message: "رزرو اعتبار هوش مصنوعی انجام نشد." } }, 503);
+          }
+        } else if (!hasActiveSubscription) {
           return reply({
             error: {
               code: reservation?.code || "INSUFFICIENT_AI_CREDIT",
@@ -315,11 +325,7 @@ Deno.serve(async (request: Request) => {
             },
           }, 402);
         }
-        reservationId = String(reservation.reservation_id || "");
-        if (!reservationId) {
-          return reply({ error: { code: "AI_RESERVATION_FAILED", message: "رزرو اعتبار هوش مصنوعی انجام نشد." } }, 503);
-        }
-      } else if (!isAdmin && !hasActiveSubscription) {
+      } else if (!isAdmin && !hasActiveSubscription && walletBalance < reserveToman) {
         return reply({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن." } }, 402);
       }
 
