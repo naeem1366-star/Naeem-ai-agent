@@ -117,48 +117,83 @@ Deno.serve(async (request: Request) => {
       return reply({ identification: content });
     }
 
-    // Secure text-to-speech route: use the server-side provider key, never a phone-stored key.
+    // Secure text-to-speech route with primary NetArz and automatic GapGPT fallback.
     if (request.method === "POST" && route === "/v1/audio/speech") {
       const body = await jsonBody(request);
       const input = String(body?.input || "").trim();
       if (!input || input.length > 4096) {
         return reply({ error: { code: "INVALID_SPEECH_INPUT", message: "متن گفتار خالی یا بیش از حد طولانی است." } }, 400);
       }
-      const providerKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
-      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
-      if (!providerKey || !providerBase.startsWith("https://")) {
-        return reply({ error: { code: "SPEECH_GATEWAY_NOT_CONFIGURED", message: "سرویس گفتار روی سرور تنظیم نشده است." } }, 503);
+
+      const primaryKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
+      const primaryBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+      const secondaryKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || "";
+      const secondaryBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\\/+$/, "");
+      const requestedModel = String(body?.model || "gpt-4o-mini-tts");
+      const requestedVoice = String(body?.voice || "nova");
+      const instructions = String(body?.instructions || "Speak Persian (Farsi) naturally and clearly.");
+
+      const speechProviders = [
+        ...(primaryKey && primaryBase.startsWith("https://") ? [{
+          name: "NetArz", key: primaryKey, base: primaryBase,
+          model: requestedModel, voice: requestedVoice,
+        }] : []),
+        ...(secondaryKey && secondaryBase.startsWith("https://") ? [{
+          name: "GapGPT", key: secondaryKey, base: secondaryBase,
+          model: Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || requestedModel,
+          voice: Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || requestedVoice,
+        }] : []),
+      ];
+      if (!speechProviders.length) {
+        return reply({ error: { code: "SPEECH_GATEWAY_NOT_CONFIGURED", message: "هیچ سرویس ساخت صدایی روی سرور تنظیم نشده است." } }, 503);
       }
-      const speechPayload = {
-        model: String(body?.model || "gpt-4o-mini-tts"),
-        voice: String(body?.voice || "nova"),
-        input,
-        instructions: String(body?.instructions || "Speak Persian (Farsi) naturally and clearly."),
-        response_format: "mp3",
-      };
-      const upstream = await fetch(`${providerBase}/audio/speech`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${providerKey}`,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg, application/octet-stream, application/json",
-        },
-        body: JSON.stringify(speechPayload),
-        signal: AbortSignal.timeout(120000),
-      });
-      if (!upstream.ok) {
-        const detail = (await upstream.text()).slice(0, 600);
-        console.error("EMA speech provider failed", { status: upstream.status, detail: detail.slice(0, 180) });
-        return reply({ error: { code: "SPEECH_PROVIDER_ERROR", message: `سرویس ساخت صدا پاسخ ناموفق داد (HTTP ${upstream.status}): ${detail}` } }, upstream.status);
+
+      let lastStatus = 502;
+      let lastDetail = "";
+      for (const provider of speechProviders) {
+        try {
+          const upstream = await fetch(`${provider.base}/audio/speech`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${provider.key}`,
+              "Content-Type": "application/json",
+              Accept: "audio/mpeg, application/octet-stream, application/json",
+            },
+            body: JSON.stringify({
+              model: provider.model,
+              voice: provider.voice,
+              input,
+              instructions,
+              response_format: "mp3",
+            }),
+            signal: AbortSignal.timeout(120000),
+          });
+          if (upstream.ok) {
+            console.log("EMA speech generated", { provider: provider.name, status: upstream.status });
+            return new Response(await upstream.arrayBuffer(), {
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
+                "Cache-Control": "no-store",
+              },
+            });
+          }
+          lastStatus = upstream.status;
+          lastDetail = (await upstream.text()).slice(0, 400);
+          console.error("EMA speech provider failed", { provider: provider.name, status: lastStatus, detail: lastDetail.slice(0, 160) });
+        } catch (error) {
+          lastStatus = 502;
+          lastDetail = error instanceof Error ? error.message : "provider request failed";
+          console.error("EMA speech provider request failed", { provider: provider.name, detail: lastDetail });
+        }
       }
-      return new Response(await upstream.arrayBuffer(), {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
-          "Cache-Control": "no-store",
+      return reply({
+        error: {
+          code: "SPEECH_PROVIDERS_UNAVAILABLE",
+          message: `ساخت صدا در سرویس‌های اصلی و پشتیبان ناموفق بود (HTTP ${lastStatus}). ${lastDetail.slice(0, 220)}`,
         },
-      });
+      }, lastStatus >= 400 && lastStatus < 600 ? lastStatus : 502);
     }
 
     // Billing routes are served by this same function so Android can use one secure gateway URL.
