@@ -32,7 +32,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.audio.SpeedProvider
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.Composition
@@ -47,7 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private data class StudioClip(val uri: Uri, val name: String, val durationMs: Long, val trimStartMs: Long = 0L, val trimEndMs: Long = durationMs)
+private data class StudioClip(val uri: Uri, val name: String, val durationMs: Long, val trimStartMs: Long = 0L, val trimEndMs: Long = durationMs, val speed: Float = 1f)
 
 private fun studioDurationMs(context: Context, uri: Uri): Long = runCatching {
     MediaMetadataRetriever().let { retriever ->
@@ -79,6 +81,9 @@ fun SupraStudioDashboard(
     var exportStatus by remember { mutableStateOf("برای شروع، ویدیوهایت را وارد کن.") }
     var exportPercent by remember { mutableIntStateOf(0) }
     var muteOriginalAudio by remember { mutableStateOf(false) }
+    var musicUri by remember { mutableStateOf<Uri?>(null) }
+    var musicName by remember { mutableStateOf("") }
+    var musicDurationMs by remember { mutableLongStateOf(0L) }
     var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
     val previewClip = clips.getOrNull(selectedIndex)
     val previewUri = previewClip?.uri
@@ -93,6 +98,8 @@ fun SupraStudioDashboard(
             }
         }
     }
+
+    LaunchedEffect(player, previewClip?.speed) { player?.setPlaybackSpeed(previewClip?.speed ?: 1f) }
 
     DisposableEffect(player) {
         onDispose { player?.release() }
@@ -130,12 +137,21 @@ fun SupraStudioDashboard(
             val clippedItem = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.trimStartMs.coerceAtLeast(0L)).setEndPositionMs(clip.trimEndMs.coerceAtLeast(clip.trimStartMs + 1L)).build()
             ).build()
-            EditedMediaItem.Builder(clippedItem).setRemoveAudio(muteOriginalAudio).build()
+            EditedMediaItem.Builder(clippedItem)
+                .setRemoveAudio(muteOriginalAudio)
+                .setSpeed(object : SpeedProvider {
+                    override fun getSpeed(presentationTimeUs: Long): Float = clip.speed
+                    override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = C.TIME_UNSET
+                })
+                .build()
         }
-        val sequence = EditedMediaItemSequence.Builder()
-            .addItems(editedItems)
-            .build()
-        val composition = Composition.Builder(listOf(sequence)).build()
+        val videoSequence = EditedMediaItemSequence.Builder().addItems(editedItems).build()
+        val sequences = mutableListOf(videoSequence)
+        musicUri?.let { uri ->
+            val musicItem = EditedMediaItem.Builder(MediaItem.fromUri(uri)).setRemoveVideo(true).build()
+            sequences.add(EditedMediaItemSequence.Builder().addItem(musicItem).build())
+        }
+        val composition = Composition.Builder(sequences).build()
         val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
@@ -178,6 +194,17 @@ fun SupraStudioDashboard(
             activeTransformer = null
             exportStatus = "شروع خروجی ناموفق بود: ${it.message ?: "خطای ناشناخته"}"
             outputFile.delete()
+        }
+    }
+
+    val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        onExternalActivityReturned()
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            musicUri = uri
+            musicName = studioDisplayName(context, uri)
+            musicDurationMs = studioDurationMs(context, uri)
+            exportStatus = "موسیقی پس‌زمینه اضافه شد."
         }
     }
 
@@ -262,6 +289,24 @@ fun SupraStudioDashboard(
             }
         }
 
+        Surface(color = Color(0xFF111B29), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("لایه موسیقی و صدا", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(musicName.ifBlank { "هنوز موسیقی پس‌زمینه انتخاب نشده" }, color = Color(0xFF9EACBD), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+                    OutlinedButton(onClick = { onExternalActivityStarted(); musicPicker.launch(arrayOf("audio/*")) }, enabled = !exporting) {
+                        Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("افزودن موسیقی")
+                    }
+                }
+                if (musicUri != null) {
+                    Text("موسیقی به‌صورت لایه مستقل روی ویدیو میکس و در خروجی MP4 قرار می‌گیرد.", color = Color(0xFF9ED7B2), style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = { musicUri = null; musicName = ""; musicDurationMs = 0L }) { Text("حذف موسیقی") }
+                }
+            }
+        }
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("تایم‌لاین پروژه", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
@@ -328,6 +373,15 @@ fun SupraStudioDashboard(
                             clips[selectedIndex] = clip.copy(trimEndMs = value.toLong().coerceIn(clip.trimStartMs + 500L, clip.durationMs))
                         }, valueRange = (clip.trimStartMs + 500L).toFloat()..clip.durationMs.toFloat(), enabled = !exporting)
                     } else Text("مدت این فایل قابل تشخیص نیست؛ برش برای آن غیرفعال است.", color = Color(0xFFE5C58A), style = MaterialTheme.typography.bodySmall)
+                    Text("سرعت پخش ویدیو", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f).forEach { rate ->
+                            FilterChip(selected = clip.speed == rate, onClick = {
+                                clips[selectedIndex] = clip.copy(speed = rate)
+                            }, enabled = !exporting, label = { Text("${rate}x") })
+                        }
+                    }
+                    Text("سرعت انتخابی هم در پیش‌نمایش و هم در خروجی اعمال می‌شود.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.labelSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("بی‌صدا کردن صدای اصلی", color = Color.White, style = MaterialTheme.typography.bodyMedium)
@@ -347,7 +401,7 @@ fun SupraStudioDashboard(
         Surface(color = Color(0xFF111821), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ابزارهای فعال این نسخه", color = Color.White, fontWeight = FontWeight.Bold)
-                Text("چند کلیپ در تایم‌لاین، پیش‌نمایش، جابه‌جایی ترتیب، حذف، برش ابتدا و انتهای هر کلیپ، بی‌صدا کردن صدای اصلی و خروجی MP4. موسیقی مستقل، متن و زیرنویس، افکت و ترنزیشن هنوز در صف توسعه‌اند.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.bodySmall)
+                Text("چند کلیپ در تایم‌لاین، پیش‌نمایش، جابه‌جایی ترتیب، حذف، برش ابتدا و انتها، سرعت ۰٫۵ تا ۲ برابر، لایه موسیقی مستقل، کنترل صدای اصلی و خروجی MP4. فیلترهای تصویری، متن و زیرنویس، استیکر، ترنزیشن و چندلایه تصویری در مرحله بعدی توسعه قرار دارند.", color = Color(0xFF9EACBD), style = MaterialTheme.typography.bodySmall)
                 Text("پردازش روی دستگاه انجام می‌شود؛ فایل‌ها برای تدوین به سرور ارسال نمی‌شوند.", color = Color(0xFF9ED7B2), style = MaterialTheme.typography.labelSmall)
             }
         }
