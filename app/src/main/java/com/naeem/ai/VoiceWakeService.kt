@@ -141,7 +141,7 @@ class VoiceWakeService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentTitle("ایما آماده شنیدن است")
-            .setContentText("برای صحبت بگو «ایما». برای خاموش‌کردن، توقف را بزن.")
+            .setContentText("برای صحبت بگو «ایما». ممکن است سرویس گفتار گوشی از اینترنت استفاده کند. برای خاموش‌کردن، توقف را بزن.")
             .setContentIntent(openApp)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -192,7 +192,7 @@ class VoiceWakeService : Service() {
     }
 
     private fun startListening() {
-        if (destroyed || listening || !ttsReady) return
+        if (destroyed || listening) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             stopSelf()
             return
@@ -279,7 +279,7 @@ class VoiceWakeService : Service() {
                     }
                 }
             }
-            speak(reply, commandArmed)
+            speak(reply, true)
         }
     }
 
