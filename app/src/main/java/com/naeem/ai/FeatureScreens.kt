@@ -1119,7 +1119,7 @@ private fun FilmPosterTile(film: Film, onAskAi: (String) -> Unit) {
  }
 }
 
-@Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit){ MusicStudioDashboard(onClose,onAskAi) }
+@Composable fun MusicDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="کشف آهنگ",gatewayUrl:String="",accessToken:String=""){ MusicStudioDashboard(onClose,onAskAi,initialTab,gatewayUrl,accessToken) }
 
 // Graphite and silver 3D feature gallery for EMA ASI PLATFORM.
 
