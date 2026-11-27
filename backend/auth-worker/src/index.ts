@@ -749,6 +749,129 @@ async function adminProvisionUser(request: Request, env: Env, userId: string): P
   } catch { return json({ error: "PROVISION_FAILED" }, 502); }
 }
 
+
+const MARKET_DEFINITIONS = [
+  { id: "crypto", name_fa: "رمزارز", name_en: "Crypto", description: "Spot and derivatives markets" },
+  { id: "currency", name_fa: "دلار و ارز", name_en: "Currencies", description: "Distinct official, reference and market rates" },
+  { id: "gold", name_fa: "طلا و سکه", name_en: "Gold", description: "Global gold and domestic bullion and coins" },
+  { id: "iran_stock", name_fa: "بورس ایران", name_en: "Iran equities", description: "Listed instruments, indices and sectors" },
+  { id: "global_stock", name_fa: "بورس جهانی", name_en: "Global equities", description: "International equities, ETFs and indices" },
+  { id: "commodities", name_fa: "کالاها", name_en: "Commodities", description: "Energy, metals and agricultural contracts" },
+] as const;
+
+function marketCatalog(): Response {
+  return json({
+    markets: MARKET_DEFINITIONS,
+    capabilities: {
+      quotes: true,
+      candles: true,
+      technical_analysis: "planned",
+      cross_market_analysis: "planned",
+      forecasts: "planned",
+      backtesting: "planned",
+    },
+    note: "A market is available only after a licensed data provider is configured and validated.",
+  });
+}
+
+async function marketOverview(_request: Request, env: Env): Promise<Response> {
+  try {
+    const [counts, providers] = await Promise.all([
+      env.DB.prepare(`SELECT i.market, COUNT(DISTINCT i.instrument_id) AS instrument_count,
+        MAX(o.observed_at) AS latest_observed_at
+        FROM market_instruments i
+        LEFT JOIN market_observations o ON o.instrument_id = i.instrument_id
+          AND o.data_type = 'quote' AND o.quality != 'rejected'
+        WHERE i.active = 1 GROUP BY i.market`).all<any>(),
+      env.DB.prepare("SELECT market, COUNT(*) AS provider_count, MAX(last_success_at) AS last_success_at FROM market_providers WHERE status IN ('active','degraded') GROUP BY market").all<any>(),
+    ]);
+    const countMap = new Map((counts.results || []).map((x: any) => [x.market, x]));
+    const providerMap = new Map((providers.results || []).map((x: any) => [x.market, x]));
+    const markets = MARKET_DEFINITIONS.map(def => {
+      const count: any = countMap.get(def.id);
+      const provider: any = providerMap.get(def.id);
+      const observed = Number(count?.latest_observed_at || 0);
+      const ageSeconds = observed > 0 ? Math.max(0, Math.floor(Date.now() / 1000) - observed) : null;
+      const freshness = ageSeconds === null ? "unavailable" : ageSeconds <= 120 ? "live" : ageSeconds <= 3600 ? "delayed" : "stale";
+      return {
+        ...def,
+        instrument_count: Number(count?.instrument_count || 0),
+        provider_count: Number(provider?.provider_count || 0),
+        latest_observed_at: observed || null,
+        age_seconds: ageSeconds,
+        freshness,
+        status: Number(count?.instrument_count || 0) > 0 && observed > 0 ? freshness : "unconfigured",
+      };
+    });
+    return json({ markets, generated_at: new Date().toISOString() });
+  } catch {
+    return json({ error: "MARKET_SCHEMA_NOT_READY", message: "Market data migration 0011 has not been applied." }, 503);
+  }
+}
+
+async function marketInstruments(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const market = url.searchParams.get("market") || "";
+  const query = (url.searchParams.get("q") || "").trim().slice(0, 80);
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 50)));
+  if (market && !MARKET_DEFINITIONS.some(x => x.id === market)) return json({ error: "INVALID_MARKET" }, 400);
+  try {
+    let statement = "SELECT instrument_id, market, asset_class, symbol, display_name, exchange, country, quote_currency, unit, timezone, active FROM market_instruments WHERE active = 1";
+    const params: any[] = [];
+    if (market) { statement += " AND market = ?"; params.push(market); }
+    if (query) { statement += " AND (symbol LIKE ? OR display_name LIKE ?)"; params.push("%" + query + "%", "%" + query + "%"); }
+    statement += " ORDER BY market, symbol LIMIT ?";
+    params.push(limit);
+    const result = await env.DB.prepare(statement).bind(...params).all<any>();
+    return json({ items: result.results || [], count: (result.results || []).length });
+  } catch {
+    return json({ error: "MARKET_SCHEMA_NOT_READY" }, 503);
+  }
+}
+
+async function marketQuotes(request: Request, env: Env): Promise<Response> {
+  const rawIds = new URL(request.url).searchParams.get("ids") || "";
+  const ids = [...new Set(rawIds.split(",").map(x => x.trim()).filter(Boolean))].slice(0, 50);
+  if (!ids.length) return json({ items: [], count: 0 });
+  if (ids.some(x => x.length > 120)) return json({ error: "INVALID_INSTRUMENT_ID" }, 400);
+  try {
+    const placeholders = ids.map(() => "?").join(",");
+    const result = await env.DB.prepare(`SELECT i.instrument_id, i.market, i.symbol, i.display_name,
+      i.quote_currency, i.unit, o.price_text, o.change_pct_text, o.volume_text,
+      o.observed_at, o.received_at, o.source_id, o.quality, o.freshness
+      FROM market_instruments i
+      LEFT JOIN market_observations o ON o.id = (
+        SELECT o2.id FROM market_observations o2
+        WHERE o2.instrument_id = i.instrument_id AND o2.data_type = 'quote' AND o2.quality != 'rejected'
+        ORDER BY o2.observed_at DESC LIMIT 1
+      )
+      WHERE i.instrument_id IN (${placeholders}) AND i.active = 1`).bind(...ids).all<any>();
+    return json({ items: result.results || [], count: (result.results || []).length });
+  } catch {
+    return json({ error: "MARKET_SCHEMA_NOT_READY" }, 503);
+  }
+}
+
+async function marketCandles(request: Request, env: Env, instrumentId: string): Promise<Response> {
+  const url = new URL(request.url);
+  const interval = url.searchParams.get("interval") || "1d";
+  const allowed = ["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1mo"];
+  if (!allowed.includes(interval)) return json({ error: "INVALID_INTERVAL" }, 400);
+  const to = Math.min(Math.floor(Date.now() / 1000), Number(url.searchParams.get("to") || Math.floor(Date.now() / 1000)));
+  const from = Math.max(0, Number(url.searchParams.get("from") || (to - 90 * 86400)));
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from >= to || to - from > 5 * 366 * 86400) return json({ error: "INVALID_RANGE" }, 400);
+  const limit = Math.min(2000, Math.max(1, Number(url.searchParams.get("limit") || 500)));
+  try {
+    const result = await env.DB.prepare(`SELECT instrument_id, interval, open_time, close_time,
+      open_text, high_text, low_text, close_text, volume_text, source_id, quality, is_final
+      FROM market_candles WHERE instrument_id = ? AND interval = ? AND open_time >= ? AND open_time <= ?
+      ORDER BY open_time ASC LIMIT ?`).bind(instrumentId, interval, from, to, limit).all<any>();
+    return json({ instrument_id: instrumentId, interval, items: result.results || [], count: (result.results || []).length });
+  } catch {
+    return json({ error: "MARKET_SCHEMA_NOT_READY" }, 503);
+  }
+}
+
 async function adminProviderLimit(request: Request, env: Env, userId: string): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   const body = await request.json().catch(() => null) as any;
