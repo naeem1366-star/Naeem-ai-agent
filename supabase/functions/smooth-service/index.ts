@@ -263,7 +263,7 @@ Deno.serve(async (request: Request) => {
       if (!isAdmin && !hasSubscription && !billingReady) throw new Error("AI_BILLING_NOT_ENABLED");
       let reservationId: string | null = null;
       let reserveToman = 0;
-      if (!isAdmin && !hasSubscription) {
+      if (!isAdmin && billingReady && walletBalance > 0) {
         if (!(estimateUsd > 0) || !Number.isFinite(estimateUsd)) throw new Error("MEDIA_MODEL_PRICE_MISSING");
         reserveToman = Math.max(1, Math.ceil(estimateUsd * rate * (1 + markup / 10000) * 1.5));
         const reserved = await serviceFetch("rpc/ema_reserve_wallet", {
@@ -273,8 +273,11 @@ Deno.serve(async (request: Request) => {
             p_reference: crypto.randomUUID(), p_feature: feature, p_model: model,
           }),
         });
-        if (!reserved?.ok || !reserved?.reservation_id) throw new Error("INSUFFICIENT_AI_CREDIT");
-        reservationId = String(reserved.reservation_id);
+        if (reserved?.ok && reserved?.reservation_id) {
+          reservationId = String(reserved.reservation_id);
+        } else if (!hasSubscription) {
+          throw new Error("INSUFFICIENT_AI_CREDIT");
+        }
       }
       return { isAdmin, hasSubscription, rate, markup, reservationId, reserveToman };
     };
@@ -282,10 +285,11 @@ Deno.serve(async (request: Request) => {
       reservationId: string | null, feature: string, model: string, actualUsd: number,
       rate: number, markup: number, isAdmin: boolean, hasSubscription: boolean,
       metadata: Record<string, unknown> = {},
+      reserveToman: number = Number.MAX_SAFE_INTEGER,
     ) => {
       const safeUsd = Math.max(0, Number.isFinite(actualUsd) ? actualUsd : 0);
       if (reservationId) {
-        const actualToman = Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000)));
+        const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000))));
         await serviceFetch("rpc/ema_settle_wallet", {
           method: "POST",
           body: JSON.stringify({
@@ -371,7 +375,7 @@ Deno.serve(async (request: Request) => {
         try { result = JSON.parse(raw); } catch { throw new Error("NETARZ_INVALID_MUSIC_RESPONSE"); }
         const returnedUsd = Number(result?.usd ?? result?.usage?.cost_usd ?? estimateUsd);
         await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.isAdmin, access.hasSubscription,
-          { request_id: result?.id || null, seconds });
+          { request_id: result?.id || null, seconds }, access.reserveToman);
         console.log("EMA paid music completed", { user_id: userId, model, provider: "NetArz", cost_usd: returnedUsd });
         return reply(result);
       } catch (error) {
@@ -438,7 +442,7 @@ Deno.serve(async (request: Request) => {
           body: JSON.stringify({
             user_id: userId, provider_job_id: providerJobId, feature: "professional_video",
             model, reservation_id: reservationId, estimated_cost_usd: actualEstimate,
-            size, seconds, status: String(job?.status || "queued"),
+            size, seconds, reserve_toman: access.reserveToman, status: String(job?.status || "queued"),
           }),
         });
         return reply({ ...job, id: providerJobId, model, usd: actualEstimate, ema_job_id: providerJobId }, 202);
