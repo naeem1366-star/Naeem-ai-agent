@@ -122,14 +122,14 @@ private suspend fun prepareMixPlayer(url:String):MediaPlayer=suspendCancellableC
 }
 
 @Composable
-fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
+fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="کشف آهنگ"){
     val context= LocalContext.current
     val store=remember(context){MusicStudioStore(context)}
     val search=remember{MultiMusicSearch()}
     val scope= rememberCoroutineScope()
     val albums= remember{mutableStateListOf<StudioAlbum>().apply{addAll(store.load())}}
     val selected= remember{mutableStateListOf<StudioTrack>()}
-    var tab by remember{mutableStateOf("کشف آهنگ")}
+    var tab by remember(initialTab){mutableStateOf(initialTab)}
     var query by remember{mutableStateOf("")}
     var source by remember{mutableStateOf("همه")}
     var results by remember{mutableStateOf<List<StudioTrack>>(emptyList())}
