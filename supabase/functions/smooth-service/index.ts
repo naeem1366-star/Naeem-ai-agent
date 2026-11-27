@@ -194,6 +194,15 @@ Deno.serve(async (request: Request) => {
 
     // Billing routes are served by this same function so Android can use one secure gateway URL.
     if (route.startsWith("/v1/billing/")) {
+      if (request.method === "GET" && route === "/v1/billing/admin/dashboard") {
+        await requireAdmin();
+        const snapshot = await serviceFetch("rpc/ema_admin_dashboard_snapshot", {
+          method: "POST",
+          body: JSON.stringify({ p_admin_id: userId }),
+        });
+        return reply(snapshot || {});
+      }
+
       if (request.method === "GET" && route === "/v1/billing/catalog") {
         const [wallets, plans, subscriptions, settings, admins] = await Promise.all([
           serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
