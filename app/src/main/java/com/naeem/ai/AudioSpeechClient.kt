@@ -41,6 +41,7 @@ class AudioSpeechClient {
             .put("response_format", "mp3")
         val request = Request.Builder()
             .url("$root/v1/audio/speech")
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
             .header("Authorization", "Bearer $accessToken")
             .header("Accept", "audio/mpeg, application/octet-stream, application/json")
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
