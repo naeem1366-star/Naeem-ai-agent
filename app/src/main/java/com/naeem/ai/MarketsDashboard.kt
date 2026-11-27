@@ -225,6 +225,10 @@ fun MarketsDashboard(onClose: () -> Unit) {
         }
     }
 
+    val observedChanges = visible.mapNotNull { it.change }
+    val positiveBreadth = observedChanges.count { it > 0 }
+    val negativeBreadth = observedChanges.count { it < 0 }
+    val averageMove = if (observedChanges.isNotEmpty()) observedChanges.average() else null
     fun formatted(value: Double): String = NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value)
     fun unitLabel(unit: String): String = when (unit.uppercase()) {
         "IRT" -> "تومان"
@@ -268,6 +272,27 @@ fun MarketsDashboard(onClose: () -> Unit) {
             Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (updatedAt.isBlank()) "در انتظار دریافت قیمت‌ها" else "آخرین داده: ${updatedAt.replace("T", " ")} UTC", color = Color(0xFF8993A3), fontSize = 10.sp, modifier = Modifier.weight(1f))
                 Text("به‌روزرسانی دستی", color = MarketAccent, fontSize = 10.sp)
+            }
+
+            if (selected != "پیشنهاد خرید" && observedChanges.isNotEmpty()) {
+                val mood = when {
+                    positiveBreadth > negativeBreadth -> "تمایل مثبت در داده‌های قابل‌مقایسه"
+                    negativeBreadth > positiveBreadth -> "تمایل منفی در داده‌های قابل‌مقایسه"
+                    else -> "بازار ترکیبی و بدون برتری روشن"
+                }
+                Column(
+                    Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        .background(MarketPanel, RoundedCornerShape(16.dp)).padding(14.dp)
+                ) {
+                    Text("تحلیلگر نبض بازار", color = MarketAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(mood, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(top = 5.dp))
+                    Text(
+                        "مثبت: $positiveBreadth  •  منفی: $negativeBreadth  •  میانگین تغییر روزانه/دوره‌ای: ${averageMove?.let { formatted(it) } ?: "—"}٪",
+                        color = Color(0xFFADB6C5), fontSize = 11.sp, modifier = Modifier.padding(top = 5.dp)
+                    )
+                    Text("این جمع‌بندی فقط از تغییرات گزارش‌شده منابع عمومی ساخته شده و سیگنال خرید یا پیش‌بینی قطعی نیست.",
+                        color = Color(0xFF7F8A9B), fontSize = 10.sp, modifier = Modifier.padding(top = 5.dp))
+                }
             }
 
             if (selected == "پیشنهاد خرید") {
