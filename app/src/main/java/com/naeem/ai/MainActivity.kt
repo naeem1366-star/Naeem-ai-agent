@@ -1193,7 +1193,7 @@ fun NaeemApp(
                     val cloudProfile = if (accessTokenForMemory.isNotBlank()) {
                         runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }.getOrNull()
                     } else null
-                    if (explicitMemory.isNotBlank() && accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                    if (explicitMemory.isNotBlank() && accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
                         runCatching {
                             cloudMemoryClient.saveMemory(
                                 BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
@@ -1201,12 +1201,13 @@ fun NaeemApp(
                             )
                         }
                     }
+                    val cloudSyncAllowed = dataStore.memorySyncEnabled() && cloudProfile?.memorySyncEnabled != false
                     val cloudPreferences = cloudProfile?.preferences ?: org.json.JSONObject()
                     val effectiveName = userName.ifBlank { cloudProfile?.displayName.orEmpty() }
                     val effectiveInterests = userInterests.ifBlank { cloudPreferences.optString("interests") }
                     val effectiveAbout = userAbout.ifBlank { cloudPreferences.optString("about") }
                     val effectiveStyle = responseStyle.ifBlank { cloudPreferences.optString("responseStyle").ifBlank { "صمیمی و طبیعی" } }
-                    if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false &&
+                    if (accessTokenForMemory.isNotBlank() && cloudSyncAllowed &&
                         (userName.isNotBlank() || userInterests.isNotBlank() || userAbout.isNotBlank())) {
                         val mergedPreferences = org.json.JSONObject(cloudPreferences.toString())
                         if (userInterests.isNotBlank()) mergedPreferences.put("interests", userInterests)
@@ -1225,7 +1226,7 @@ fun NaeemApp(
                         question.trim().startsWith("نه") || question.contains("اشتباهه") || question.contains("منظورم این بود") || question.contains("اصلاحش کن") -> "correction"
                         else -> null
                     }
-                    if (learningType != null && accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                    if (learningType != null && accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
                         runCatching {
                             cloudMemoryClient.recordLearningEvent(
                                 BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
@@ -1233,11 +1234,11 @@ fun NaeemApp(
                             )
                         }
                     }
-                    val cloudMemories = if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                    val cloudMemories = if (accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
                         runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
                             .getOrDefault(emptyList()).map { it.content }
                     } else emptyList()
-                    val cloudLearning = if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                    val cloudLearning = if (accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
                         runCatching { cloudMemoryClient.listLearningEvents(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
                             .getOrDefault(emptyList())
                     } else emptyList()
