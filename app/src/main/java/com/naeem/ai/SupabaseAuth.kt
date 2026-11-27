@@ -8,6 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.ConnectionSpec
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
@@ -30,6 +32,9 @@ class SupabaseAuthClient(context: Context) {
         .writeTimeout(30, TimeUnit.SECONDS)
         .callTimeout(60, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
+        // Some mobile VPN/proxy routes reset HTTP/2 streams; force broadly compatible HTTP/1.1.
+        .protocols(listOf(Protocol.HTTP_1_1))
+        .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))
         .build()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
     // Avoid a launch crash if Android Keystore is unavailable on a device.
