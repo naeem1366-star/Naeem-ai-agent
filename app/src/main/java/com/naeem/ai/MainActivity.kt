@@ -809,11 +809,11 @@ fun NaeemApp(
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
     suspend fun sendChat(text: String, image: String? = null): String {
-        val gateway = BuildConfig.CHAT_GATEWAY_URL.trim()
-        check(gateway.isNotBlank()) {
-            if (isEnglish) "The EMA secure chat gateway is not configured in this build. The API key saved in Connection Settings is for local provider tools and cannot replace the server gateway." else "نشانی درگاه امن چت ایما در این نسخه تنظیم نشده است. کلید API ذخیره‌شده در تنظیمات گوشی جایگزین درگاه سرور نیست؛ ابتدا باید سرور EMA منتشر و به برنامه متصل شود."
+        val savedKey = store.apiKeyFor(baseUrl).ifBlank { apiKey }.trim()
+        check(savedKey.isNotBlank()) {
+            if (isEnglish) "Enter and save your API key in Connection Settings first." else "ابتدا کلید API سرویس خودت را در تنظیمات اتصال وارد و ذخیره کن."
         }
-        return client.sendViaGateway(gateway, chatAccessToken, model, text, image)
+        return client.send(baseUrl, model, savedKey, text, image)
     }
     val imageClient = remember { ImageGenerationClient() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
