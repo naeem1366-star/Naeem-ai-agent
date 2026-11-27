@@ -20,6 +20,12 @@ data class EmaCloudMemory(
     val updatedAt: String
 )
 
+data class EmaCloudProfile(
+    val displayName: String,
+    val preferences: JSONObject,
+    val memorySyncEnabled: Boolean
+)
+
 /**
  * Account-scoped memory sync. The device keeps its local memory for offline use;
  * this client syncs only explicit/user-approved memories through the authenticated gateway.
@@ -97,6 +103,50 @@ class EmaMemoryClient {
                 pinned = item.optBoolean("pinned", false),
                 updatedAt = item.optString("updated_at")
             )
+        }
+    }
+
+    suspend fun getProfile(gatewayUrl: String, accessToken: String): EmaCloudProfile =
+        withContext(Dispatchers.IO) {
+            val root = gatewayUrl.trim().trimEnd('/')
+            val request = Request.Builder()
+                .url("$root/v1/memory/profile")
+                .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
+                .header("Authorization", "Bearer $accessToken")
+                .get().build()
+            http.newCall(request).execute().use { response ->
+                val raw = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw IllegalStateException(memoryError(response.code, raw))
+                val profile = JSONObject(raw).optJSONObject("profile") ?: JSONObject()
+                EmaCloudProfile(
+                    displayName = profile.optString("display_name"),
+                    preferences = profile.optJSONObject("preferences") ?: JSONObject(),
+                    memorySyncEnabled = profile.optBoolean("memory_sync_enabled", true)
+                )
+            }
+        }
+
+    suspend fun saveProfile(
+        gatewayUrl: String,
+        accessToken: String,
+        displayName: String,
+        preferences: JSONObject,
+        memorySyncEnabled: Boolean = true
+    ) = withContext(Dispatchers.IO) {
+        val root = gatewayUrl.trim().trimEnd('/')
+        val body = JSONObject()
+            .put("displayName", displayName.take(80))
+            .put("preferences", preferences)
+            .put("memorySyncEnabled", memorySyncEnabled)
+        val request = Request.Builder()
+            .url("$root/v1/memory/profile")
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
+            .header("Authorization", "Bearer $accessToken")
+            .patch(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) throw IllegalStateException(memoryError(response.code, raw))
         }
     }
 
