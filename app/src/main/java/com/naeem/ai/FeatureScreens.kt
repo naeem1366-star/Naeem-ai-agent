@@ -147,17 +147,13 @@ fun FeatureHub(
 ){
     var query by remember { mutableStateOf("") }
     var hasPaidAccess by remember { mutableStateOf(false) }
-    var accessChecked by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("free") }
     LaunchedEffect(accessToken, gatewayUrl) {
         hasPaidAccess = false
-        accessChecked = false
+        hasPaidAccess = false
         if (accessToken.isNotBlank() && gatewayUrl.isNotBlank()) {
-            runCatching { BillingClient(gatewayUrl).load(accessToken).catalog }.onSuccess { catalog ->
-                hasPaidAccess = catalog.isAdmin || catalog.balanceToman > 0L || !catalog.subscriptionName.isNullOrBlank()
-            }
+            hasPaidAccess = runCatching { BillingClient(gatewayUrl).hasPaidAccess(accessToken) }.getOrDefault(false)
         }
-        accessChecked = true
     }
     var showFeatureMap by remember { mutableStateOf(false) }
     var orbitRotation by remember { mutableStateOf(0f) }
