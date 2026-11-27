@@ -680,6 +680,8 @@ fun NaeemApp(
     var selectedImage by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var imageMode by remember { mutableStateOf(false) }
     var prompt by remember { mutableStateOf("") }
+    var selectedFileText by remember { mutableStateOf<String?>(null) }
+    var selectedFileName by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
@@ -710,6 +712,7 @@ fun NaeemApp(
     var deleteConversationTarget by remember { mutableStateOf<StoredConversation?>(null) }
     var renameConversationDraft by remember { mutableStateOf("") }
     val dataStore = remember { AssistantDataStore(context) }
+    val cloudMemoryClient = remember { EmaMemoryClient() }
     val deepSearchClient = remember { DeepSearchClient() }
     var memories by remember { mutableStateOf(dataStore.memories()) }
     var albumImages by remember { mutableStateOf(dataStore.images()) }
@@ -835,6 +838,23 @@ fun NaeemApp(
         }
     }
     val imageClient = remember { ImageGenerationClient() }
+    val textFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                val text = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: throw IllegalStateException("خواندن فایل انتخاب‌شده ممکن نشد.")
+                if (text.isBlank()) throw IllegalStateException("فایل انتخاب‌شده خالی است.")
+                if (text.length > 120_000) throw IllegalStateException("حجم متن فایل بیش از ۱۲۰ هزار نویسه است؛ لطفاً فایل کوچک‌تری انتخاب کن.")
+                selectedFileText = text
+                selectedFileName = uri.lastPathSegment?.substringAfterLast('/')?.take(90) ?: "فایل متنی"
+                error = ""
+            } catch (e: Exception) {
+                selectedFileText = null
+                selectedFileName = null
+                error = e.message ?: "خواندن فایل ناموفق بود."
+            }
+        }
+    }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             try {
@@ -1112,7 +1132,9 @@ fun NaeemApp(
         val question = prompt.trim()
         val imageToSend = selectedImageBase64
         val imagePreview = selectedImage
-        if ((question.isBlank() && imageToSend.isNullOrBlank()) || busy) return
+        val fileTextToSend = selectedFileText
+        val fileNameToSend = selectedFileName
+        if ((question.isBlank() && imageToSend.isNullOrBlank() && fileTextToSend.isNullOrBlank()) || busy) return
         // Intercept labelled credentials locally before they can enter chat history or leave the device.
         val parsedApiConfig = if (imageToSend.isNullOrBlank()) ApiConfigTextParser.parse(question) else null
         if (parsedApiConfig != null) {
@@ -1121,12 +1143,15 @@ fun NaeemApp(
             error = ""
             return
         }
-        val finalQuestion = question.ifBlank { "این تصویر را با جزئیات بررسی و تحلیل کن." }
-        val shouldGenerateImage = imageMode || isImageGenerationRequest(finalQuestion)
+        val fileContext = fileTextToSend?.let { "\n\nمحتوای فایل پیوست «${fileNameToSend ?: "فایل متنی"}»:\n$it" }.orEmpty()
+        val finalQuestion = (question.ifBlank { if (imageToSend != null) "این تصویر را با جزئیات بررسی و تحلیل کن." else "این فایل را بررسی کن." } + fileContext).trim()
+        val shouldGenerateImage = imageMode || (fileTextToSend == null && isImageGenerationRequest(finalQuestion))
         prompt = ""
         selectedImageBase64 = null
         selectedImage = null
-        messages.add(ChatMessage(if (shouldGenerateImage) "ساخت تصویر: $finalQuestion" else finalQuestion, true, imagePreview))
+        selectedFileText = null
+        selectedFileName = null
+        messages.add(ChatMessage(if (shouldGenerateImage) "ساخت تصویر: $question" else question + fileNameToSend?.let { "\n📎 $it" }.orEmpty(), true, imagePreview))
         busy = true
         error = ""
         scope.launch {
@@ -1150,7 +1175,30 @@ fun NaeemApp(
                         if (speakAnswer) playAnswer(actionReply)
                         return@launch
                     }
-                    val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
+                    val accessTokenForMemory = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                    val explicitMemory = when {
+                        finalQuestion.contains("به خاطر بسپار") -> finalQuestion.substringAfter("به خاطر بسپار").trim()
+                        finalQuestion.contains("یادت باشه") -> finalQuestion.substringAfter("یادت باشه").trim()
+                        else -> ""
+                    }
+                    if (explicitMemory.isNotBlank()) {
+                        dataStore.addMemory(explicitMemory)
+                        memories = dataStore.memories()
+                        if (accessTokenForMemory.isNotBlank()) {
+                            runCatching {
+                                cloudMemoryClient.saveMemory(
+                                    BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                    explicitMemory, type = "note", source = "user_explicit"
+                                )
+                            }
+                        }
+                    }
+                    val cloudMemories = if (accessTokenForMemory.isNotBlank()) {
+                        runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
+                            .getOrDefault(emptyList()).map { it.content }
+                    } else emptyList()
+                    val allMemories = (memories + cloudMemories).distinct().takeLast(40)
+                    val memoryContext = allMemories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
                     val profileContext = buildString {
                         if (userName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $userName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
                         if (userInterests.isNotBlank()) append("\nعلایق کاربر: $userInterests.")
@@ -1166,10 +1214,6 @@ fun NaeemApp(
                         report + "\n\nمنابع بررسی‌شده:\n" + findings.mapIndexed { index, item -> "[${index + 1}] ${item.title} — ${item.url}" }.joinToString("\n")
                     } else {
                         val memoryAwarePrompt = "زمینه کاربر:\n$userContext\n\nدرخواست کاربر:\n$finalQuestion"
-                        if (finalQuestion.contains("به خاطر بسپار") || finalQuestion.contains("یادت باشه")) {
-                            val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
-                            if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
-                        }
                         sendChat(memoryAwarePrompt, imageToSend, featureForThisMessage)
                     }
                     messages.add(ChatMessage(answer, false))
@@ -1312,53 +1356,72 @@ fun NaeemApp(
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        if (selectedImage != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Image(bitmap = selectedImage!!, contentDescription = "تصویر انتخاب‌شده", modifier = Modifier.size(64.dp), contentScale = ContentScale.Crop)
-                                Text(appText("تصویر آماده ارسال است", isEnglish), color = Muted, style = MaterialTheme.typography.labelMedium)
-                                TextButton(onClick = { selectedImage = null; selectedImageBase64 = null }) { Text(appText("حذف", isEnglish), color = Gold) }
+                        if (selectedImage != null || selectedFileName != null) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                            ) {
+                                if (selectedImage != null) {
+                                    Image(bitmap = selectedImage!!, contentDescription = "تصویر انتخاب‌شده", modifier = Modifier.size(48.dp), contentScale = ContentScale.Crop)
+                                }
+                                Text(
+                                    selectedFileName?.let { "📎 $it" } ?: "تصویر آماده ارسال است",
+                                    color = Muted, style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.weight(1f), maxLines = 1
+                                )
+                                TextButton(onClick = {
+                                    selectedImage = null; selectedImageBase64 = null
+                                    selectedFileText = null; selectedFileName = null
+                                }, contentPadding = PaddingValues(horizontal = 5.dp)) {
+                                    Text("حذف", color = Gold)
+                                }
                             }
                         }
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            TextButton(
+                            IconButton(
+                                onClick = { textFilePicker.launch(arrayOf("text/*", "application/json", "application/xml")) },
+                                enabled = !busy,
+                                modifier = Modifier.size(34.dp)
+                            ) { Icon(Icons.Default.Add, contentDescription = "پیوست فایل متنی", tint = Gold, modifier = Modifier.size(21.dp)) }
+                            IconButton(
                                 onClick = { imagePicker.launch("image/*") },
                                 enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
-                            ) {
-                                Text(appText("＋ عکس", isEnglish), color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
-                            }
-                            TextButton(
+                                modifier = Modifier.size(34.dp)
+                            ) { Icon(Icons.Default.Image, contentDescription = "افزودن تصویر", tint = Gold, modifier = Modifier.size(20.dp)) }
+                            IconButton(
                                 onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } },
                                 enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
-                            ) {
-                                Text(appText(if (imageMode) "✦ تصویر روشن" else "✦ ساخت تصویر", isEnglish), color = if (imageMode) Color(0xFFD4D9E0) else Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
-                            }
-                            TextButton(
+                                modifier = Modifier.size(34.dp)
+                            ) { Icon(Icons.Default.AutoAwesome, contentDescription = "ساخت تصویر", tint = if (imageMode) Color(0xFFE9C46A) else Muted, modifier = Modifier.size(19.dp)) }
+                            IconButton(
                                 onClick = { searchMode = !searchMode },
                                 enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+                                modifier = Modifier.size(34.dp)
+                            ) { Icon(Icons.Default.TravelExplore, contentDescription = "جست‌وجوی وب", tint = if (searchMode) Color(0xFF8DD9C0) else Muted, modifier = Modifier.size(19.dp)) }
+                            IconButton(
+                                onClick = {
+                                    if (conversationMode) {
+                                        conversationMode = false
+                                        listening = false
+                                        mediaPlayer?.runCatching { stop() }; mediaPlayer?.release(); mediaPlayer = null
+                                    } else {
+                                        conversationMode = true
+                                        startVoiceCapture?.invoke()
+                                    }
+                                },
+                                enabled = !busy || conversationMode,
+                                modifier = Modifier.size(38.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape).onGloballyPositioned { micTargetBounds = it.boundsInWindow() }
                             ) {
-                                Text(appText(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", isEnglish), color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
+                                Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
                             }
-                        }
-                        Row(
-                            verticalAlignment = Alignment.Bottom,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
                             IconButton(
                                 onClick = {
                                     if (wakeAssistantEnabled) {
                                         context.stopService(Intent(context, VoiceWakeService::class.java))
-                                        wakeAssistantEnabled = false
-                                        wakePrefs.edit().putBoolean("enabled", false).apply()
                                     } else {
                                         val needed = mutableListOf<String>()
                                         if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -1370,20 +1433,16 @@ fun NaeemApp(
                                         }
                                         if (needed.isEmpty()) {
                                             runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
-                                                .onSuccess {
-                                                    wakeAssistantEnabled = true
-                                                    wakePrefs.edit().putBoolean("enabled", true).apply()
-                                                }
-                                                .onFailure { wakeAssistantEnabled = false }
+                                                .onFailure { error = "فعال‌سازی شنود صوتی ناموفق بود: ${it.message ?: "خطای نامشخص"}" }
                                         } else wakePermissionLauncher.launch(needed.toTypedArray())
                                     }
                                 },
-                                modifier = Modifier.size(44.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
+                                modifier = Modifier.size(38.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
                             ) {
                                 Icon(Icons.Default.GraphicEq, contentDescription = if (smartListeningEnabled) "شنود هوشمند ایما فعال است" else if (wakeAssistantEnabled) "آماده‌باش صوتی ایما فعال است" else "فعال‌کردن دستیار صوتی ایما", tint = if (smartListeningEnabled) Color.White else Gold)
                             }
-                            IconButton(onClick = { showVoiceHelp = true }, modifier = Modifier.size(34.dp)) {
-                                Icon(Icons.Default.Info, contentDescription = "راهنمای دستیار صوتی ایما", tint = Gold, modifier = Modifier.size(19.dp))
+                            IconButton(onClick = { showVoiceHelp = true }, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Default.Info, contentDescription = "راهنمای دستیار صوتی ایما", tint = Muted, modifier = Modifier.size(17.dp))
                             }
                             if (showVoiceHelp) {
                                 AlertDialog(
@@ -1391,8 +1450,8 @@ fun NaeemApp(
                                     title = { Text(if (isEnglish) "EMA Life Assistant" else "دستیار زندگی ایما", color = Color.White, fontWeight = FontWeight.Bold) },
                                     text = {
                                         Text(
-                                            if (isEnglish) "1. Turn on voice standby with the sound-wave button.\n2. Say “EMA” — EMA replies “I’m here.”\n3. Say “be on the lookout” to enable smart listening; the control turns green.\n4. Say “EMA, stop listening” to stop smart listening and return to wake-word standby.\n5. Tap the sound-wave button again to stop the voice service completely.\n\nThe microphone remains active while the voice service is on, and Android shows an ongoing notification. In this version, spoken food and workout logging are supported; other categories are still being developed."
-                                            else "۱. دکمه موج صوتی را روشن کن تا ایما در حالت آماده‌باش قرار بگیرد.\n۲. بگو «ایما»؛ ایما جواب می‌دهد «در خدمتم».\n۳. بگو «ایما، به گوش باش» تا شنود هوشمند فعال شود و کلید سبز شود.\n۴. بگو «ایما، شنود رو خاموش کن» تا شنود هوشمند متوقف شود و ایما به حالت آماده‌باش برگردد.\n۵. برای خاموش‌کردن کامل میکروفون، دکمه موج صوتی را دوباره لمس کن.\n\nتا وقتی سرویس صوتی روشن است میکروفون فعال می‌ماند و اعلان دائمی اندروید نمایش داده می‌شود. در این نسخه ثبت صوتی غذا و تمرین فعال است؛ تحلیل سایر موضوعات هنوز در حال توسعه است.",
+                                            if (isEnglish) "1. Turn on voice standby with the sound-wave button.\n2. Say “EMA” — EMA replies “I’m here.”\n3. Say “be on the lookout” to enable smart listening; the control turns green.\n4. Say “EMA, stop listening” to stop smart listening and return to wake-word standby.\n5. Tap the sound-wave button again to stop the voice service completely.\n\nThe microphone remains active while the voice service is on, and Android shows an ongoing notification. Spoken commands are currently limited to the supported local assistant tools."
+                                            else "۱. دکمه موج صوتی را روشن کن تا ایما در حالت آماده‌باش قرار بگیرد.\n۲. بگو «ایما»؛ ایما جواب می‌دهد «در خدمتم».\n۳. بگو «ایما، به گوش باش» تا شنود هوشمند فعال شود و کلید سبز شود.\n۴. بگو «ایما، شنود رو خاموش کن» تا شنود هوشمند متوقف شود و ایما به حالت آماده‌باش برگردد.\n۵. برای خاموش‌کردن کامل میکروفون، دکمه موج صوتی را دوباره لمس کن.\n\nتا وقتی سرویس صوتی روشن است میکروفون فعال می‌ماند و اعلان دائمی اندروید نمایش داده می‌شود. اجرای فرمان‌های صوتی هنوز به ابزارهای پشتیبانی‌شده محدود است.",
                                             color = Color(0xFFD5DCE7),
                                             style = MaterialTheme.typography.bodyMedium,
                                             lineHeight = 22.sp
@@ -1406,27 +1465,11 @@ fun NaeemApp(
                                     textContentColor = Color(0xFFD5DCE7)
                                 )
                             }
-                            IconButton(
-                                onClick = {
-                                    if (conversationMode) {
-                                        conversationMode = false
-                                        listening = false
-                                        mediaPlayer?.runCatching { stop() }; mediaPlayer?.release(); mediaPlayer = null
-                                    } else {
-                                        conversationMode = true
-                                        startVoiceCapture?.invoke()
-                                    }
-                                },
-                                enabled = !busy || conversationMode,
-                                modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape).onGloballyPositioned { micTargetBounds = it.boundsInWindow() }
-                            ) {
-                                Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
-                            }
                             OutlinedTextField(
                                 value = prompt, onValueChange = { prompt = it },
-                                modifier = Modifier.weight(1f).onGloballyPositioned { inputTargetBounds = it.boundsInWindow() },
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp).onGloballyPositioned { inputTargetBounds = it.boundsInWindow() },
                                 placeholder = { Text(appText(if (imageMode) "توضیح تصویری که می‌خواهی بسازم…" else if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", isEnglish), color = Muted) },
-                                maxLines = 4, shape = RoundedCornerShape(22.dp),
+                                minLines = 2, maxLines = 5, shape = RoundedCornerShape(22.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
                                     focusedContainerColor = Color(0x16FFFFFF), unfocusedContainerColor = Color(0x10FFFFFF)
@@ -1434,10 +1477,10 @@ fun NaeemApp(
                             )
                             IconButton(
                                 onClick = { sendMessage(false) },
-                                enabled = !busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank()),
-                                modifier = Modifier.size(48.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Gold else Panel, CircleShape).onGloballyPositioned { sendTargetBounds = it.boundsInWindow() }
+                                enabled = !busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank() || !selectedFileText.isNullOrBlank()),
+                                modifier = Modifier.size(42.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank() || !selectedFileText.isNullOrBlank())) Gold else Panel, CircleShape).onGloballyPositioned { sendTargetBounds = it.boundsInWindow() }
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = if (imageMode) "ساخت تصویر" else "ارسال", tint = if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Ink else Muted)
+                                Icon(Icons.Default.Send, contentDescription = if (imageMode) "ساخت تصویر" else "ارسال", tint = if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank() || !selectedFileText.isNullOrBlank())) Ink else Muted)
                             }
                         }
                     }
