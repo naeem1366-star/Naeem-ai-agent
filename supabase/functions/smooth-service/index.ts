@@ -373,7 +373,8 @@ Deno.serve(async (request: Request) => {
         }
         let result: any;
         try { result = JSON.parse(raw); } catch { throw new Error("NETARZ_INVALID_MUSIC_RESPONSE"); }
-        const returnedUsd = Number(result?.usd ?? result?.usage?.cost_usd ?? estimateUsd);
+        const reportedUsd = Number(result?.usd ?? result?.usage?.cost_usd);
+        const returnedUsd = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
         await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.isAdmin, access.hasSubscription,
           { request_id: result?.id || null, seconds }, access.reserveToman);
         console.log("EMA paid music completed", { user_id: userId, model, provider: "NetArz", cost_usd: returnedUsd });
@@ -436,7 +437,8 @@ Deno.serve(async (request: Request) => {
         const job = JSON.parse(raw);
         const providerJobId = String(job?.id || job?.data?.id || "");
         if (!providerJobId || !/^[A-Za-z0-9_-]{1,160}$/.test(providerJobId)) throw new Error("NETARZ_INVALID_VIDEO_JOB");
-        const actualEstimate = Number(job?.usd ?? estimateUsd);
+        const reportedUsd = Number(job?.usd);
+        const actualEstimate = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
         await serviceFetch("ema_media_jobs", {
           method: "POST", headers: { Prefer: "return=minimal" },
           body: JSON.stringify({
@@ -485,7 +487,8 @@ Deno.serve(async (request: Request) => {
       if (!savedJob.settled && (status === "completed" || status === "failed" || status === "cancelled")) {
         const reservationId = savedJob.reservation_id ? String(savedJob.reservation_id) : null;
         if (status === "completed") {
-          const cost = Number(job?.usd ?? savedJob.estimated_cost_usd ?? 0);
+          const reportedUsd = Number(job?.usd);
+          const cost = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : Number(savedJob.estimated_cost_usd || 0);
           const billingRows = await serviceFetch("ema_billing_settings?select=usd_to_toman,markup_bps&singleton=eq.true&limit=1");
           const billing = billingRows?.[0] || {};
           const admins = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
