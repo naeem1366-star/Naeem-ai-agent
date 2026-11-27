@@ -151,6 +151,33 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
                     Text(if (isEnglish) "Provider cost ledger" else "دفتر هزینه سرویس‌های هوش مصنوعی", color = Color.White, fontWeight = FontWeight.Bold)
                     MetricCard(if (isEnglish) "All-time tracked cost" else "کل هزینه ثبت‌شده", "$" + String.format(Locale.US, "%.4f", s.optDouble("provider_cost_total_usd")), accent, panel)
                     MetricCard(if (isEnglish) "This month tracked cost" else "هزینه ثبت‌شده این ماه", "$" + String.format(Locale.US, "%.4f", s.optDouble("provider_cost_month_usd")), accent, panel)
+                    Text(if (isEnglish) "Live provider accounts" else "وضعیت و موجودی حساب سرویس‌ها", color = Color.White, fontWeight = FontWeight.Bold)
+                    data.providerAccounts.forEach { account ->
+                        AdminInfoCard(panel) {
+                            val provider = account.optString("provider")
+                            val status = account.optString("status")
+                            val statusLabel = when (status) {
+                                "active" -> if (isEnglish) "Connected · active" else "متصل و فعال"
+                                "not_configured" -> if (isEnglish) "API key not configured" else "کلید API تنظیم نشده"
+                                "configured_balance_unavailable" -> if (isEnglish) "Key configured · live balance endpoint unavailable" else "کلید تنظیم است؛ موجودی زنده قابل استعلام نیست"
+                                "unreachable" -> if (isEnglish) "Provider unreachable" else "ارتباط با سرویس برقرار نشد"
+                                "error" -> if (isEnglish) "Provider returned an error" else "سرویس خطا برگرداند"
+                                "suspended" -> if (isEnglish) "Account suspended" else "حساب تعلیق شده"
+                                else -> status.ifBlank { if (isEnglish) "Unknown" else "نامشخص" }
+                            }
+                            Text(provider, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            Text(statusLabel, color = if (status == "active") Color(0xFF9BE7C4) else Color(0xFFFFD18A))
+                            if (provider == "NetArz" && account.has("balance_usd") && !account.isNull("balance_usd")) {
+                                Text((if (isEnglish) "Available credit: " else "اعتبار باقی‌مانده: ") + account.optString("balance_display").ifBlank { "$" + account.optString("balance_usd") }, color = accent)
+                                if (!account.isNull("balance_toman_estimate")) Text((if (isEnglish) "Approx. toman: " else "معادل تقریبی تومان: ") + money(account.optLong("balance_toman_estimate")), color = muted)
+                                if (!account.isNull("spent_usd")) Text((if (isEnglish) "Spent on this key: $" else "مصرف ثبت‌شده این کلید: $") + account.optString("spent_usd"), color = muted, style = MaterialTheme.typography.bodySmall)
+                                if (!account.isNull("usage_30d_usd")) Text((if (isEnglish) "Last 30 days: $" else "مصرف ۳۰ روز اخیر: $") + account.optString("usage_30d_usd"), color = muted, style = MaterialTheme.typography.bodySmall)
+                                Text((if (isEnglish) "Project: " else "پروژه: ") + account.optString("project_name").ifBlank { "—" }, color = muted, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text((if (isEnglish) "Last checked: " else "آخرین بررسی: ") + account.optString("checked_at").take(19).replace("T", " "), color = muted, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Text(if (isEnglish) "GapGPT live account balance is not shown because a verified balance API endpoint has not been established. EMA's recorded costs are displayed separately below." else "موجودی زنده GapGPT فعلاً نمایش داده نمی‌شود، چون مسیر رسمی و تأییدشده استعلام موجودی آن مشخص نیست. هزینه‌های ثبت‌شده در ایما جداگانه در ادامه آمده‌اند.", color = muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
                     data.providerCosts.forEach { item ->
                         AdminInfoCard(panel) {
                             Text(item.optString("provider"), color = Color.White, fontWeight = FontWeight.SemiBold)
