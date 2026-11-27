@@ -392,7 +392,7 @@ Deno.serve(async (request: Request) => {
               output_tokens: outputTokens,
               provider_cost_usd: actualUsd,
               charged_toman: 0,
-              metadata: { access: isAdmin ? "admin" : "subscription" },
+              metadata: { access: isAdmin ? "admin" : "subscription", pricing_configured: !!pricing },
             }),
           });
           const usageEventId = usageEvents?.[0]?.id;
