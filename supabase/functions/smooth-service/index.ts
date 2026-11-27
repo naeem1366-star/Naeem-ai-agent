@@ -315,35 +315,20 @@ Deno.serve(async (request: Request) => {
       return reply({ error: { code: "NOT_FOUND", message: "مسیر پرداخت پیدا نشد." } }, 404);
     }
 
-    // Free chat is deliberately routed to GapGPT only.
-    // NetArz is reserved for paid features; never spend the paid provider balance on free-chat fallback.
-    if (request.method !== "POST" || !route.endsWith("/chat/completions")) {
-      return reply({ error: { code: "NOT_FOUND", message: "مسیر درخواست معتبر نیست." } }, 404);
-    }
+    // Free chat uses GapGPT only; NetArz is reserved for paid features.
+    if (request.method !== "POST" || !route.endsWith("/chat/completions")) return reply({ error: { code: "NOT_FOUND", message: "مسیر درخواست معتبر نیست." } }, 404);
     const raw = await request.text();
-    if (new TextEncoder().encode(raw).length > 1_500_000) {
-      return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
-    }
+    if (new TextEncoder().encode(raw).length > 1_500_000) return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
     let body: any;
-    try { body = JSON.parse(raw); } catch {
-      return reply({ error: { code: "INVALID_JSON", message: "ساختار درخواست معتبر نیست." } }, 400);
-    }
-    if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) {
-      return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
-    }
-    if (JSON.stringify(body.messages).includes("data:image/")) {
-      return reply({ error: { code: "IMAGE_NOT_ENABLED", message: "تحلیل تصویر هنوز در درگاه امن فعال نشده است." } }, 503);
-    }
+    try { body = JSON.parse(raw); } catch { return reply({ error: { code: "INVALID_JSON", message: "ساختار درخواست معتبر نیست." } }, 400); }
+    if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
+    if (JSON.stringify(body.messages).includes("data:image/")) return reply({ error: { code: "IMAGE_NOT_ENABLED", message: "تحلیل تصویر هنوز در درگاه امن فعال نشده است." } }, 503);
 
-    // Accept the corrected secret name and the legacy misspelling already used in the dashboard.
-    const freeKey = Deno.env.get("CHAT_SECONDARY_API_KEY") ||
-      Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-    const freeBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\\/+$/, "");
-    const freeModel = Deno.env.get("CHAT_FREE_MODEL") ||
-      Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini";
-    if (!freeKey || !freeBase.startsWith("https://")) {
-      return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "سرویس چت رایگان هنوز روی سرور تنظیم نشده است." } }, 503);
-    }
+    const freeKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+    let freeBase = Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1";
+    while (freeBase.endsWith("/")) freeBase = freeBase.slice(0, -1);
+    const freeModel = Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini";
+    if (!freeKey || !freeBase.startsWith("https://")) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "سرویس چت رایگان هنوز روی سرور تنظیم نشده است." } }, 503);
 
     const quotaDate = new Date().toISOString().slice(0, 10);
     const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
@@ -351,16 +336,9 @@ Deno.serve(async (request: Request) => {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
       signal: AbortSignal.timeout(12000),
-    }).catch((error) => {
-      console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error");
-      return null;
-    });
-    if (!quotaResponse?.ok) {
-      return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
-    }
-    if (await quotaResponse.json().catch(() => null) !== true) {
-      return reply({ error: { code: "DAILY_FREE_LIMIT_REACHED", message: "سهمیه رایگان امروز تمام شده است؛ فردا دوباره امتحان کن." } }, 429);
-    }
+    }).catch((error) => { console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error"); return null; });
+    if (!quotaResponse?.ok) return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
+    if (await quotaResponse.json().catch(() => null) !== true) return reply({ error: { code: "DAILY_FREE_LIMIT_REACHED", message: "سهمیه رایگان امروز تمام شده است؛ فردا دوباره امتحان کن." } }, 429);
 
     const refundFreeQuota = async () => {
       const response = await fetch(supabaseUrl + "/rest/v1/rpc/ema_refund_chat_quota", {
@@ -372,14 +350,7 @@ Deno.serve(async (request: Request) => {
       if (!response?.ok) console.error("EMA failed to refund free chat quota after provider error");
     };
 
-    const payload = {
-      model: freeModel,
-      messages: body.messages,
-      stream: false,
-      max_tokens: Math.min(1200, Math.max(1, Number(body.max_tokens) || 1200)),
-      temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.7,
-    };
-
+    const payload = { model: freeModel, messages: body.messages, stream: false, max_tokens: Math.min(1200, Math.max(1, Number(body.max_tokens) || 1200)), temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.7 };
     let upstream: Response;
     try {
       upstream = await fetch(freeBase + "/chat/completions", {
@@ -393,14 +364,12 @@ Deno.serve(async (request: Request) => {
       console.error("EMA GapGPT free chat request failed", error instanceof Error ? error.message : "network error");
       return reply({ error: { code: "FREE_CHAT_PROVIDER_UNAVAILABLE", message: "سرویس چت رایگان موقتاً پاسخگو نیست؛ کمی بعد دوباره تلاش کن." } }, 503);
     }
-
     const providerText = await upstream.text();
     if (!upstream.ok) {
       await refundFreeQuota();
       console.error("EMA GapGPT free chat returned an error", { status: upstream.status, detail: providerText.slice(0, 180) });
       return reply({ error: { code: "FREE_CHAT_PROVIDER_ERROR", message: "سرویس چت رایگان نتوانست پاسخ بدهد؛ کمی بعد دوباره تلاش کن." } }, 503);
     }
-
     let result: any;
     try { result = JSON.parse(providerText); } catch {
       await refundFreeQuota();
@@ -411,12 +380,6 @@ Deno.serve(async (request: Request) => {
       return reply({ error: { code: "FREE_CHAT_EMPTY_RESPONSE", message: "پاسخی از سرویس چت دریافت نشد؛ دوباره تلاش کن." } }, 502);
     }
     return reply(result);
-  } catch (error) {
-        lastStatus = 502; lastBody = error instanceof Error ? error.message : "provider request failed";
-      }
-    }
-    console.error("EMA chat providers failed", { status: lastStatus, detail: lastBody.slice(0, 200) });
-    return reply({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "سرویس گفتگو موقتاً پاسخگو نیست؛ لطفاً کمی بعد دوباره تلاش کن." } }, 503);
   } catch (error) {
     const code = error instanceof Error ? error.message : "INTERNAL_ERROR";
     const status = code === "ADMIN_REQUIRED" ? 403 : (error as any)?.status || 500;
