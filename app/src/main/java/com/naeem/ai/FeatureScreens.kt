@@ -143,7 +143,7 @@ fun FeatureHub(
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onPodcast:()->Unit,onVideo:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onJournal:()->Unit,onTrail:()->Unit,onSocial:()->Unit,
-    onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {},onProductLens:()->Unit = {},onMusicCreation:()->Unit = onMusic
+    onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {},onProductLens:()->Unit = {},onMusicCreation:()->Unit = onMusic,onFreeVideo:()->Unit = onVideo
 ){
     var query by remember { mutableStateOf("") }
     var hasPaidAccess by remember { mutableStateOf(false) }
@@ -185,8 +185,8 @@ fun FeatureHub(
         Entry("پادکست","شنیدن و کشف برنامه‌های صوتی","پادکست‌های رایگان، RSS و پخش درون‌برنامه‌ای","پادکست‌های رایگان با فید عمومی را پیدا کن، قسمت‌ها را داخل ایما پخش کن و موارد دلخواهت را برای بعد نگه دار. امکان افزودن فید RSS عمومی هم وجود دارد.","فیدهای عمومی رایگان؛ بدون اشتراک پولی",Icons.Default.Podcasts,onPodcast,"پادکست صوتی برنامه شنیداری RSS"),
         Entry("تحلیل عکس","تحلیل تصویر و شناسایی محصول","تحلیل هوشمند تصویر با دوربین","از محصول عکس بگیر یا تصویرش را انتخاب کن؛ ایما نام، برند احتمالی و دسته‌بندی را تشخیص می‌دهد و برای پیدا کردن نمونه‌ها و فروشگاه‌ها در وب جست‌وجو می‌کند.","تحلیل تصویر با GapGPT؛ مصرف از سهمیه سرویس و بدون کسر کیف پول ایما",Icons.Default.ImageSearch,onProductLens,"لنز تصویری گوگل لنز شناسایی محصول عکس دوربین جستجوی کالا خرید محصول"),
         Entry("استودیو ایما","تدوین حرفه‌ای ویدیو","تایم‌لاین و خروجی MP4","چند ویدیو را وارد کن، پیش‌نمایش بگیر، ترتیب کلیپ‌ها را تغییر بده و آن‌ها را روی گوشی به یک فایل MP4 تبدیل کن. ابزارهای تدوین پیشرفته در حال توسعه‌اند.","تدوین و خروجی محلی؛ بدون API",Icons.Default.MovieCreation,onVideo,"ویدیو تدوین ادیت مونتاژ تایم لاین کپ کات فیلم سازی"),
-        Entry("تولید ویدیو رایگان","ساخت ویدیو با هوش مصنوعی","تولید ویدیو از متن یا تصویر","ویدیو را از متن یا تصویر بساز. دسترسی رایگان وابسته به اعتبار و سهمیه‌ی سرویس سازنده است و ممکن است همیشه یا نامحدود در دسترس نباشد؛ از کیف پول ایما برای این بخش کسر نمی‌شود.","سرویس تولید ویدیو با سهمیه‌ی رایگان محدود",Icons.Default.AutoAwesome,onVideo,"تولید ویدیو رایگان هوش مصنوعی عکس به ویدیو text to video image to video Kling Seedance Veo Gemini"),
-        Entry("تولید ویدیوی حرفه‌ای","ساخت ویدیو با مدل‌های حرفه‌ای","مدل‌های پیشرفته ویدیوساز","با مدل‌های حرفه‌ای NetArz از متن، تصویر یا ویدیوی مرجع خروجی بساز. مصرف این بخش پولی است و به دسترسی فعال حساب یا اعتبار مجاز نیاز دارد.","هوش مصنوعی پولی NetArz",Icons.Default.MovieFilter,onProfessionalVideo,"تولید ویدیوی حرفه‌ای NetArz Sora Veo video generation"),
+        Entry("ساخت ویدیو رایگان مبتدی","تولید ویدیوی ساده از متن یا تصویر","ابزار پایه برای ساخت ویدیو","برای ساخت ویدیوهای ساده از متن یا تصویر استفاده کن. این ابزار در مسیر رایگان و با سهمیه محدود سرویس ارائه می‌شود.","رایگان مبتدی؛ وابسته به سهمیه سرویس",Icons.Default.AutoAwesome,onFreeVideo,"ساخت ویدیو رایگان مبتدی هوش مصنوعی عکس به ویدیو text to video image to video"),
+        Entry("ساخت ویدیوی پیشرفته","تولید ویدیو با مدل‌های حرفه‌ای","مدل‌های پیشرفته ویدیوساز","با مدل‌های حرفه‌ای NetArz از متن، تصویر یا ویدیوی مرجع خروجی بساز. این بخش پولی است و هزینه آن از مسیر NetArz و بر اساس مدل و مدت ویدیو محاسبه می‌شود؛ به اشتراک فعال یا اعتبار کافی نیاز دارد.","پولی؛ اتصال مستقیم از درگاه امن NetArz",Icons.Default.MovieFilter,onProfessionalVideo,"ساخت ویدیوی پیشرفته پولی NetArz Sora Veo video generation"),
         Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی","حال‌وهوا، سبک یا هنرمند موردعلاقه‌ات را در گفتگو بگو؛ مغز هوشمند پیشنهاد می‌دهد و جست‌وجو و پیش‌نمایش موسیقی در همین بخش انجام می‌شود.","پیشنهاد از دستیار: از طریق گفتگو",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
         Entry("ساخت موسیقی با هوش مصنوعی","تولید آهنگ و جلوه صوتی","ساخت قطعه با مدل‌های حرفه‌ای","موسیقی یا جلوه صوتی را با مدل‌های پولی NetArz بساز؛ جست‌وجو و شنیدن آهنگ‌های موجود در بخش رایگان موسیقی جداست.","هوش مصنوعی پولی NetArz",Icons.Default.GraphicEq,onMusicCreation,"ساخت موسیقی هوش مصنوعی تولید آهنگ Lyria ElevenLabs"),
         Entry("تحلیل اینستاگرام","رشد و عملکرد پیج","اتصال حساب و تحلیل محتوا","آمار پیج را وارد کن تا مغز هوشمند نرخ تعامل، بازدید و عملکرد محتوا را بررسی و برای رشد پیشنهاد بدهد. تحلیل خودکار حساب پس از اتصال رسمی و دریافت مجوزهای Meta ممکن می‌شود.","تحلیل دستی: آماده؛ تحلیل هوشمند با NetArz؛ اتصال رسمی: نیازمند تنظیم Meta",Icons.Default.Insights,onSocial,"اینستاگرام شبکه اجتماعی تحلیل پیج رشد محتوا") ,
@@ -309,7 +309,7 @@ fun FeatureHub(
             aiStatus = copy?.third ?: entry.aiStatus
         )
     } else entries
-    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "تحلیل اینستاگرام", "تولید ویدیوی حرفه‌ای", "ساخت موسیقی با هوش مصنوعی")
+    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "تحلیل اینستاگرام", "ساخت ویدیوی پیشرفته", "ساخت موسیقی با هوش مصنوعی")
     fun isPaid(entry: Entry) = entry.title in paidTitles
     fun hubText(fa: String, en: String) = if (isEnglish) en else fa
 
