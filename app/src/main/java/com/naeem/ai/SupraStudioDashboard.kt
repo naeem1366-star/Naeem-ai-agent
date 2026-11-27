@@ -5,6 +5,8 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
+import org.json.JSONArray
+import org.json.JSONObject
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +44,8 @@ import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Effects
+import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Transformer
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
@@ -84,7 +88,31 @@ fun SupraStudioDashboard(
     var musicUri by remember { mutableStateOf<Uri?>(null) }
     var musicName by remember { mutableStateOf("") }
     var musicDurationMs by remember { mutableLongStateOf(0L) }
+    var projectName by remember { mutableStateOf("پروژه جدید") }
+    var aspectRatio by remember { mutableStateOf("عمودی 9:16") }
+    var exportQuality by remember { mutableStateOf("1080p") }
+    var projectStatus by remember { mutableStateOf("ذخیره خودکار فعال است.") }
+    val projectPrefs = remember { context.getSharedPreferences("ema_video_projects", Context.MODE_PRIVATE) }
     var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
+    LaunchedEffect(clips.size, selectedIndex, projectName, aspectRatio, exportQuality, musicUri, musicName) {
+        val items = JSONArray()
+        clips.forEach { clip -> items.put(JSONObject().put("uri", clip.uri.toString()).put("name", clip.name).put("duration", clip.durationMs).put("start", clip.trimStartMs).put("end", clip.trimEndMs).put("speed", clip.speed)) }
+        val saved = JSONObject().put("name", projectName).put("clips", items).put("music", musicUri?.toString() ?: "").put("musicName", musicName).put("aspect", aspectRatio).put("quality", exportQuality)
+        projectPrefs.edit().putString("autosave", saved.toString()).apply()
+    }
+    fun restoreProject() {
+        runCatching {
+            val saved = JSONObject(projectPrefs.getString("autosave", "{}") ?: "{}")
+            val items = saved.optJSONArray("clips") ?: JSONArray()
+            clips.clear()
+            for (i in 0 until items.length()) { val item = items.getJSONObject(i); clips.add(StudioClip(Uri.parse(item.getString("uri")), item.optString("name"), item.optLong("duration"), item.optLong("start"), item.optLong("end"), item.optDouble("speed", 1.0).toFloat())) }
+            projectName = saved.optString("name", "پروژه بازیابی‌شده")
+            aspectRatio = saved.optString("aspect", "عمودی 9:16")
+            exportQuality = saved.optString("quality", "1080p")
+            saved.optString("music").takeIf { it.isNotBlank() }?.let { musicUri = Uri.parse(it); musicName = saved.optString("musicName") }
+            selectedIndex = 0; projectStatus = "پروژه بازیابی شد."
+        }.onFailure { projectStatus = "پروژه ذخیره‌شده‌ای برای بازیابی وجود ندارد." }
+    }
     val previewClip = clips.getOrNull(selectedIndex)
     val previewUri = previewClip?.uri
     val player = remember(previewClip) {
@@ -133,12 +161,15 @@ fun SupraStudioDashboard(
         exportPercent = 0
         exportStatus = "در حال آماده‌سازی پروژه…"
         val outputFile = File(context.cacheDir, "supra_studio_${System.currentTimeMillis()}.mp4")
+        val targetSize = when (aspectRatio) { "افقی 16:9" -> 1920 to 1080; "مربع 1:1" -> 1080 to 1080; else -> 1080 to 1920 }
+        val presentation = Presentation.createForWidthAndHeight(targetSize.first, targetSize.second, Presentation.LAYOUT_SCALE_TO_FIT)
         val editedItems = clips.map { clip ->
             val clippedItem = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.trimStartMs.coerceAtLeast(0L)).setEndPositionMs(clip.trimEndMs.coerceAtLeast(clip.trimStartMs + 1L)).build()
             ).build()
             EditedMediaItem.Builder(clippedItem)
                 .setRemoveAudio(muteOriginalAudio)
+                .setEffects(Effects(emptyList(), listOf(presentation)))
                 .setSpeed(object : SpeedProvider {
                     override fun getSpeed(presentationTimeUs: Long): Float = clip.speed
                     override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = C.TIME_UNSET
@@ -231,6 +262,17 @@ fun SupraStudioDashboard(
             Icon(Icons.Default.Movie, contentDescription = null, tint = Color(0xFF9CB9F4), modifier = Modifier.size(28.dp))
         }
 
+        Surface(color = Color(0xFF111B29), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("پروژه تدوین", color = Color.White, fontWeight = FontWeight.Bold)
+                OutlinedTextField(value = projectName, onValueChange = { projectName = it }, label = { Text("نام پروژه") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { projectStatus = "پروژه روی دستگاه ذخیره شد." }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Save, null); Spacer(Modifier.width(4.dp)); Text("ذخیره پروژه") }
+                    OutlinedButton(onClick = { restoreProject() }, modifier = Modifier.weight(1f)) { Text("بازیابی پروژه") }
+                }
+                Text(projectStatus, color = Color(0xFF9ED7B2), style = MaterialTheme.typography.labelSmall)
+            }
+        }
         Surface(color = Color(0xFF111B29), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -307,6 +349,15 @@ fun SupraStudioDashboard(
             }
         }
 
+        Surface(color = Color(0xFF111B29), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("قالب خروجی", color = Color.White, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("عمودی 9:16", "افقی 16:9", "مربع 1:1").forEach { ratio -> FilterChip(selected = aspectRatio == ratio, onClick = { aspectRatio = ratio }, enabled = !exporting, label = { Text(ratio) }) } }
+                Text("کیفیت خروجی", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("720p", "1080p").forEach { quality -> FilterChip(selected = exportQuality == quality, onClick = { exportQuality = quality }, enabled = !exporting, label = { Text(quality) }) } }
+                Text("نسبت تصویر انتخابی در خروجی اعمال می‌شود. انتخاب کیفیت فعلاً در رابط ثبت می‌شود.", color = Color(0xFFE5C58A), style = MaterialTheme.typography.labelSmall)
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("تایم‌لاین پروژه", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
