@@ -16,6 +16,7 @@ data class BillingOrder(val id:String,val amountToman:Long,val purpose:String,va
 data class BillingCatalog(val balanceToman:Long,val plans:List<BillingPlan>,val paymentInstructions:String,val minTopupToman:Long,val maxTopupToman:Long,val subscriptionName:String?,val isAdmin:Boolean)
 data class BillingAdminOrder(val id:String,val userId:String,val amountToman:Long,val purpose:String,val reference:String,val createdAt:String)
 data class BillingSnapshot(val catalog:BillingCatalog,val orders:List<BillingOrder>)
+data class BillingAdminDashboard(val summary:JSONObject,val users:List<JSONObject>,val orders:List<JSONObject>,val subscriptions:List<JSONObject>,val providerCosts:List<JSONObject>,val paymentStatus:List<JSONObject>,val recentAudit:List<JSONObject>)
 
 class BillingClient(private val gatewayUrl:String) {
     private val http=OkHttpClient.Builder().connectTimeout(20,TimeUnit.SECONDS).readTimeout(30,TimeUnit.SECONDS).writeTimeout(20,TimeUnit.SECONDS).build()
@@ -92,4 +93,21 @@ class BillingClient(private val gatewayUrl:String) {
         call("/v1/billing/admin/orders/"+orderId+"/review",token,"POST",
             JSONObject().put("decision",decision).put("reason",reason))
     }
+    suspend fun adminDashboard(token:String):BillingAdminDashboard {
+        val json=call("/v1/billing/admin/dashboard",token)
+        fun objects(key:String):List<JSONObject> {
+            val array=json.optJSONArray(key) ?: JSONArray()
+            return (0 until array.length()).mapNotNull { i -> array.optJSONObject(i) }
+        }
+        return BillingAdminDashboard(
+            json.optJSONObject("summary") ?: JSONObject(),
+            objects("users"),
+            objects("orders"),
+            objects("subscriptions"),
+            objects("provider_costs"),
+            objects("payment_status"),
+            objects("recent_audit")
+        )
+    }
+
 }

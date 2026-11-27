@@ -75,7 +75,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
         }
         if(snapshot?.catalog?.isAdmin == true) {
             OutlinedButton(onClick={showAdminPanel=true},modifier=Modifier.fillMaxWidth()) {
-                Text(if(isEnglish) "Admin payment review" else "ورود به پنل مدیریت پرداخت‌ها")
+                Text(if(isEnglish) "Open owner admin console" else "ورود به پنل مدیریت مجموعه")
             }
         }
         if(loading && snapshot==null) Box(Modifier.fillMaxWidth().padding(40.dp),contentAlignment=Alignment.Center) { CircularProgressIndicator(color=accent) }
