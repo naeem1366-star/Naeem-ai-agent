@@ -1177,8 +1177,8 @@ fun NaeemApp(
                     }
                     val accessTokenForMemory = runCatching { chatAccessTokenProvider() }.getOrDefault("")
                     val explicitMemory = when {
-                        finalQuestion.contains("به خاطر بسپار") -> finalQuestion.substringAfter("به خاطر بسپار").trim()
-                        finalQuestion.contains("یادت باشه") -> finalQuestion.substringAfter("یادت باشه").trim()
+                        question.contains("به خاطر بسپار") -> question.substringAfter("به خاطر بسپار").trim()
+                        question.contains("یادت باشه") -> question.substringAfter("یادت باشه").trim()
                         else -> ""
                     }
                     if (explicitMemory.isNotBlank()) {
@@ -1207,7 +1207,7 @@ fun NaeemApp(
                     }
                     val userContext = profileContext + memoryContext
                     val answer = if (searchMode) {
-                        val findings = deepSearchClient.search(finalQuestion, 8)
+                        val findings = deepSearchClient.search(finalQuestion, 8, BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
                         val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$userContext"
                         val report = sendChat(researchPrompt, paidFeature = featureForThisMessage)
@@ -1333,6 +1333,8 @@ fun NaeemApp(
                             prompt = ""
                             selectedImage = null
                             selectedImageBase64 = null
+                            selectedFileText = null
+                            selectedFileName = null
                             imageMode = false
                             conversationMode = false
                             stopSpeech()
