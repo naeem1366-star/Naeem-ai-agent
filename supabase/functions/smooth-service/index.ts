@@ -395,7 +395,7 @@ Deno.serve(async (request: Request) => {
       const seconds = Math.max(1, Math.min(60, Number(body?.seconds || 4)));
       const size = String(body?.size || "auto").trim();
       if (!model || model.length > 180 || !prompt || prompt.length > 4000 ||
-          (!/^(\\d{3,4})x(\\d{3,4})$/.test(size) && size !== "auto")) {
+          (!/^(\d{3,4})x(\d{3,4})$/.test(size) && size !== "auto")) {
         return reply({ error: { code: "INVALID_VIDEO_REQUEST", message: "مدل، توضیح یا ابعاد ویدیو معتبر نیست." } }, 400);
       }
       let reservationId: string | null = null;
