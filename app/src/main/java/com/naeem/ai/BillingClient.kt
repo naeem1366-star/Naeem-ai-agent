@@ -46,6 +46,14 @@ class BillingClient(private val gatewayUrl:String) {
         }
     }
 
+    suspend fun hasPaidAccess(token:String):Boolean {
+        val catalog = call("/v1/billing/catalog", token)
+        val subscription = catalog.optJSONObject("subscription")
+        return catalog.optBoolean("isAdmin", false) ||
+            catalog.optLong("balanceToman") > 0L ||
+            !subscription?.optString("plan_name").isNullOrBlank()
+    }
+
     suspend fun load(token:String):BillingSnapshot {
         val catalogJson=call("/v1/billing/catalog",token)
         val ordersJson=call("/v1/billing/orders",token)
