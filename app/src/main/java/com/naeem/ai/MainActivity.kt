@@ -743,6 +743,7 @@ fun NaeemApp(
     var musicCreationStart by remember { mutableStateOf(false) }
     var showPodcast by remember { mutableStateOf(false) }
     var showVideoCreator by remember { mutableStateOf(false) }
+    var showBeginnerVideo by remember { mutableStateOf(false) }
     var showProfessionalVideo by remember { mutableStateOf(false) }
     var showTravel by remember { mutableStateOf(false) }
     var showSports by remember { mutableStateOf(false) }
@@ -760,7 +761,6 @@ fun NaeemApp(
     var showFutureGateway by remember { mutableStateOf(false) }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
-    var showVideoDevelopment by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
     var speechJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
@@ -1193,23 +1193,7 @@ fun NaeemApp(
             onSurfaceVariant = Color(0xFFBFC6D0), secondary = Color(0xFFBFC6D0)
         )
     ) {
-        if (showVideoDevelopment) {
-            Dialog(
-                onDismissRequest = { showVideoDevelopment = false },
-                properties = DialogProperties(usePlatformDefaultWidth = false)
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize().safeDrawingPadding(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = Color(0xFF050B16)
-                ) {
-                    ModuleScreenBackdrop("music") {
-                        VideoCreatorDashboard(onClose = { showVideoDevelopment = false }, initialPrompt = prompt)
-                    }
-                }
-            }
-        }
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+old free video dialog        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         ModalNavigationDrawer(
             drawerState = drawerState,
             gesturesEnabled = true,
@@ -1354,14 +1338,7 @@ fun NaeemApp(
                             ) {
                                 Text(appText(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", isEnglish), color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
                             }
-                            TextButton(
-                                onClick = { showVideoDevelopment = true },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
-                            ) {
-                                Text(appText("▶ ویدیو", isEnglish), color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
-                            }
-                        }
+toolbar video button                        }
                         Row(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1684,6 +1661,7 @@ fun NaeemApp(
                         onMusicCreation = { showHub = false; musicCreationStart = true; showMusic = true },
                         onPodcast = { showHub = false; showPodcast = true },
                         onVideo = { showHub = false; showVideoCreator = true },
+                        onFreeVideo = { showHub = false; showBeginnerVideo = true },
                         onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
                         onAlbum = { showHub = false; showAlbum = true; albumImages = dataStore.images() },
                         onSettings = { showHub = false; showSettings = true },
@@ -1705,6 +1683,15 @@ fun NaeemApp(
                          onProductLens = { showHub = false; showProductLens = true }
                     ) }
                 }
+                }
+            }
+        }
+        if (showBeginnerVideo) {
+            Dialog(onDismissRequest = { showBeginnerVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
+                    ModuleScreenBackdrop("music") {
+                        VideoCreatorDashboard(onClose = { showBeginnerVideo = false }, initialPrompt = prompt)
+                    }
                 }
             }
         }
