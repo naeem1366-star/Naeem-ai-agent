@@ -61,7 +61,9 @@ class ChatClient {
     ): String = withContext(Dispatchers.IO) {
         val root = gatewayUrl.trim().trimEnd('/')
         require(root.startsWith("https://", ignoreCase = true)) { "نشانی درگاه امن چت تنظیم نشده است." }
-        require(accessToken.isNotBlank()) { "نشست ورود منقضی شده است؛ دوباره وارد حساب شو." }
+        require(accessToken.isNotBlank() && accessToken.count { it == '.' } == 2 && accessToken.none { it.isWhitespace() }) {
+            "نشست ورود معتبر نیست؛ دوباره وارد حساب شو."
+        }
         require(prompt.isNotBlank() || !imageBase64.isNullOrBlank()) { "متن یا تصویر برای ارسال وجود ندارد." }
 
         val userContent: Any = if (imageBase64.isNullOrBlank()) {
@@ -80,6 +82,7 @@ class ChatClient {
             .put("stream", false)
         val request = Request.Builder()
             .url("$root/v1/chat/completions")
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
             .header("Authorization", "Bearer $accessToken")
             .header("Accept", "application/json")
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
