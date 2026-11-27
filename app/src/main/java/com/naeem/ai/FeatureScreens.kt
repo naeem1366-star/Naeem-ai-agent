@@ -996,7 +996,7 @@ private class TrackSearch{
    }else failed=true
   }catch(_:Exception){failed=true}
  }
- Box(Modifier.width(112.dp).height(164.dp).background(SupraGlass.Glass,RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){
+ Box(Modifier.width(132.dp).height(194.dp).background(SupraGlass.Glass,RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center){
   if(bitmap!=null) Image(bitmap!!,contentDescription="پوستر فیلم $title",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
   else Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)){
    Icon(Icons.Default.Movie,null,tint=Color(0xFFD4D9E0),modifier=Modifier.size(32.dp))
@@ -1004,6 +1004,30 @@ private class TrackSearch{
   }
  }
 }
+
+@Composable
+private fun FilmPosterTile(film: Film, onAskAi: (String) -> Unit) {
+ Card(
+  modifier = Modifier.fillMaxWidth().clickable {
+   onAskAi("معرفی و نقد بدون اسپویل فیلم " + film.title + " را بنویس.")
+  },
+  colors = CardDefaults.cardColors(containerColor = FC),
+  shape = RoundedCornerShape(14.dp)
+ ) {
+  Column(
+   modifier = Modifier.fillMaxWidth().padding(9.dp),
+   horizontalAlignment = Alignment.CenterHorizontally,
+   verticalArrangement = Arrangement.spacedBy(6.dp)
+  ) {
+   FilmPoster(film.title)
+   Text(film.title, color = Color.White, fontWeight = FontWeight.Bold,
+    style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+   Text(film.year.toString() + " • " + film.genre, color = FG,
+    style = MaterialTheme.typography.labelSmall, maxLines = 2)
+  }
+ }
+}
+
 @Composable fun DiscoverDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="فیلم امروز",standalone:Boolean=false){
  val ctx=LocalContext.current;var tab by remember{mutableStateOf(initialTab)};var query by remember{mutableStateOf("")};var mood by remember{mutableStateOf("همه")};var tracks by remember{mutableStateOf<List<Track>>(emptyList())};var loading by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")};var playing by remember{mutableStateOf<String?>(null)};var player by remember{mutableStateOf<MediaPlayer?>(null)}
  val scope=rememberCoroutineScope();val search=remember{TrackSearch()};val today=films[((System.currentTimeMillis()/86400000L)%films.size).toInt()]
@@ -1015,12 +1039,12 @@ private class TrackSearch{
    LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=24.dp)){
     item{FCard{Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top){FilmPoster(today.title);Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){Text("انتخاب امروز",color=FG,fontWeight=FontWeight.Bold);Text(today.title,color=Color.White,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text(today.year.toString()+" • "+today.genre+" • "+today.duration+" دقیقه",color=FG,style=MaterialTheme.typography.labelSmall);Text(today.summary,color=Color.White,style=MaterialTheme.typography.bodySmall);Text(today.reason,color=FM,style=MaterialTheme.typography.bodySmall);Button(onClick={onAskAi("درباره فیلم "+today.title+" معرفی کامل بدون اسپویل و تحلیل سبک کارگردانی بنویس.")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("تحلیل بیشتر")}}}}}
     item{Text("بر اساس حال‌وهوا",color=FG,fontWeight=FontWeight.Bold);Row{listOf("همه","آرام","پرکشش","علمی‌تخیلی","درام").forEach{FilterChip(selected=mood==it,onClick={mood=it},label={Text(it,style=MaterialTheme.typography.labelSmall)})}}}
-    items(films.filter{mood=="همه"||it.genre.contains(mood)||(mood=="آرام"&&it.duration>=90)||(mood=="پرکشش"&&it.genre.contains("ماجراجویی"))}){f->FCard{Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top){FilmPoster(f.title);Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){Text(f.title,color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium);Text(f.year.toString()+" • "+f.genre+" • "+f.duration+" دقیقه",color=FG,style=MaterialTheme.typography.labelSmall);Text(f.summary,color=FM,style=MaterialTheme.typography.bodySmall);TextButton(onClick={onAskAi("معرفی و نقد بدون اسپویل فیلم "+f.title+" را بنویس.")}){Text("نقد و معرفی بیشتر",color=FG)}}}}}
+    items(films.filter{mood=="همه"||it.genre.contains(mood)||(mood=="آرام"&&it.duration>=90)||(mood=="پرکشش"&&it.genre.contains("ماجراجویی"))}.chunked(2)){row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.Top){row.forEach{f->Box(Modifier.weight(1f)){FilmPosterTile(f,onAskAi)}};if(row.size==1)Spacer(Modifier.weight(1f))}}
    }
   }else if(tab=="جست‌وجوی فیلم"){
    LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
     item{FInput("نام فیلم یا ژانر",query,{query=it},Modifier.fillMaxWidth());Button(onClick={onAskAi("چند فیلم خوب دربارهٔ "+query+" معرفی کن و خلاصه و دلیل انتخابشان را بگو.")},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=FG,contentColor=FB)){Text("پیشنهاد با هوش مصنوعی")}}
-    items(films.filter{query.isBlank()||it.title.contains(query,true)||it.genre.contains(query,true)}){f->FCard{Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top){FilmPoster(f.title);Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){Text(f.title,color=Color.White,fontWeight=FontWeight.Bold);Text(f.year.toString()+" • "+f.genre,color=FG);Text(f.summary,color=FM,style=MaterialTheme.typography.bodySmall)}}}}
+    items(films.filter{query.isBlank()||it.title.contains(query,true)||it.genre.contains(query,true)}.chunked(2)){row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.Top){row.forEach{f->Box(Modifier.weight(1f)){FilmPosterTile(f,onAskAi)}};if(row.size==1)Spacer(Modifier.weight(1f))}}
    }
   }else{
    Text("جست‌وجوی آهنگ و هنرمند",color=FG,fontWeight=FontWeight.Bold)
