@@ -346,7 +346,12 @@ class SportsAssistantTool(context: Context) : AssistantTool {
                     p["minutes"]?.toIntOrNull() ?: 0, p["distance"]?.toDoubleOrNull() ?: 0.0,
                     p["sets"]?.toIntOrNull() ?: 0, p["reps"]?.toIntOrNull() ?: 0, p["weight"]?.toDoubleOrNull() ?: 0.0, p["notes"].orEmpty(), p["calories"]?.toIntOrNull() ?: 0)
                 store.save(listOf(log) + logs)
-                AssistantToolResult(true, "تمرین «" + log.title + "» ثبت شد؛ " + (if (log.reps > 0) log.sets + " ست × " + log.reps + " تکرار" + (if (log.weight > 0) " با " + log.weight + " کیلو" else "") else log.minutes + " دقیقه، " + log.distance + " کیلومتر") + (if (log.calories > 0) "، " + log.calories + " کیلوکالری" else "") + ".")
+                val exerciseDetails = if (log.reps > 0) {
+                    "${log.sets} ست × ${log.reps} تکرار" + (if (log.weight > 0) " با ${log.weight} کیلو" else "")
+                } else {
+                    "${log.minutes} دقیقه، ${log.distance} کیلومتر"
+                }
+                AssistantToolResult(true, "تمرین «${log.title}» ثبت شد؛ $exerciseDetails" + (if (log.calories > 0) "، ${log.calories} کیلوکالری" else "") + ".")
             }
             else -> AssistantToolResult(false, "عملیات ورزشی ناشناخته است.")
         }
