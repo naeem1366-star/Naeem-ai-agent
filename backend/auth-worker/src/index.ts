@@ -1,3 +1,5 @@
+import { buildTechnicalSnapshot } from "./market-quant";
+
 interface Env {
   DB: D1Database;
   SUPABASE_URL: string;
@@ -872,6 +874,36 @@ async function marketCandles(request: Request, env: Env, instrumentId: string): 
   }
 }
 
+
+async function marketTechnical(request: Request, env: Env, instrumentId: string): Promise<Response> {
+  const url = new URL(request.url);
+  const interval = url.searchParams.get("interval") || "1d";
+  const allowed = ["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1mo"];
+  if (!allowed.includes(interval)) return json({ error: "INVALID_INTERVAL" }, 400);
+  try {
+    const result = await env.DB.prepare(`SELECT open_time, high_text, low_text, close_text
+      FROM market_candles WHERE instrument_id = ? AND interval = ?
+      ORDER BY open_time DESC LIMIT 500`).bind(instrumentId, interval).all<any>();
+    const rows = (result.results || []).reverse();
+    if (rows.length < 60) {
+      return json({
+        instrument_id: instrumentId,
+        interval,
+        ready: false,
+        required_candles: 60,
+        available_candles: rows.length,
+        reason: "INSUFFICIENT_HISTORY",
+      }, 200);
+    }
+    const snapshot = buildTechnicalSnapshot(rows);
+    return json({ instrument_id: instrumentId, interval, analysis: snapshot });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "MARKET_ANALYSIS_FAILED";
+    if (code.startsWith("INVALID_")) return json({ error: code }, 422);
+    return json({ error: "MARKET_ANALYSIS_FAILED" }, 500);
+  }
+}
+
 async function adminProviderLimit(request: Request, env: Env, userId: string): Promise<Response> {
   if (!(await adminUser(request, env))) return json({ error: "ADMIN_ONLY" }, 403);
   const body = await request.json().catch(() => null) as any;
@@ -895,6 +927,9 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/market/overview") return withHeaders(await marketOverview(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/market/instruments") return withHeaders(await marketInstruments(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/market/quotes") return withHeaders(await marketQuotes(request, env), headers);
+      const marketTechnicalPrefix = "/v1/market/technical/";
+      const marketTechnicalId = url.pathname.startsWith(marketTechnicalPrefix) ? url.pathname.slice(marketTechnicalPrefix.length) : "";
+      if (request.method === "GET" && marketTechnicalId && !marketTechnicalId.includes("/")) return withHeaders(await marketTechnical(request, env, decodeURIComponent(marketTechnicalId)), headers);
       const marketCandlesPrefix = "/v1/market/candles/";
       const marketCandlesId = url.pathname.startsWith(marketCandlesPrefix) ? url.pathname.slice(marketCandlesPrefix.length) : "";
       if (request.method === "GET" && marketCandlesId && !marketCandlesId.includes("/")) return withHeaders(await marketCandles(request, env, decodeURIComponent(marketCandlesId)), headers);
