@@ -111,7 +111,7 @@ class VoiceWakeService : Service() {
         }
         startForeground(NOTIFICATION_ID, buildNotification())
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(PREF_ENABLED, true).apply()
-        if (ttsReady) startListening()
+        startListening()
         return START_NOT_STICKY
     }
 
@@ -129,7 +129,7 @@ class VoiceWakeService : Service() {
         }
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(message: String = "برای صحبت بگو «ایما». برای خاموش‌کردن، توقف را بزن."): Notification {
         val openApp = PendingIntent.getActivity(
             this, 7313, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -287,6 +287,10 @@ class VoiceWakeService : Service() {
         restartAfterSpeech = listenAgain
         val engine = tts
         if (!ttsReady || engine == null) {
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID,
+                buildNotification(text.take(180))
+            )
             main.postDelayed({ if (listenAgain) startListening() }, 900)
             return
         }
