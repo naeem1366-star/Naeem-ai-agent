@@ -80,6 +80,129 @@ Deno.serve(async (request: Request) => {
   };
 
   try {
+    // Account-scoped personal memory. All writes are server-side and tied to the verified Auth user.
+    if (route === "/v1/memory/items" && request.method === "GET") {
+      const items = await serviceFetch(
+        `ema_memory_items?select=id,memory_type,content,confidence,sensitivity,pinned,updated_at&user_id=eq.${userId}&order=pinned.desc,updated_at.desc&limit=100`
+      );
+      return reply({ items: items || [], sync: "account" });
+    }
+
+    if (route === "/v1/memory/items" && request.method === "POST") {
+      const body = await jsonBody(request);
+      const content = String(body?.content || "").trim();
+      const memoryType = String(body?.memoryType || "note");
+      const source = String(body?.source || "user_explicit");
+      const sensitivity = String(body?.sensitivity || "normal");
+      if (!content || content.length > 4000 ||
+          !["preference", "fact", "project", "decision", "note", "correction"].includes(memoryType) ||
+          !["user_explicit", "user_correction", "assistant_suggested", "imported"].includes(source) ||
+          !["normal", "sensitive"].includes(sensitivity)) {
+        return reply({ error: { code: "INVALID_MEMORY", message: "اطلاعات حافظه معتبر نیست." } }, 400);
+      }
+      // Never promote inferred or sensitive information into durable memory without user action.
+      if (source === "assistant_suggested" || sensitivity === "sensitive") {
+        return reply({ error: { code: "MEMORY_REQUIRES_APPROVAL", message: "ذخیره این نوع اطلاعات به تأیید صریح کاربر نیاز دارد." } }, 403);
+      }
+      const normalizedKey = content.toLocaleLowerCase("fa-IR").replace(/\s+/g, " ").slice(0, 4000);
+      const rows = await serviceFetch("ema_memory_items?on_conflict=user_id,normalized_key", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify({
+          user_id: userId, memory_type: memoryType, content, normalized_key: normalizedKey,
+          confidence: source === "user_correction" ? 1 : 0.95, source, sensitivity,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      return reply({ item: rows?.[0] || null }, 201);
+    }
+
+    const memoryDelete = route.match(/^\/v1\/memory\/items\/([0-9a-f-]{36})$/i);
+    if (memoryDelete && request.method === "DELETE") {
+      await serviceFetch(`ema_memory_items?id=eq.${memoryDelete[1]}&user_id=eq.${userId}`, { method: "DELETE" });
+      return reply({ ok: true });
+    }
+
+    if (route === "/v1/memory/profile" && request.method === "GET") {
+      const rows = await serviceFetch(
+        `ema_profiles?select=display_name,preferences,memory_sync_enabled&user_id=eq.${userId}&limit=1`
+      );
+      return reply({ profile: rows?.[0] || { display_name: "", preferences: {}, memory_sync_enabled: true } });
+    }
+
+    if (route === "/v1/memory/profile" && request.method === "PATCH") {
+      const body = await jsonBody(request);
+      const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (typeof body?.displayName === "string") patch.display_name = body.displayName.trim().slice(0, 80);
+      if (body?.preferences && typeof body.preferences === "object" && !Array.isArray(body.preferences)) {
+        patch.preferences = body.preferences;
+      }
+      if (typeof body?.memorySyncEnabled === "boolean") patch.memory_sync_enabled = body.memorySyncEnabled;
+      const rows = await serviceFetch(`ema_profiles?user_id=eq.${userId}`, {
+        method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch),
+      });
+      return reply({ profile: rows?.[0] || null });
+    }
+
+    if (route === "/v1/memory/learning-events" && request.method === "POST") {
+      const body = await jsonBody(request);
+      const eventType = String(body?.eventType || "");
+      const summary = String(body?.summary || "").trim();
+      if (!["correction", "preference_signal", "task_outcome", "memory_review", "user_feedback"].includes(eventType) ||
+          !summary || summary.length > 2000) {
+        return reply({ error: { code: "INVALID_LEARNING_EVENT", message: "گزارش یادگیری معتبر نیست." } }, 400);
+      }
+      const rows = await serviceFetch("ema_learning_events?select=id,event_type,status,created_at", {
+        method: "POST", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ user_id: userId, event_type: eventType, summary, status: "pending" }),
+      });
+      return reply({ event: rows?.[0] || null }, 201);
+    }
+
+    if (route === "/v1/ai/providers" && request.method === "GET") {
+      const configured = (key: string) => !!Deno.env.get(key)?.trim();
+      return reply({
+        chat: [
+          { id: "ema_primary", configured: configured("EMA_CHAT_FREE_PRIMARY_API_KEY"), role: "primary" },
+          { id: "ema_fallback", configured: configured("EMA_CHAT_FREE_FALLBACK_API_KEY"), role: "fallback" },
+          { id: "gapgpt", configured: configured("CHAT_SECONDARY_API_KEY") || configured("CHAT_SECONDARY_APLIKEY"), role: "compatibility_fallback" },
+        ],
+        webSearch: { configured: configured("EMA_SEARCH_API_KEY"), provider: Deno.env.get("EMA_SEARCH_PROVIDER") || "brave" },
+        memory: { available: true, storage: "account_scoped" },
+      });
+    }
+
+    if (route === "/v1/search/web" && request.method === "POST") {
+      const body = await jsonBody(request);
+      const query = String(body?.query || "").trim();
+      const count = Math.min(10, Math.max(1, Number(body?.count) || 8));
+      const searchKey = Deno.env.get("EMA_SEARCH_API_KEY") || "";
+      const searchProvider = (Deno.env.get("EMA_SEARCH_PROVIDER") || "brave").toLowerCase();
+      if (!query || query.length > 500) return reply({ error: { code: "INVALID_SEARCH_QUERY", message: "عبارت جست‌وجو معتبر نیست." } }, 400);
+      if (!searchKey || searchProvider !== "brave") {
+        return reply({ error: { code: "WEB_SEARCH_NOT_CONFIGURED", message: "موتور جست‌وجوی امن هنوز روی سرور تنظیم نشده است." } }, 503);
+      }
+      const searchUrl = new URL("https://api.search.brave.com/res/v1/web/search");
+      searchUrl.searchParams.set("q", query);
+      searchUrl.searchParams.set("count", String(count));
+      const upstream = await fetch(searchUrl, {
+        headers: { "X-Subscription-Token": searchKey, Accept: "application/json" },
+        signal: AbortSignal.timeout(18000),
+      });
+      if (!upstream.ok) {
+        console.error("EMA web search provider failed", { status: upstream.status });
+        return reply({ error: { code: "WEB_SEARCH_PROVIDER_ERROR", message: "جست‌وجوی وب موقتاً ناموفق بود." } }, 502);
+      }
+      const data: any = await upstream.json().catch(() => ({}));
+      const results = (data?.web?.results || []).slice(0, count).map((item: any) => ({
+        title: String(item?.title || "").slice(0, 300),
+        url: String(item?.url || ""),
+        snippet: String(item?.description || "").slice(0, 1200),
+        published: item?.page_age || item?.age || null,
+      })).filter((item: any) => item.title && item.url.startsWith("https://"));
+      return reply({ provider: "brave", searched_at: new Date().toISOString(), results });
+    }
+
     // Product lens: identify a photographed product using the server-side vision model.
     if (request.method === "POST" && route === "/v1/vision/product") {
       const body = await jsonBody(request);
@@ -889,20 +1012,37 @@ Deno.serve(async (request: Request) => {
       return reply({ error: { code: "NOT_FOUND", message: "مسیر پرداخت پیدا نشد." } }, 404);
     }
 
-    // Free chat uses GapGPT only; NetArz is reserved for paid features.
+    // Model-independent free chat router. Only explicitly configured free/no-charge providers enter this chain.
     if (request.method !== "POST" || !route.endsWith("/chat/completions")) return reply({ error: { code: "NOT_FOUND", message: "مسیر درخواست معتبر نیست." } }, 404);
     const raw = await request.text();
     if (new TextEncoder().encode(raw).length > 1_500_000) return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
     let body: any;
-    try { body = JSON.parse(raw); } catch { return reply({ error: { code: "INVALID_JSON", message: "ساختار درخواست معتبر نیست." } }, 400); }
+    try { body = JSON.parse(raw); } catch { return reply({ error: { code: "INVALID_JSON", message: "ساختار گفتگو معتبر نیست." } }, 400); }
     if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
     if (JSON.stringify(body.messages).includes("data:image/")) return reply({ error: { code: "IMAGE_NOT_ENABLED", message: "تحلیل تصویر هنوز در درگاه امن فعال نشده است." } }, 503);
 
-    const freeKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-    let freeBase = Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1";
-    while (freeBase.endsWith("/")) freeBase = freeBase.slice(0, -1);
-    const freeModel = Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini";
-    if (!freeKey || !freeBase.startsWith("https://")) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "سرویس چت رایگان هنوز روی سرور تنظیم نشده است." } }, 503);
+    const candidates = [
+      {
+        name: "EMA Primary",
+        key: Deno.env.get("EMA_CHAT_FREE_PRIMARY_API_KEY") || "",
+        base: (Deno.env.get("EMA_CHAT_FREE_PRIMARY_BASE_URL") || "").replace(/\/+$/, ""),
+        model: Deno.env.get("EMA_CHAT_FREE_PRIMARY_MODEL") || "",
+      },
+      {
+        name: "EMA Fallback",
+        key: Deno.env.get("EMA_CHAT_FREE_FALLBACK_API_KEY") || "",
+        base: (Deno.env.get("EMA_CHAT_FREE_FALLBACK_BASE_URL") || "").replace(/\/+$/, ""),
+        model: Deno.env.get("EMA_CHAT_FREE_FALLBACK_MODEL") || "",
+      },
+      {
+        name: "GapGPT",
+        key: Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "",
+        base: (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, ""),
+        model: Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini",
+      },
+    ].filter((provider) => provider.key && provider.base.startsWith("https://") && provider.model);
+
+    if (!candidates.length) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "هیچ موتور گفت‌وگوی رایگانی روی سرور تنظیم نشده است." } }, 503);
 
     const quotaDate = new Date().toISOString().slice(0, 10);
     const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
@@ -924,34 +1064,63 @@ Deno.serve(async (request: Request) => {
       if (!response?.ok) console.error("EMA failed to refund free chat quota after provider error");
     };
 
-    const payload = { model: freeModel, messages: body.messages, stream: false, max_tokens: Math.min(1200, Math.max(1, Number(body.max_tokens) || 1200)), temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.7 };
-    let upstream: Response;
-    try {
-      upstream = await fetch(freeBase + "/chat/completions", {
-        method: "POST",
-        headers: { Authorization: "Bearer " + freeKey, "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(30000),
-      });
-    } catch (error) {
-      await refundFreeQuota();
-      console.error("EMA GapGPT free chat request failed", error instanceof Error ? error.message : "network error");
-      return reply({ error: { code: "FREE_CHAT_PROVIDER_UNAVAILABLE", message: "سرویس چت رایگان موقتاً پاسخگو نیست؛ کمی بعد دوباره تلاش کن." } }, 503);
+    const payload = {
+      model: body.model || candidates[0].model,
+      messages: body.messages,
+      stream: false,
+      max_tokens: Math.min(4096, Math.max(1, Number(body.max_tokens) || 2400)),
+      temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.65,
+    };
+
+    let result: any = null;
+    let lastFailure: string | null = null;
+    for (let index = 0; index < candidates.length; index++) {
+      const provider = candidates[index];
+      const providerPayload = { ...payload, model: provider.model || payload.model };
+      let upstream: Response;
+      try {
+        upstream = await fetch(provider.base + "/chat/completions", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + provider.key, "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(providerPayload),
+          signal: AbortSignal.timeout(45000),
+        });
+      } catch (error) {
+        lastFailure = error instanceof Error ? error.message : "network_error";
+        console.warn("EMA chat provider unavailable; trying next configured provider", { provider: provider.name });
+        continue;
+      }
+
+      const providerText = await upstream.text();
+      if (!upstream.ok) {
+        lastFailure = "http_" + upstream.status;
+        // Only transient failures are eligible for automatic fallback. Auth/config errors are surfaced.
+        if (upstream.status === 408 || upstream.status === 429 || upstream.status >= 500) {
+          console.warn("EMA chat provider transient failure; trying next provider", { provider: provider.name, status: upstream.status });
+          continue;
+        }
+        await refundFreeQuota();
+        console.error("EMA chat provider rejected request", { provider: provider.name, status: upstream.status });
+        return reply({ error: { code: "CHAT_PROVIDER_REJECTED", message: "موتور گفت‌وگوی انتخاب‌شده درخواست را نپذیرفت؛ تنظیمات مدل و دسترسی آن باید بررسی شود." } }, 502);
+      }
+
+      try { result = JSON.parse(providerText); } catch {
+        lastFailure = "invalid_json";
+        console.warn("EMA chat provider returned invalid JSON", { provider: provider.name });
+        continue;
+      }
+      if (!Array.isArray(result?.choices) || !result.choices.length) {
+        lastFailure = "empty_choices";
+        continue;
+      }
+      console.log("EMA chat completed", { provider: provider.name, model: providerPayload.model, user_id: userId });
+      break;
     }
-    const providerText = await upstream.text();
-    if (!upstream.ok) {
+
+    if (!result) {
       await refundFreeQuota();
-      console.error("EMA GapGPT free chat returned an error", { status: upstream.status, detail: providerText.slice(0, 180) });
-      return reply({ error: { code: "FREE_CHAT_PROVIDER_ERROR", message: "سرویس چت رایگان نتوانست پاسخ بدهد؛ کمی بعد دوباره تلاش کن." } }, 503);
-    }
-    let result: any;
-    try { result = JSON.parse(providerText); } catch {
-      await refundFreeQuota();
-      return reply({ error: { code: "FREE_CHAT_INVALID_RESPONSE", message: "پاسخ سرویس چت معتبر نبود؛ دوباره تلاش کن." } }, 502);
-    }
-    if (!Array.isArray(result?.choices) || !result.choices.length) {
-      await refundFreeQuota();
-      return reply({ error: { code: "FREE_CHAT_EMPTY_RESPONSE", message: "پاسخی از سرویس چت دریافت نشد؛ دوباره تلاش کن." } }, 502);
+      console.error("All EMA chat providers failed", { reason: lastFailure });
+      return reply({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "موتورهای گفت‌وگوی ایما موقتاً پاسخگو نیستند؛ سهمیه این درخواست آزاد شد." } }, 503);
     }
     return reply(result);
   } catch (error) {
