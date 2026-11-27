@@ -258,6 +258,13 @@ Deno.serve(async (request: Request) => {
       }
       const admins = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
       const isAdmin = Array.isArray(admins) && admins.length > 0;
+      const now = new Date().toISOString();
+      const [walletRows, subscriptionRows] = await Promise.all([
+        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(now)}&ends_at=gt.${encodeURIComponent(now)}&limit=1`),
+      ]);
+      const walletBalance = Number(walletRows?.[0]?.balance_toman || 0);
+      const hasActiveSubscription = Array.isArray(subscriptionRows) && subscriptionRows.length > 0;
 
       const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1");
       const billing = billingRows?.[0] || {};
@@ -281,8 +288,13 @@ Deno.serve(async (request: Request) => {
       const reserveToman = Math.max(1, Math.ceil(reserveUsd * usdToToman * (1 + markupBps / 10000) * 1.5));
       const reservationKey = crypto.randomUUID();
       let reservationId: string | null = null;
+      if (!isAdmin && walletBalance <= 0 && !hasActiveSubscription) {
+        return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
+      }
 
-      if (!isAdmin) {
+      // Wallet credit is charged per request. An active subscription without wallet credit
+      // is treated as included plan access; provider cost is still recorded below.
+      if (!isAdmin && walletBalance >= reserveToman) {
         const reservation = await serviceFetch("rpc/ema_reserve_wallet", {
           method: "POST",
           body: JSON.stringify({
@@ -298,7 +310,7 @@ Deno.serve(async (request: Request) => {
             error: {
               code: reservation?.code || "INSUFFICIENT_AI_CREDIT",
               message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن.",
-              balance_toman: reservation?.balance_toman ?? null,
+              balance_toman: reservation?.balance_toman ?? walletBalance,
               required_toman: reservation?.required_toman ?? reserveToman,
             },
           }, 402);
@@ -307,6 +319,8 @@ Deno.serve(async (request: Request) => {
         if (!reservationId) {
           return reply({ error: { code: "AI_RESERVATION_FAILED", message: "رزرو اعتبار هوش مصنوعی انجام نشد." } }, 503);
         }
+      } else if (!isAdmin && !hasActiveSubscription) {
+        return reply({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن." } }, 402);
       }
 
       try {
@@ -331,7 +345,7 @@ Deno.serve(async (request: Request) => {
             }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
           }
           console.error("EMA NetArz paid AI failed", { status: upstream.status, detail: raw.slice(0, 180) });
-          return reply({ error: { code: "NETARZ_PROVIDER_ERROR", message: `پاسخ NetArz ناموفق بود (HTTP ${upstream.status}). اعتبار و مدل انتخابی را بررسی کن.` } }, upstream.status >= 400 && upstream.status < 600 ? upstream.status : 502);
+          return reply({ error: { code: "NETARZ_PROVIDER_ERROR", message: `پاسخ NetArz ناموفق بود (HTTP ${upstream.status}). اعتبار و مدل انتخابی را بررسی کن.` } }, 502);
         }
 
         let result: any;
@@ -345,11 +359,11 @@ Deno.serve(async (request: Request) => {
           return reply({ error: { code: "NETARZ_INVALID_RESPONSE", message: "پاسخ NetArz در قالب معتبر دریافت نشد." } }, 502);
         }
 
+        const usage = result?.usage || {};
+        const inputTokens = Math.max(0, Number(usage.prompt_tokens ?? estimatedInputTokens));
+        const outputTokens = Math.max(0, Number(usage.completion_tokens ?? maxTokens));
+        const actualUsd = ((inputTokens * inputRate) + (outputTokens * outputRate)) / 1_000_000;
         if (reservationId) {
-          const usage = result?.usage || {};
-          const inputTokens = Math.max(0, Number(usage.prompt_tokens ?? estimatedInputTokens));
-          const outputTokens = Math.max(0, Number(usage.completion_tokens ?? maxTokens));
-          const actualUsd = ((inputTokens * inputRate) + (outputTokens * outputRate)) / 1_000_000;
           const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(actualUsd * usdToToman * (1 + markupBps / 10000))));
           await serviceFetch("rpc/ema_settle_wallet", {
             method: "POST",
@@ -362,6 +376,31 @@ Deno.serve(async (request: Request) => {
               p_provider_cost_usd: actualUsd,
             }),
           });
+        } else {
+          const usageEvents = await serviceFetch("ema_usage_events?select=id", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({
+              user_id: userId,
+              reservation_id: null,
+              feature,
+              provider: "NetArz",
+              model,
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              provider_cost_usd: actualUsd,
+              charged_toman: 0,
+              metadata: { access: isAdmin ? "admin" : "subscription" },
+            }),
+          });
+          const usageEventId = usageEvents?.[0]?.id;
+          if (usageEventId) {
+            await serviceFetch("ema_provider_cost_ledger", {
+              method: "POST",
+              headers: { Prefer: "return=minimal" },
+              body: JSON.stringify({ user_id: userId, usage_event_id: usageEventId, provider: "NetArz", model, cost_usd: actualUsd }),
+            });
+          }
         }
         console.log("EMA paid AI request completed", { provider: "NetArz", feature, model, user_id: userId });
         return reply(result);
