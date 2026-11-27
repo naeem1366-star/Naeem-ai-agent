@@ -4,6 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.ConnectionSpec
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -18,6 +20,9 @@ class ChatClient {
         .writeTimeout(45, TimeUnit.SECONDS)
         .callTimeout(160, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
+        // Some mobile VPN/proxy routes reset HTTP/2 streams; force broadly compatible HTTP/1.1.
+        .protocols(listOf(Protocol.HTTP_1_1))
+        .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))
         .build()
 
     suspend fun fetchModels(baseUrl: String, apiKey: String, type: String? = null): List<String> = withContext(Dispatchers.IO) {
