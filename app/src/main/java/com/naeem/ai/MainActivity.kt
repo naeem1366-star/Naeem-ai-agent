@@ -885,6 +885,7 @@ fun NaeemApp(
     var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
     var smartListeningEnabled by remember { mutableStateOf(wakePrefs.getBoolean("smart_listening", false)) }
     var showVoiceHelp by remember { mutableStateOf(false) }
+    var showComposerMenu by remember { mutableStateOf(false) }
     DisposableEffect(wakePrefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             if (key == "enabled") wakeAssistantEnabled = prefs?.getBoolean("enabled", false) ?: false
@@ -898,13 +899,10 @@ fun NaeemApp(
     ) { permissions ->
         if (permissions[android.Manifest.permission.RECORD_AUDIO] == true) {
             runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
-                .onSuccess {
-                    wakeAssistantEnabled = true
-                    wakePrefs.edit().putBoolean("enabled", true).apply()
-                }
                 .onFailure {
                     wakeAssistantEnabled = false
                     wakePrefs.edit().putBoolean("enabled", false).apply()
+                    error = "فعال‌سازی شنود صوتی ناموفق بود: ${it.message ?: "خطای نامشخص"}"
                 }
         } else {
             wakeAssistantEnabled = false
@@ -1384,26 +1382,44 @@ fun NaeemApp(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            IconButton(
-                                onClick = { textFilePicker.launch(arrayOf("text/*", "application/json", "application/xml")) },
-                                enabled = !busy,
-                                modifier = Modifier.size(34.dp)
-                            ) { Icon(Icons.Default.Add, contentDescription = "پیوست فایل متنی", tint = Gold, modifier = Modifier.size(21.dp)) }
+                            Box {
+                                IconButton(
+                                    onClick = { showComposerMenu = true },
+                                    enabled = !busy,
+                                    modifier = Modifier.size(36.dp)
+                                ) { Icon(Icons.Default.Add, contentDescription = "پیوست و ابزارها", tint = Gold, modifier = Modifier.size(22.dp)) }
+                                DropdownMenu(
+                                    expanded = showComposerMenu,
+                                    onDismissRequest = { showComposerMenu = false },
+                                    containerColor = Panel
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("پیوست فایل متنی") },
+                                        leadingIcon = { Icon(Icons.Default.AttachFile, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; textFilePicker.launch(arrayOf("text/*", "application/json", "application/xml")) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(if (imageMode) "خاموش‌کردن ساخت تصویر" else "ساخت تصویر") },
+                                        leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(if (searchMode) "خاموش‌کردن جست‌وجوی وب" else "جست‌وجوی وب") },
+                                        leadingIcon = { Icon(Icons.Default.TravelExplore, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; searchMode = !searchMode }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("راهنمای دستیار صوتی") },
+                                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; showVoiceHelp = true }
+                                    )
+                                }
+                            }
                             IconButton(
                                 onClick = { imagePicker.launch("image/*") },
                                 enabled = !busy,
-                                modifier = Modifier.size(34.dp)
+                                modifier = Modifier.size(36.dp)
                             ) { Icon(Icons.Default.Image, contentDescription = "افزودن تصویر", tint = Gold, modifier = Modifier.size(20.dp)) }
-                            IconButton(
-                                onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } },
-                                enabled = !busy,
-                                modifier = Modifier.size(34.dp)
-                            ) { Icon(Icons.Default.AutoAwesome, contentDescription = "ساخت تصویر", tint = if (imageMode) Color(0xFFE9C46A) else Muted, modifier = Modifier.size(19.dp)) }
-                            IconButton(
-                                onClick = { searchMode = !searchMode },
-                                enabled = !busy,
-                                modifier = Modifier.size(34.dp)
-                            ) { Icon(Icons.Default.TravelExplore, contentDescription = "جست‌وجوی وب", tint = if (searchMode) Color(0xFF8DD9C0) else Muted, modifier = Modifier.size(19.dp)) }
                             IconButton(
                                 onClick = {
                                     if (conversationMode) {
@@ -1442,9 +1458,6 @@ fun NaeemApp(
                                 modifier = Modifier.size(38.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
                             ) {
                                 Icon(Icons.Default.GraphicEq, contentDescription = if (smartListeningEnabled) "شنود هوشمند ایما فعال است" else if (wakeAssistantEnabled) "آماده‌باش صوتی ایما فعال است" else "فعال‌کردن دستیار صوتی ایما", tint = if (smartListeningEnabled) Color.White else Gold)
-                            }
-                            IconButton(onClick = { showVoiceHelp = true }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Info, contentDescription = "راهنمای دستیار صوتی ایما", tint = Muted, modifier = Modifier.size(17.dp))
                             }
                             if (showVoiceHelp) {
                                 AlertDialog(
