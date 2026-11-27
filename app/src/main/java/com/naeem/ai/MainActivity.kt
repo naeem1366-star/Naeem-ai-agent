@@ -809,11 +809,12 @@ fun NaeemApp(
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
     suspend fun sendChat(text: String, image: String? = null): String {
-        val savedKey = store.apiKeyFor(baseUrl).ifBlank { apiKey }.trim()
-        check(savedKey.isNotBlank()) {
-            if (isEnglish) "Enter and save your API key in Connection Settings first." else "ابتدا کلید API سرویس خودت را در تنظیمات اتصال وارد و ذخیره کن."
+        val gateway = BuildConfig.CHAT_GATEWAY_URL.trim()
+        check(gateway.isNotBlank()) {
+            if (isEnglish) "EMA secure chat service is not configured. Please try again later."
+            else "سرویس امن گفتگوی ایما هنوز روی سرور تنظیم نشده است. لطفاً کمی بعد دوباره تلاش کن."
         }
-        return client.send(baseUrl, model, savedKey, text, image)
+        return client.sendViaGateway(gateway, chatAccessToken, model, text, image)
     }
     val imageClient = remember { ImageGenerationClient() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
