@@ -740,6 +740,7 @@ fun NaeemApp(
     var showGames by remember { mutableStateOf(false) }
     var showDiscover by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
+    var musicCreationStart by remember { mutableStateOf(false) }
     var showPodcast by remember { mutableStateOf(false) }
     var showVideoCreator by remember { mutableStateOf(false) }
     var showProfessionalVideo by remember { mutableStateOf(false) }
@@ -1630,7 +1631,8 @@ fun NaeemApp(
                         onHealth = { showHub = false; showHealth = true },
                         onGames = { showHub = false; showGames = true },
                         onDiscover = { showHub = false; showDiscover = true },
-                        onMusic = { showHub = false; showMusic = true },
+                        onMusic = { showHub = false; musicCreationStart = false; showMusic = true },
+                        onMusicCreation = { showHub = false; musicCreationStart = true; showMusic = true },
                         onPodcast = { showHub = false; showPodcast = true },
                         onVideo = { showHub = false; showVideoCreator = true },
                         onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
@@ -1829,7 +1831,7 @@ fun NaeemApp(
         if (showMusic) {
             Dialog(onDismissRequest = { showMusic = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }) }
+                    ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }, initialTab = if (musicCreationStart) "ساخت موسیقی" else "کشف آهنگ") }
                 }
             }
         }
