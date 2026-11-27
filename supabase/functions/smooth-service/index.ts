@@ -200,7 +200,68 @@ Deno.serve(async (request: Request) => {
           method: "POST",
           body: JSON.stringify({ p_admin_id: userId }),
         });
-        return reply(snapshot || {});
+        const providerAccounts: any[] = [];
+        const checkedAt = new Date().toISOString();
+
+        // NetArz documents GET /me and GET /usage for live account monitoring.
+        const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+        const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+        if (!netarzKey || !netarzBase.startsWith("https://")) {
+          providerAccounts.push({ provider: "NetArz", status: "not_configured", checked_at: checkedAt });
+        } else {
+          try {
+            const accountResponse = await fetch(`${netarzBase}/me`, {
+              headers: { Authorization: `Bearer ${netarzKey}`, Accept: "application/json" },
+              signal: AbortSignal.timeout(12000),
+            });
+            if (!accountResponse.ok) {
+              providerAccounts.push({ provider: "NetArz", status: "error", http_status: accountResponse.status, checked_at: checkedAt });
+            } else {
+              const account = await accountResponse.json();
+              let usage: any = null;
+              let usageStatus = "unavailable";
+              try {
+                const usageResponse = await fetch(`${netarzBase}/usage`, {
+                  headers: { Authorization: `Bearer ${netarzKey}`, Accept: "application/json" },
+                  signal: AbortSignal.timeout(12000),
+                });
+                if (usageResponse.ok) {
+                  usage = await usageResponse.json();
+                  usageStatus = "ok";
+                } else {
+                  usageStatus = "error";
+                }
+              } catch { usageStatus = "error"; }
+              providerAccounts.push({
+                provider: "NetArz",
+                status: String(account?.status || "active"),
+                balance_usd: account?.balance?.usd ?? null,
+                balance_display: account?.balance?.usd_display ?? null,
+                balance_toman_estimate: account?.balance?.toman_estimate ?? null,
+                spent_usd: account?.key?.spent_usd ?? null,
+                usage_30d_usd: usage?.total_usd ?? null,
+                usage_status: usageStatus,
+                project_name: account?.project?.name ?? null,
+                key_name: account?.key?.name ?? null,
+                rpm_limit: account?.key?.rpm_limit ?? null,
+                checked_at: checkedAt,
+              });
+            }
+          } catch {
+            providerAccounts.push({ provider: "NetArz", status: "unreachable", checked_at: checkedAt });
+          }
+        }
+
+        // GapGPT's balance endpoint is not verified. Report configuration only;
+        // never infer a provider balance from EMA's internal cost ledger.
+        const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+        providerAccounts.push({
+          provider: "GapGPT",
+          status: gapgptKey ? "configured_balance_unavailable" : "not_configured",
+          checked_at: checkedAt,
+        });
+
+        return reply({ ...(snapshot || {}), provider_accounts: providerAccounts });
       }
 
       if (request.method === "GET" && route === "/v1/billing/catalog") {
