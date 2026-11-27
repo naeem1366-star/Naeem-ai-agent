@@ -508,6 +508,7 @@ Deno.serve(async (request: Request) => {
       return reply({ ...job, id: providerJobId, status });
     }
 
+    // Media billing uses live NetArz catalog pricing; do not hardcode model prices in the APK.
     // Paid AI tools use NetArz only. Wallet authorization, reservation and settlement stay server-side.
     if (request.method === "POST" && route === "/v1/ai/paid/chat/completions") {
       const body = await jsonBody(request);
