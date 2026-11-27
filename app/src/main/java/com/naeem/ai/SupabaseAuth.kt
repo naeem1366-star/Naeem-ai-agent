@@ -14,16 +14,16 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+internal object EmaSupabaseConfig {
+    const val URL = "https://ifloyzpvgjgmneqgcggu.supabase.co"
+    const val PUBLISHABLE_KEY = "sb_publishable_Vq7VJtBwR8azcEKsIOmc-Q_aqO-fzSh"
+}
+
 data class SupabaseSession(val userId: String, val email: String, val accessToken: String, val refreshToken: String, val expiresAt: Long)
 data class SupabaseAuthResult(val session: SupabaseSession? = null, val needsEmailConfirmation: Boolean = false)
 
 class SupabaseAuthClient(context: Context) {
-    companion object {
-        private const val SUPABASE_URL = "https://ifloyzpvgjgmneqgcggu.supabase.co"
-        // Publishable client key only. Never place a service-role key in the Android app.
-        private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Vq7VJtBwR8azcEKsIOmc-Q_aqO-fzSh"
-    }
-
+    // EmaSupabaseConfig contains only the public client URL and publishable key.
     private val http = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS).callTimeout(30, TimeUnit.SECONDS).build()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
@@ -79,9 +79,9 @@ class SupabaseAuthClient(context: Context) {
     }
 
     private fun post(path: String, body: JSONObject, accessToken: String? = null): JSONObject {
-        val builder = Request.Builder().url(SUPABASE_URL + path)
+        val builder = Request.Builder().url(EmaSupabaseConfig.URL + path)
             // Publishable keys are API keys, not JWTs. Keep them only in the apikey header.
-            .header("apikey", SUPABASE_PUBLISHABLE_KEY)
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
             .header("Accept", "application/json")
             .post(body.toString().toRequestBody(jsonType))
         if (!accessToken.isNullOrBlank()) {
