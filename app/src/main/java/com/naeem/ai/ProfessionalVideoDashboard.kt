@@ -30,13 +30,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: String) {
+fun ProfessionalVideoDashboard(onClose: () -> Unit, gatewayUrl: String, accessToken: String) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val secureStore = remember(context) { SecureConfigStore(context) }
-    var localKey by remember(baseUrl) { mutableStateOf(apiKey.ifBlank { secureStore.apiKeyFor(baseUrl) }) }
-    var keySaved by remember(baseUrl) { mutableStateOf(localKey.isNotBlank()) }
-    val api = remember(baseUrl, localKey) { NetArzApiClient(baseUrl, localKey) }
+    val api = remember(gatewayUrl, accessToken) { NetArzMediaGatewayClient(gatewayUrl, accessToken) }
     var models by remember { mutableStateOf<List<NetArzVideoModel>>(emptyList()) }
     var selected by remember { mutableStateOf<NetArzVideoModel?>(null) }
     var prompt by remember { mutableStateOf("") }
@@ -66,7 +63,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
             loading = false
         }
     }
-    LaunchedEffect(baseUrl, localKey) { refreshModels() }
+    LaunchedEffect(gatewayUrl, accessToken) { if (accessToken.isNotBlank()) refreshModels() }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -124,26 +121,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
             Icon(Icons.Default.AutoAwesome, null, tint = SupraGlass.Ice)
         }
 
-        Surface(color = panel, shape = RoundedCornerShape(14.dp)) {
-            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("کلید API", color = Color.White, fontWeight = FontWeight.SemiBold)
-                OutlinedTextField(
-                    value = localKey, onValueChange = { localKey = it; keySaved = false },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    placeholder = { Text("کلید API مربوطه را وارد کنید") },
-                    keyboardOptions = KeyboardOptions.Default,
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = silver, unfocusedBorderColor = Color(0xFF46515F))
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (keySaved) "کلید در حافظه امن دستگاه ذخیره شده است." else "برای ادامه، کلید را ذخیره کنید.", color = if (keySaved) Color(0xFF9BD2A9) else muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                    Button(enabled = localKey.isNotBlank() && !keySaved, onClick = {
-                        secureStore.rememberApiKey(baseUrl, localKey); keySaved = true; refreshModels()
-                    }) { Text("ذخیره کلید") }
-                }
-                Text("برای دریافت کلید، با پشتیبانی تماس بگیرید.", color = muted, style = MaterialTheme.typography.labelSmall)
-            }
-        }
+        if (accessToken.isBlank()) Text("برای استفاده از تولید ویدیوی حرفه‌ای ابتدا وارد حساب ایما شو.", color = Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
 
         if (selected == null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -220,7 +198,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
             }
             Button(
                 onClick = { confirm = true },
-                enabled = !running && keySaved && localKey.isNotBlank() && prompt.isNotBlank() &&
+                enabled = !running && accessToken.isNotBlank() && prompt.isNotBlank() &&
                     (model.seconds.isEmpty() || seconds in model.seconds) &&
                     (model.sizes.isEmpty() || size in model.sizes) &&
                     (!model.imageInput || imageData != null) &&
@@ -296,7 +274,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, baseUrl: String, apiKey: Str
         AlertDialog(
             onDismissRequest = { confirm = false },
             title = { Text("تأیید تولید") },
-            text = { Text("مدل: ${model.name}\nمدت: $seconds ثانیه\nاندازه: $size\nنسبت: $ratio\n\nبا شروع درخواست، هزینه از اعتبار API کسر می‌شود. ادامه می‌دهی؟") },
+            text = { Text("مدل: ${model.name}\nمدت: $seconds ثانیه\nاندازه: $size\nنسبت: $ratio\n\nهزینه بر اساس قیمت رسمی مدل NetArz محاسبه می‌شود و در صورت استفاده از کیف پول ایما، پیش از شروع رزرو و پس از مشخص‌شدن هزینه نهایی تسویه می‌شود. ادامه می‌دهی؟") },
             confirmButton = {
                 TextButton(onClick = {
                     confirm = false; running = true; progress = 0; error = ""; resultBytes = null; status = "در حال ارسال درخواست…"
