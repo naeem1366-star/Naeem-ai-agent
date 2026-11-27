@@ -246,7 +246,7 @@ Deno.serve(async (request: Request) => {
       }
 
       const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-      const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+      const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
       const model = String(Deno.env.get("CHAT_PRIMARY_MODEL") || body?.model || "gpt-4o-mini").trim();
       if (!netarzKey || !netarzBase.startsWith("https://")) {
         return reply({ error: { code: "NETARZ_NOT_CONFIGURED", message: "اتصال امن NetArz روی سرور تنظیم نشده است." } }, 503);
