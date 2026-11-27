@@ -287,10 +287,6 @@ Deno.serve(async (request: Request) => {
       const reserveToman = Math.max(1, Math.ceil(reserveUsd * usdToToman * (1 + markupBps / 10000) * 1.5));
       const reservationKey = crypto.randomUUID();
       let reservationId: string | null = null;
-      if (!isAdmin && walletBalance <= 0 && !hasActiveSubscription) {
-        return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
-      }
-
       // Prefer per-request wallet billing when configured and sufficiently funded.
       // An active subscription remains a valid included-access path when wallet billing is not used.
       if (!isAdmin && walletBalance > 0 && !hasActiveSubscription && !walletBillingReady) {
