@@ -1193,7 +1193,7 @@ fun NaeemApp(
             onSurfaceVariant = Color(0xFFBFC6D0), secondary = Color(0xFFBFC6D0)
         )
     ) {
-old free video dialog        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         ModalNavigationDrawer(
             drawerState = drawerState,
             gesturesEnabled = true,
@@ -1338,7 +1338,7 @@ old free video dialog        CompositionLocalProvider(LocalLayoutDirection provi
                             ) {
                                 Text(appText(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", isEnglish), color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
                             }
-toolbar video button                        }
+                        }
                         Row(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
