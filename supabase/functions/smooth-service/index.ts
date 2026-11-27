@@ -230,6 +230,292 @@ Deno.serve(async (request: Request) => {
       }
     }
 
+    // Paid media tools use NetArz only. Provider secrets never leave this function.
+    const mediaNetarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+    const mediaNetarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+    const mediaProviderFetch = async (path: string, init: RequestInit = {}) => {
+      if (!mediaNetarzKey || !mediaNetarzBase.startsWith("https://")) throw new Error("NETARZ_NOT_CONFIGURED");
+      return await fetch(mediaNetarzBase + path, {
+        ...init,
+        headers: { Authorization: `Bearer ${mediaNetarzKey}`, Accept: "application/json", ...(init.headers || {}) },
+        signal: init.signal || AbortSignal.timeout(180000),
+      });
+    };
+    const getMediaAccess = async (feature: string, model: string, estimateUsd: number) => {
+      const profiles = await serviceFetch(`ema_profiles?select=status&user_id=eq.${userId}&limit=1`);
+      if (!Array.isArray(profiles) || profiles.length === 0 || profiles[0].status !== "active") {
+        throw new Error("ACCOUNT_NOT_ACTIVE");
+      }
+      const [admins, wallets, subscriptions, settings] = await Promise.all([
+        serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`),
+        serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1"),
+      ]);
+      const isAdmin = Array.isArray(admins) && admins.length > 0;
+      const hasSubscription = Array.isArray(subscriptions) && subscriptions.length > 0;
+      const walletBalance = Number(wallets?.[0]?.balance_toman || 0);
+      const billing = settings?.[0] || {};
+      const rate = Number(billing.usd_to_toman || 0);
+      const markup = Math.max(0, Number(billing.markup_bps || 0));
+      const billingReady = billing.ai_billing_enabled === true && rate > 0;
+      if (!isAdmin && !hasSubscription && walletBalance <= 0) throw new Error("PAID_ACCESS_REQUIRED");
+      if (!isAdmin && !hasSubscription && !billingReady) throw new Error("AI_BILLING_NOT_ENABLED");
+      let reservationId: string | null = null;
+      let reserveToman = 0;
+      if (!isAdmin && billingReady && walletBalance > 0) {
+        if (!(estimateUsd > 0) || !Number.isFinite(estimateUsd)) throw new Error("MEDIA_MODEL_PRICE_MISSING");
+        reserveToman = Math.max(1, Math.ceil(estimateUsd * rate * (1 + markup / 10000) * 1.5));
+        const reserved = await serviceFetch("rpc/ema_reserve_wallet", {
+          method: "POST",
+          body: JSON.stringify({
+            p_user_id: userId, p_amount_toman: reserveToman,
+            p_reference: crypto.randomUUID(), p_feature: feature, p_model: model,
+          }),
+        });
+        if (reserved?.ok && reserved?.reservation_id) {
+          reservationId = String(reserved.reservation_id);
+        } else if (!hasSubscription) {
+          throw new Error("INSUFFICIENT_AI_CREDIT");
+        }
+      }
+      return { isAdmin, hasSubscription, rate, markup, reservationId, reserveToman };
+    };
+    const settleMediaReservation = async (
+      reservationId: string | null, feature: string, model: string, actualUsd: number,
+      rate: number, markup: number, isAdmin: boolean, hasSubscription: boolean,
+      metadata: Record<string, unknown> = {},
+      reserveToman: number = Number.MAX_SAFE_INTEGER,
+    ) => {
+      const safeUsd = Math.max(0, Number.isFinite(actualUsd) ? actualUsd : 0);
+      if (reservationId) {
+        const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000))));
+        await serviceFetch("rpc/ema_settle_wallet", {
+          method: "POST",
+          body: JSON.stringify({
+            p_reservation_id: reservationId, p_actual_toman: actualToman,
+            p_provider: "NetArz", p_input_tokens: 0, p_output_tokens: 0, p_provider_cost_usd: safeUsd,
+          }),
+        });
+        const events = await serviceFetch(`ema_usage_events?select=id&reservation_id=eq.${reservationId}&limit=1`);
+        const eventId = events?.[0]?.id;
+        if (eventId) await serviceFetch("ema_provider_cost_ledger", {
+          method: "POST", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ user_id: userId, usage_event_id: eventId, provider: "NetArz", model, cost_usd: safeUsd }),
+        }).catch((error) => console.error("EMA media cost ledger insert failed", error instanceof Error ? error.message : "unknown"));
+      } else {
+        const events = await serviceFetch("ema_usage_events?select=id", {
+          method: "POST", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            user_id: userId, reservation_id: null, feature, provider: "NetArz", model,
+            input_tokens: 0, output_tokens: 0, provider_cost_usd: safeUsd, charged_toman: 0,
+            metadata: { access: isAdmin ? "admin" : hasSubscription ? "subscription" : "wallet", ...metadata },
+          }),
+        });
+        const eventId = events?.[0]?.id;
+        if (eventId) await serviceFetch("ema_provider_cost_ledger", {
+          method: "POST", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ user_id: userId, usage_event_id: eventId, provider: "NetArz", model, cost_usd: safeUsd }),
+        });
+      }
+    };
+    const getMediaCatalog = async (type: "video" | "music") => {
+      const response = await mediaProviderFetch(`/models?type=${type}`, { method: "GET" });
+      const raw = await response.text();
+      if (!response.ok) throw new Error("NETARZ_MODEL_CATALOG_FAILED");
+      return JSON.parse(raw);
+    };
+
+    if (request.method === "GET" && route === "/v1/media/models") {
+      const type = url.searchParams.get("type");
+      if (type !== "video" && type !== "music") return reply({ error: { code: "INVALID_MEDIA_TYPE", message: "نوع فهرست رسانه معتبر نیست." } }, 400);
+      try { return reply(await getMediaCatalog(type)); }
+      catch (error) {
+        console.error("EMA NetArz media catalog failed", error instanceof Error ? error.message : "unknown");
+        return reply({ error: { code: "NETARZ_MODEL_CATALOG_FAILED", message: "دریافت فهرست مدل‌های NetArz ناموفق بود." } }, 502);
+      }
+    }
+
+    if (request.method === "POST" && route === "/v1/media/music") {
+      const body = await jsonBody(request);
+      const model = String(body?.model || "").trim();
+      const prompt = String(body?.prompt || "").trim();
+      if (!model || model.length > 180 || !prompt || prompt.length > 4000) {
+        return reply({ error: { code: "INVALID_MUSIC_REQUEST", message: "مدل یا توضیح موسیقی معتبر نیست." } }, 400);
+      }
+      let reservationId: string | null = null;
+      try {
+        const catalog = await getMediaCatalog("music");
+        const item = (catalog?.data || []).find((entry: any) => entry?.id === model);
+        if (!item) return reply({ error: { code: "MEDIA_MODEL_NOT_ALLOWED", message: "مدل موسیقی در فهرست فعال NetArz نیست." } }, 400);
+        const pricing = item?.pricing || {};
+        const seconds = Number(body?.seconds || 0);
+        const perRequest = Number(pricing.per_request || 0);
+        const perMinute = Number(pricing.per_minute || 0);
+        const estimateUsd = perRequest + (perMinute > 0 && seconds > 0 ? perMinute * seconds / 60 : 0);
+        if (!(estimateUsd > 0)) return reply({ error: { code: "MEDIA_MODEL_PRICE_MISSING", message: "قیمت این مدل موسیقی از فهرست NetArz دریافت نشد؛ تولید متوقف شد." } }, 503);
+        const access = await getMediaAccess("ai_music", model, estimateUsd);
+        reservationId = access.reservationId;
+        const payload: Record<string, unknown> = { model, prompt };
+        if (body?.seconds != null) payload.seconds = body.seconds;
+        if (body?.temperature != null) payload.temperature = body.temperature;
+        if (body?.seed != null) payload.seed = body.seed;
+        const upstream = await mediaProviderFetch("/audio/music", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload), signal: AbortSignal.timeout(240000),
+        });
+        const raw = await upstream.text();
+        if (!upstream.ok) {
+          if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+            method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_music_http_${upstream.status}` }),
+          });
+          return reply({ error: { code: "NETARZ_MUSIC_ERROR", message: `ساخت موسیقی با NetArz ناموفق بود (HTTP ${upstream.status}).` } }, 502);
+        }
+        let result: any;
+        try { result = JSON.parse(raw); } catch { throw new Error("NETARZ_INVALID_MUSIC_RESPONSE"); }
+        const reportedUsd = Number(result?.usd ?? result?.usage?.cost_usd);
+        const returnedUsd = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
+        await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.isAdmin, access.hasSubscription,
+          { request_id: result?.id || null, seconds }, access.reserveToman);
+        console.log("EMA paid music completed", { user_id: userId, model, provider: "NetArz", cost_usd: returnedUsd });
+        return reply(result);
+      } catch (error) {
+        if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+          method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "netarz_music_request_failed" }),
+        }).catch(() => null);
+        const code = error instanceof Error ? error.message : "NETARZ_MUSIC_FAILED";
+        const status = code === "PAID_ACCESS_REQUIRED" || code === "INSUFFICIENT_AI_CREDIT" ? 402 :
+          code === "ACCOUNT_NOT_ACTIVE" ? 403 : code === "AI_BILLING_NOT_ENABLED" || code === "MEDIA_MODEL_PRICE_MISSING" ? 503 : 502;
+        return reply({ error: { code, message: code === "PAID_ACCESS_REQUIRED" ? "برای ساخت موسیقی اشتراک فعال یا اعتبار کیف پول لازم است." :
+          code === "INSUFFICIENT_AI_CREDIT" ? "اعتبار کیف پول برای هزینه این قطعه کافی نیست." :
+          code === "AI_BILLING_NOT_ENABLED" ? "محاسبه هزینه و کسر اعتبار هنوز توسط مدیر فعال نشده است." :
+          code === "ACCOUNT_NOT_ACTIVE" ? "حساب کاربری فعال نیست." : "درخواست ساخت موسیقی انجام نشد؛ تنظیمات مدل و سرویس را بررسی کن." } }, status);
+      }
+    }
+
+    if (request.method === "POST" && route === "/v1/media/videos") {
+      const body = await jsonBody(request);
+      const model = String(body?.model || "").trim();
+      const prompt = String(body?.prompt || "").trim();
+      const seconds = Math.max(1, Math.min(60, Number(body?.seconds || 4)));
+      const size = String(body?.size || "auto").trim();
+      if (!model || model.length > 180 || !prompt || prompt.length > 4000 ||
+          (!/^(\d{3,4})x(\d{3,4})$/.test(size) && size !== "auto")) {
+        return reply({ error: { code: "INVALID_VIDEO_REQUEST", message: "مدل، توضیح یا ابعاد ویدیو معتبر نیست." } }, 400);
+      }
+      let reservationId: string | null = null;
+      try {
+        const catalog = await getMediaCatalog("video");
+        const item = (catalog?.data || []).find((entry: any) => entry?.id === model);
+        if (!item) return reply({ error: { code: "MEDIA_MODEL_NOT_ALLOWED", message: "مدل ویدیو در فهرست فعال NetArz نیست." } }, 400);
+        const pricing = item?.pricing || {};
+        const caps = item?.capabilities || {};
+        const multiplier = Number(caps.size_multipliers?.[size] || 1);
+        const perSecond = Number(pricing.per_second || 0);
+        const estimateUsd = perSecond * seconds * multiplier;
+        if (!(estimateUsd > 0)) return reply({ error: { code: "MEDIA_MODEL_PRICE_MISSING", message: "قیمت این مدل ویدیو از فهرست NetArz دریافت نشد؛ تولید متوقف شد." } }, 503);
+        const access = await getMediaAccess("professional_video", model, estimateUsd);
+        reservationId = access.reservationId;
+        const payload: Record<string, unknown> = { model, prompt, seconds: String(seconds), size };
+        if (typeof body?.image === "string" && body.image.length <= 8_000_000) payload.image = body.image;
+        if (typeof body?.video === "string" && body.video.length <= 18_000_000) payload.video = body.video;
+        if (new TextEncoder().encode(JSON.stringify(payload)).length > 19_000_000) {
+          if (reservationId) await serviceFetch("rpc/ema_release_wallet", { method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "media_payload_too_large" }) });
+          return reply({ error: { code: "MEDIA_PAYLOAD_TOO_LARGE", message: "حجم فایل مرجع بیش از حد مجاز است." } }, 413);
+        }
+        const upstream = await mediaProviderFetch("/videos", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload), signal: AbortSignal.timeout(120000),
+        });
+        const raw = await upstream.text();
+        if (!upstream.ok) {
+          if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+            method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_video_http_${upstream.status}` }),
+          });
+          return reply({ error: { code: "NETARZ_VIDEO_ERROR", message: `شروع تولید ویدیو ناموفق بود (HTTP ${upstream.status}).` } }, 502);
+        }
+        const job = JSON.parse(raw);
+        const providerJobId = String(job?.id || job?.data?.id || "");
+        if (!providerJobId || !/^[A-Za-z0-9_-]{1,160}$/.test(providerJobId)) throw new Error("NETARZ_INVALID_VIDEO_JOB");
+        const reportedUsd = Number(job?.usd);
+        const actualEstimate = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
+        await serviceFetch("ema_media_jobs", {
+          method: "POST", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({
+            user_id: userId, provider_job_id: providerJobId, feature: "professional_video",
+            model, reservation_id: reservationId, estimated_cost_usd: actualEstimate,
+            size, seconds, reserve_toman: access.reserveToman, status: String(job?.status || "queued"),
+          }),
+        });
+        return reply({ ...job, id: providerJobId, model, usd: actualEstimate, ema_job_id: providerJobId }, 202);
+      } catch (error) {
+        if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+          method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "netarz_video_create_failed" }),
+        }).catch(() => null);
+        const code = error instanceof Error ? error.message : "NETARZ_VIDEO_FAILED";
+        const status = code === "PAID_ACCESS_REQUIRED" || code === "INSUFFICIENT_AI_CREDIT" ? 402 :
+          code === "ACCOUNT_NOT_ACTIVE" ? 403 : code === "AI_BILLING_NOT_ENABLED" || code === "MEDIA_MODEL_PRICE_MISSING" ? 503 : 502;
+        return reply({ error: { code, message: code === "PAID_ACCESS_REQUIRED" ? "برای تولید ویدیوی حرفه‌ای اشتراک فعال یا اعتبار کیف پول لازم است." :
+          code === "INSUFFICIENT_AI_CREDIT" ? "اعتبار کیف پول برای هزینه این ویدیو کافی نیست." :
+          code === "AI_BILLING_NOT_ENABLED" ? "محاسبه هزینه و کسر اعتبار هنوز توسط مدیر فعال نشده است." :
+          code === "ACCOUNT_NOT_ACTIVE" ? "حساب کاربری فعال نیست." : "درخواست تولید ویدیوی حرفه‌ای انجام نشد؛ تنظیمات مدل را بررسی کن." } }, status);
+      }
+    }
+
+    const mediaJobMatch = route.match(/^\/v1\/media\/videos\/([A-Za-z0-9_-]{1,160})(?:\/(content))?$/);
+    if (request.method === "GET" && mediaJobMatch) {
+      const providerJobId = mediaJobMatch[1];
+      const isContent = mediaJobMatch[2] === "content";
+      const jobs = await serviceFetch(`ema_media_jobs?select=*&provider_job_id=eq.${encodeURIComponent(providerJobId)}&user_id=eq.${userId}&limit=1`);
+      const savedJob = jobs?.[0];
+      if (!savedJob) return reply({ error: { code: "MEDIA_JOB_NOT_FOUND", message: "درخواست ویدیو برای این حساب پیدا نشد." } }, 404);
+      if (isContent) {
+        if (savedJob.status !== "completed") return reply({ error: { code: "MEDIA_NOT_READY", message: "ویدیو هنوز آماده دانلود نیست." } }, 409);
+        const contentResponse = await mediaProviderFetch(`/videos/${providerJobId}/content`, {
+          method: "GET", headers: { Accept: "video/mp4, application/octet-stream, */*" },
+        });
+        if (!contentResponse.ok) return reply({ error: { code: "NETARZ_VIDEO_DOWNLOAD_FAILED", message: "دریافت فایل ویدیوی نهایی ناموفق بود." } }, 502);
+        return new Response(contentResponse.body, {
+          status: 200, headers: { ...corsHeaders, "Content-Type": contentResponse.headers.get("Content-Type") || "video/mp4", "Cache-Control": "no-store" },
+        });
+      }
+      const statusResponse = await mediaProviderFetch(`/videos/${providerJobId}`, { method: "GET" });
+      const raw = await statusResponse.text();
+      if (!statusResponse.ok) return reply({ error: { code: "NETARZ_VIDEO_STATUS_FAILED", message: "دریافت وضعیت ویدیو از NetArz ناموفق بود." } }, 502);
+      const job = JSON.parse(raw);
+      const status = String(job?.status || "unknown");
+      if (!savedJob.settled && (status === "completed" || status === "failed" || status === "cancelled")) {
+        const reservationId = savedJob.reservation_id ? String(savedJob.reservation_id) : null;
+        if (status === "completed") {
+          const reportedUsd = Number(job?.usd);
+          const cost = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : Number(savedJob.estimated_cost_usd || 0);
+          const billingRows = await serviceFetch("ema_billing_settings?select=usd_to_toman,markup_bps&singleton=eq.true&limit=1");
+          const billing = billingRows?.[0] || {};
+          const admins = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
+          const isAdmin = Array.isArray(admins) && admins.length > 0;
+          const subs = await serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
+          await settleMediaReservation(reservationId, "professional_video", savedJob.model, cost,
+            Number(billing.usd_to_toman || 0), Math.max(0, Number(billing.markup_bps || 0)), isAdmin,
+            Array.isArray(subs) && subs.length > 0, { provider_job_id: providerJobId, seconds: savedJob.seconds, size: savedJob.size });
+        } else if (reservationId) {
+          await serviceFetch("rpc/ema_release_wallet", {
+            method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_video_${status}` }),
+          });
+        }
+        await serviceFetch(`ema_media_jobs?id=eq.${savedJob.id}`, {
+          method: "PATCH", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ status, settled: true, updated_at: new Date().toISOString() }),
+        });
+      } else {
+        await serviceFetch(`ema_media_jobs?id=eq.${savedJob.id}`, {
+          method: "PATCH", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+        });
+      }
+      return reply({ ...job, id: providerJobId, status });
+    }
+
+    // Media billing uses live NetArz catalog pricing; do not hardcode model prices in the APK.
     // Paid AI tools use NetArz only. Wallet authorization, reservation and settlement stay server-side.
     if (request.method === "POST" && route === "/v1/ai/paid/chat/completions") {
       const body = await jsonBody(request);

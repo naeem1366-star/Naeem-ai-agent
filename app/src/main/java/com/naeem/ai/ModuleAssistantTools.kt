@@ -125,12 +125,20 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.HEALTH, "add_food", ActionAccess.WRITE, mapOf("food" to foodName, "grams" to grams.toString(), "meal" to meal))
         }
 
-        val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
-        if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز").any { text.contains(it) }) {
+        val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا", "پرس", "اسکوات", "ددلیفت", "وزنه", "بارفیکس").any { text.contains(it) }
+        if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز", "زدم", "انجام دادم").any { text.contains(it) }) {
             val strength = listOf("وزنه", "باشگاه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
-            val minutes = Regex("""(\d+)\s*(دقیقه|min|minutes)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
+            val minutes = parseDurationMinutes(text)
+            val calories = Regex("""(\d+)\s*(?:گرم\s*)?(?:کالری|کیلوکالری|kcal)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
+                ?: mapOf("صد کالری" to 100, "دویست کالری" to 200, "دویست گرم کالری" to 200, "سیصد کالری" to 300, "چهارصد کالری" to 400, "پانصد کالری" to 500).entries.firstOrNull { text.contains(it.key) }?.value ?: 0
             val distance = Regex("""(\d+(?:\.\d+)?)\s*(کیلومتر|km)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
+            val reps = Regex("""(\d+)\s*(?:تا|تکرار|rep|reps)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
+                ?: mapOf("پنج تا" to 5, "هشت تا" to 8, "ده تا" to 10, "دوازده تا" to 12, "پانزده تا" to 15, "بیست تا" to 20).entries.firstOrNull { text.contains(it.key) }?.value ?: 0
+            val sets = Regex("""(\d+)\s*(?:ست|set|sets)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: if (reps > 0) 1 else 0
+            val weight = Regex("""(\d+(?:\.\d+)?)\s*(?:کیلو|kg)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
             val title = when {
+                text.contains("پرس پا") -> "پرس پا"
+                text.contains("پرس سینه") -> "پرس سینه"
                 text.contains("باشگاه") || text.contains("بدنسازی") -> "تمرین باشگاه"
                 text.contains("دوچرخه") -> "دوچرخه‌سواری"
                 text.contains("دویدن") -> "دویدن"
@@ -150,7 +158,7 @@ object PersianAssistantIntentResolver {
             }
             return ready(AssistantModule.SPORTS, "add_workout", ActionAccess.WRITE, mapOf(
                 "title" to title, "category" to category, "minutes" to (minutes ?: 0).toString(),
-                "distance" to (distance ?: 0.0).toString(), "sets" to "0", "reps" to "0", "weight" to "0", "notes" to ""
+                "distance" to (distance ?: 0.0).toString(), "sets" to sets.toString(), "reps" to reps.toString(), "weight" to weight.toString(), "calories" to calories.toString(), "notes" to ""
             ))
         }
         if (text.contains("تمرین") || text.contains("ورزش")) {
@@ -189,6 +197,18 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.FINANCE, "recent", ActionAccess.READ)
 
         return AssistantIntentResolution.NoMatch
+    }
+
+    private fun parseDurationMinutes(text: String): Int? {
+        Regex("""(\d+)\s*(?:دقیقه|min|minutes)""").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+        Regex("""(\d+)\s*ساعت""").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { return it * 60 }
+        return when {
+            text.contains("نیم ساعت") || text.contains("نیم‌ساعت") -> 30
+            text.contains("یک ساعت") || text.contains("یه ساعت") -> 60
+            text.contains("دو ساعت") -> 120
+            text.contains("سه ساعت") -> 180
+            else -> null
+        }
     }
 
     private fun parseGrams(text: String): Int? {
@@ -304,7 +324,11 @@ class SportsAssistantTool(context: Context) : AssistantTool {
     private val store = SportStore(context)
     override suspend fun validate(action: AssistantAction): ActionValidation = when (action.operation) {
         "summary", "history" -> ActionValidation.Valid
-        "add_workout" -> if (action.parameters["title"].isNullOrBlank()) ActionValidation.NeedsClarification("نام فعالیت یا حرکت ورزشی چیست؟") else ActionValidation.Valid
+        "add_workout" -> when {
+            action.parameters["title"].isNullOrBlank() -> ActionValidation.NeedsClarification("نام فعالیت یا حرکت ورزشی چیست؟")
+            (action.parameters["minutes"]?.toIntOrNull() ?: 0) <= 0 && (action.parameters["distance"]?.toDoubleOrNull() ?: 0.0) <= 0.0 && (action.parameters["reps"]?.toIntOrNull() ?: 0) <= 0 -> ActionValidation.NeedsClarification("مدت تمرین، مسافت یا تعداد تکرار را هم بگو؛ مثلاً «نیم ساعت ورزش کردم» یا «۱۰ تا پرس پا زدم».")
+            else -> ActionValidation.Valid
+        }
         else -> ActionValidation.Invalid("این عملیات ورزشی پشتیبانی نمی‌شود.")
     }
     override suspend fun execute(action: AssistantAction): AssistantToolResult {
@@ -320,9 +344,14 @@ class SportsAssistantTool(context: Context) : AssistantTool {
                 val p = action.parameters
                 val log = SportLog(UUID.randomUUID().toString(), p.getValue("title"), p["category"].orEmpty(), System.currentTimeMillis(),
                     p["minutes"]?.toIntOrNull() ?: 0, p["distance"]?.toDoubleOrNull() ?: 0.0,
-                    p["sets"]?.toIntOrNull() ?: 0, p["reps"]?.toIntOrNull() ?: 0, p["weight"]?.toDoubleOrNull() ?: 0.0, p["notes"].orEmpty())
+                    p["sets"]?.toIntOrNull() ?: 0, p["reps"]?.toIntOrNull() ?: 0, p["weight"]?.toDoubleOrNull() ?: 0.0, p["notes"].orEmpty(), p["calories"]?.toIntOrNull() ?: 0)
                 store.save(listOf(log) + logs)
-                AssistantToolResult(true, "تمرین «" + log.title + "» ثبت شد؛ " + log.minutes + " دقیقه، " + log.distance + " کیلومتر.")
+                val exerciseDetails = if (log.reps > 0) {
+                    "${log.sets} ست × ${log.reps} تکرار" + (if (log.weight > 0) " با ${log.weight} کیلو" else "")
+                } else {
+                    "${log.minutes} دقیقه، ${log.distance} کیلومتر"
+                }
+                AssistantToolResult(true, "تمرین «${log.title}» ثبت شد؛ $exerciseDetails" + (if (log.calories > 0) "، ${log.calories} کیلوکالری" else "") + ".")
             }
             else -> AssistantToolResult(false, "عملیات ورزشی ناشناخته است.")
         }

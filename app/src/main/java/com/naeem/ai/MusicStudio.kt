@@ -122,19 +122,27 @@ private suspend fun prepareMixPlayer(url:String):MediaPlayer=suspendCancellableC
 }
 
 @Composable
-fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
+fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:String="کشف آهنگ",gatewayUrl:String="",accessToken:String=""){
     val context= LocalContext.current
     val store=remember(context){MusicStudioStore(context)}
     val search=remember{MultiMusicSearch()}
     val scope= rememberCoroutineScope()
     val albums= remember{mutableStateListOf<StudioAlbum>().apply{addAll(store.load())}}
     val selected= remember{mutableStateListOf<StudioTrack>()}
-    var tab by remember{mutableStateOf("کشف آهنگ")}
+    var tab by remember(initialTab){mutableStateOf(initialTab)}
+    var hasPaidAccess by remember{mutableStateOf(false)}
     var query by remember{mutableStateOf("")}
     var source by remember{mutableStateOf("همه")}
     var results by remember{mutableStateOf<List<StudioTrack>>(emptyList())}
     var loading by remember{mutableStateOf(false)}
     var message by remember{mutableStateOf("")}
+    LaunchedEffect(gatewayUrl,accessToken){
+        hasPaidAccess = if(accessToken.isBlank()) false else runCatching{BillingClient(gatewayUrl).hasPaidAccess(accessToken)}.getOrDefault(false)
+        if(!hasPaidAccess && tab=="ساخت موسیقی"){
+            tab="کشف آهنگ"
+            message="ساخت موسیقی با هوش مصنوعی به اشتراک فعال یا اعتبار کیف پول نیاز دارد."
+        }
+    }
     var clientId by remember{mutableStateOf(store.clientId())}
     var settings by remember{mutableStateOf(false)}
     var albumDialog by remember{mutableStateOf(false)}
@@ -210,7 +218,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
                     Triple("میز دی‌جی",Icons.Default.GraphicEq,"چیدن و میکس آهنگ‌ها"),
                     Triple("آلبوم‌ها",Icons.Default.Album,"مجموعه‌های ذخیره‌شده"),
                     Triple("ساخت موسیقی",Icons.Default.AutoAwesome,"ساخت قطعه با هوش مصنوعی")
-                )
+                ).filter { hasPaidAccess || it.first != "ساخت موسیقی" }
                 tools.chunked(2).forEach { rowTools ->
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         rowTools.forEach { item ->
@@ -245,7 +253,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
         }
         if(message.isNotBlank()) Text(message,color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
         when(tab){
-            "ساخت موسیقی"-> MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),onMessage={message=it})
+            "ساخت موسیقی"-> if(hasPaidAccess) MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),gatewayUrl=gatewayUrl,accessToken=accessToken,onMessage={message=it}) else Text("این قابلیت به اشتراک فعال یا اعتبار کیف پول نیاز دارد.",color=Color(0xFFFFB4A9))
             "کشف آهنگ"->{
                 OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("نام آهنگ، خواننده یا سبک")})
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
@@ -344,15 +352,11 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit){
 
 
 @Composable
-private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Unit){
+private fun MusicCreationPanel(modifier:Modifier=Modifier,gatewayUrl:String,accessToken:String,onMessage:(String)->Unit){
     val context=LocalContext.current
-    val config=remember(context){SecureConfigStore(context)}
-    val baseUrl=config.baseUrl()
-    var musicApiKey by remember{mutableStateOf(config.apiKeyFor(baseUrl).ifBlank{config.apiKey()})}
-    var keySaved by remember{mutableStateOf(musicApiKey.isNotBlank())}
-    val api=remember(baseUrl,musicApiKey){NetArzApiClient(baseUrl,musicApiKey)}
+    val api=remember(gatewayUrl,accessToken){NetArzMediaGatewayClient(gatewayUrl,accessToken)}
     val scope=rememberCoroutineScope()
-    var model by remember{mutableStateOf(config.modelFor("music").ifBlank{"lyria-3.5"})}
+    var model by remember{mutableStateOf("lyria-3.5")}
     var models by remember{mutableStateOf(listOf("lyria-3.5","lyria-3-pro-preview","lyria-3-clip-preview","openrouter/google/lyria-3-pro-preview","openrouter/google/lyria-3-clip-preview","eleven-music-v1","eleven-sound-effects-v3","eleven-sound-effects-v2"))}
     var modelsLoading by remember{mutableStateOf(false)}
     var modelMenu by remember{mutableStateOf(false)}
@@ -390,11 +394,11 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
         }
     }
     DisposableEffect(Unit){onDispose{stopPreview()}}
-    LaunchedEffect(baseUrl,musicApiKey){
-        if(musicApiKey.isNotBlank()){
+    LaunchedEffect(gatewayUrl,accessToken){
+        if(accessToken.isNotBlank()){
             modelsLoading=true
-            runCatching{api.musicModels()}.onSuccess{found->if(found.isNotEmpty())models=found}
-                .onFailure{status="فهرست مدل‌ها دریافت نشد؛ از مدل‌های پیش‌فرض استفاده می‌شود."}
+            runCatching{api.musicModels()}.onSuccess{found->if(found.isNotEmpty()){models=found;if(model !in found)model=found.first()}}
+                .onFailure{status=it.message?: "فهرست مدل‌های NetArz دریافت نشد."}
             modelsLoading=false
         }
     }
@@ -408,36 +412,10 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                     Text("استودیوی ساخت موسیقی هوش مصنوعی",color=Color.White,fontWeight=FontWeight.Bold)
                 }
                 Text("ساخت موسیقی و جلوه صوتی با API پولی نت‌ارز؛ مستقل از ویدیوساز رایگان.",color=Color(0xFFB9C2CE),style=MaterialTheme.typography.bodySmall)
-                Text(if(musicApiKey.isBlank())"کلید API وارد نشده است؛ آن را در کادر زیر وارد و ذخیره کن." else "کلید API ذخیره شده و به‌صورت امن نگهداری می‌شود.",color=if(musicApiKey.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
+                Text(if(accessToken.isBlank())"برای ساخت موسیقی وارد حساب شو؛ کلید سرویس روی سرور نگهداری می‌شود." else "اتصال امن NetArz از طریق درگاه ایما فعال است.",color=if(accessToken.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
             }
         }
-        Text("اتصال سرویس ساخت موسیقی",color=Color.White,fontWeight=FontWeight.Bold)
-        OutlinedTextField(
-            value=musicApiKey,
-            onValueChange={musicApiKey=it;keySaved=false},
-            modifier=Modifier.fillMaxWidth(),
-            singleLine=true,
-            label={Text("کلید API نت‌ارز")},
-            placeholder={Text("کلید API را اینجا وارد کن")},
-            visualTransformation=PasswordVisualTransformation(),
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Ascii)
-        )
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically){
-            Button(
-                onClick={
-                    if(musicApiKey.isBlank()) status="ابتدا کلید API را وارد کن."
-                    else{
-                        config.rememberApiKey(baseUrl,musicApiKey)
-                        keySaved=true
-                        status="کلید API به‌صورت امن ذخیره شد."
-                    }
-                },
-                enabled=musicApiKey.isNotBlank(),
-                modifier=Modifier.weight(1f)
-            ){Icon(Icons.Default.Save,null);Spacer(Modifier.width(6.dp));Text("ذخیره کلید")}
-            Text(if(keySaved)"ذخیره شده" else "ذخیره نشده",color=if(keySaved)Color(0xFFB9E5C9) else Color(0xFFFFD28A),style=MaterialTheme.typography.labelSmall)
-        }
-        Text("نشانی سرور از تنظیمات اصلی برنامه خوانده می‌شود؛ فقط کلید مربوط به همان سرویس را اینجا وارد کن.",color=Color(0xFFA8ADB8),style=MaterialTheme.typography.bodySmall)
+        if(accessToken.isBlank()) Text("برای ساخت موسیقی ابتدا وارد حساب ایما شو.",color=Color(0xFFFFB4A9),style=MaterialTheme.typography.bodySmall)
 
         Text("۱. مدل تولید",color=Color.White,fontWeight=FontWeight.Bold)
         Box{
@@ -446,7 +424,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                 Icon(Icons.Default.ArrowDropDown,null)
             }
             DropdownMenu(expanded=modelMenu,onDismissRequest={modelMenu=false}){
-                models.forEach{item->DropdownMenuItem(text={Text(item)},onClick={model=item;config.saveModelFor("music",item);modelMenu=false})}
+                models.forEach{item->DropdownMenuItem(text={Text(item)},onClick={model=item;modelMenu=false})}
             }
         }
         if(modelsLoading)LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -521,7 +499,6 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                         )
                     }.onSuccess{result->
                         generated=result
-                        config.saveModelFor("music",model)
                         val file=java.io.File(context.cacheDir,"ima_music_${System.currentTimeMillis()}.${result.format}")
                         withContext(Dispatchers.IO){file.writeBytes(result.bytes)}
                         tempFile=file
@@ -531,7 +508,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,onMessage:(String)->Un
                     generating=false
                 }
             },
-            enabled=!generating&&musicApiKey.isNotBlank()&&keySaved&&extraPrompt.length+lyrics.length<3900,
+            enabled=!generating&&accessToken.isNotBlank()&&extraPrompt.length+lyrics.length<3900,
             modifier=Modifier.fillMaxWidth()
         ){
             if(generating){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp));Text("در حال ساخت…")}

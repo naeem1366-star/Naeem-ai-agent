@@ -740,6 +740,7 @@ fun NaeemApp(
     var showGames by remember { mutableStateOf(false) }
     var showDiscover by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
+    var musicCreationStart by remember { mutableStateOf(false) }
     var showPodcast by remember { mutableStateOf(false) }
     var showVideoCreator by remember { mutableStateOf(false) }
     var showProfessionalVideo by remember { mutableStateOf(false) }
@@ -860,6 +861,26 @@ fun NaeemApp(
     var conversationMode by remember { mutableStateOf(false) }
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val wakePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
+    var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
+    val wakePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[android.Manifest.permission.RECORD_AUDIO] == true) {
+            runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
+                .onSuccess {
+                    wakeAssistantEnabled = true
+                    wakePrefs.edit().putBoolean("enabled", true).apply()
+                }
+                .onFailure {
+                    wakeAssistantEnabled = false
+                    wakePrefs.edit().putBoolean("enabled", false).apply()
+                }
+        } else {
+            wakeAssistantEnabled = false
+            wakePrefs.edit().putBoolean("enabled", false).apply()
+        }
+    }
 
     fun stopSpeech() {
         speechJob?.cancel()
@@ -1131,7 +1152,7 @@ fun NaeemApp(
                         val findings = deepSearchClient.search(finalQuestion, 8)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
                         val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$userContext"
-                        val report = sendChat(researchPrompt)
+                        val report = sendChat(researchPrompt, paidFeature = featureForThisMessage)
                         report + "\n\nمنابع بررسی‌شده:\n" + findings.mapIndexed { index, item -> "[${index + 1}] ${item.title} — ${item.url}" }.joinToString("\n")
                     } else {
                         val memoryAwarePrompt = "زمینه کاربر:\n$userContext\n\nدرخواست کاربر:\n$finalQuestion"
@@ -1345,6 +1366,35 @@ fun NaeemApp(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            IconButton(
+                                onClick = {
+                                    if (wakeAssistantEnabled) {
+                                        context.stopService(Intent(context, VoiceWakeService::class.java))
+                                        wakeAssistantEnabled = false
+                                        wakePrefs.edit().putBoolean("enabled", false).apply()
+                                    } else {
+                                        val needed = mutableListOf<String>()
+                                        if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                            needed.add(android.Manifest.permission.RECORD_AUDIO)
+                                        }
+                                        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                                            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                            needed.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                        if (needed.isEmpty()) {
+                                            runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
+                                                .onSuccess {
+                                                    wakeAssistantEnabled = true
+                                                    wakePrefs.edit().putBoolean("enabled", true).apply()
+                                                }
+                                                .onFailure { wakeAssistantEnabled = false }
+                                        } else wakePermissionLauncher.launch(needed.toTypedArray())
+                                    }
+                                },
+                                modifier = Modifier.size(44.dp).background(if (wakeAssistantEnabled) Color(0xFF3D8065) else Panel, CircleShape)
+                            ) {
+                                Icon(Icons.Default.GraphicEq, contentDescription = "دستیار همیشه‌آماده ایما", tint = if (wakeAssistantEnabled) Color.White else Gold)
+                            }
                             IconButton(
                                 onClick = {
                                     if (conversationMode) {
@@ -1630,7 +1680,8 @@ fun NaeemApp(
                         onHealth = { showHub = false; showHealth = true },
                         onGames = { showHub = false; showGames = true },
                         onDiscover = { showHub = false; showDiscover = true },
-                        onMusic = { showHub = false; showMusic = true },
+                        onMusic = { showHub = false; musicCreationStart = false; showMusic = true },
+                        onMusicCreation = { showHub = false; musicCreationStart = true; showMusic = true },
                         onPodcast = { showHub = false; showPodcast = true },
                         onVideo = { showHub = false; showVideoCreator = true },
                         onMemory = { showHub = false; showMemory = true; memories = dataStore.memories() },
@@ -1808,7 +1859,7 @@ fun NaeemApp(
             Dialog(onDismissRequest = { showProfessionalVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
                     ModuleScreenBackdrop("music") {
-                        ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, baseUrl = baseUrl, apiKey = apiKey)
+                        ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, gatewayUrl = BuildConfig.CHAT_GATEWAY_URL, accessToken = chatAccessToken)
                     }
                 }
             }
@@ -1829,7 +1880,7 @@ fun NaeemApp(
         if (showMusic) {
             Dialog(onDismissRequest = { showMusic = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }) }
+                    ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }, initialTab = if (musicCreationStart) "ساخت موسیقی" else "کشف آهنگ", gatewayUrl = BuildConfig.CHAT_GATEWAY_URL, accessToken = chatAccessToken) }
                 }
             }
         }
