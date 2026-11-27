@@ -142,7 +142,10 @@ export async function publicMarketSnapshot(market: string): Promise<Response> {
     } else if (market === "fx_reference") {
       try { quotes = await frankfurterQuotes(); sourceStatus.frankfurter = "ok"; }
       catch (error) { sourceStatus.frankfurter = error instanceof Error ? error.message : "unavailable"; }
-    } else if (market === "iran_local") {\n      try { quotes = await tgjuQuotes(); sourceStatus.tgju = "ok"; }\n      catch (error) { sourceStatus.tgju = error instanceof Error ? error.message : "unavailable"; }\n    } else if (market === "iran_stock") {
+    } else if (market === "iran_local") {
+      try { quotes = await tgjuQuotes(); sourceStatus.tgju = "ok"; }
+      catch (error) { sourceStatus.tgju = error instanceof Error ? error.message : "unavailable"; }
+    } else if (market === "iran_stock") {
       try { quotes = await iranStockQuotes(); sourceStatus.tsetmc = "ok"; }
       catch (error) { sourceStatus.tsetmc = error instanceof Error ? error.message : "unavailable"; }
     } else {
