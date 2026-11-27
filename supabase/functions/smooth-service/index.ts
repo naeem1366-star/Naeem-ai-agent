@@ -36,7 +36,11 @@ Deno.serve(async (request: Request) => {
 
   const identityResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: { apikey: anonKey, Authorization: auth },
-  }).catch(() => null);
+    signal: AbortSignal.timeout(12000),
+  }).catch((error) => {
+    console.error("EMA auth lookup failed", error instanceof Error ? error.message : "network error");
+    return null;
+  });
   if (!identityResponse?.ok) {
     return reply({ error: { code: "UNAUTHORIZED", message: "نشست ورود معتبر نیست؛ دوباره وارد حساب شو." } }, 401);
   }
@@ -334,7 +338,11 @@ Deno.serve(async (request: Request) => {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
-    }).catch(() => null);
+      signal: AbortSignal.timeout(12000),
+    }).catch((error) => {
+      console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error");
+      return null;
+    });
     if (!quotaResponse?.ok) {
       return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
     }
@@ -368,7 +376,7 @@ Deno.serve(async (request: Request) => {
           method: "POST",
           headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ ...payload, model: provider.model }),
-          signal: AbortSignal.timeout(85000),
+          signal: AbortSignal.timeout(28000),
         });
         const text = await response.text();
         if (response.ok) {
