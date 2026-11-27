@@ -792,7 +792,7 @@ async function marketOverview(_request: Request, env: Env): Promise<Response> {
       const provider: any = providerMap.get(def.id);
       const observed = Number(count?.latest_observed_at || 0);
       const ageSeconds = observed > 0 ? Math.max(0, Math.floor(Date.now() / 1000) - observed) : null;
-      const freshness = ageSeconds === null ? "unavailable" : ageSeconds <= 120 ? "live" : ageSeconds <= 3600 ? "delayed" : "stale";
+      const freshness = ageSeconds === null ? "unavailable" : ageSeconds <= 120 ? "recently_observed" : "historical_or_delayed";
       return {
         ...def,
         instrument_count: Number(count?.instrument_count || 0),
@@ -800,7 +800,7 @@ async function marketOverview(_request: Request, env: Env): Promise<Response> {
         latest_observed_at: observed || null,
         age_seconds: ageSeconds,
         freshness,
-        status: Number(count?.instrument_count || 0) > 0 && observed > 0 ? freshness : "unconfigured",
+        status: Number(count?.instrument_count || 0) > 0 && observed > 0 ? "data_available" : "unconfigured",
       };
     });
     return json({ markets, generated_at: new Date().toISOString() });
