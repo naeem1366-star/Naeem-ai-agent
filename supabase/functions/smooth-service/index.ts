@@ -1019,7 +1019,6 @@ Deno.serve(async (request: Request) => {
     let body: any;
     try { body = JSON.parse(raw); } catch { return reply({ error: { code: "INVALID_JSON", message: "ساختار گفتگو معتبر نیست." } }, 400); }
     if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
-    if (JSON.stringify(body.messages).includes("data:image/")) return reply({ error: { code: "IMAGE_NOT_ENABLED", message: "تحلیل تصویر هنوز در درگاه امن فعال نشده است." } }, 503);
 
     const candidates = [
       {
@@ -1027,18 +1026,21 @@ Deno.serve(async (request: Request) => {
         key: Deno.env.get("EMA_CHAT_FREE_PRIMARY_API_KEY") || "",
         base: (Deno.env.get("EMA_CHAT_FREE_PRIMARY_BASE_URL") || "").replace(/\/+$/, ""),
         model: Deno.env.get("EMA_CHAT_FREE_PRIMARY_MODEL") || "",
+        visionModel: Deno.env.get("EMA_CHAT_FREE_PRIMARY_VISION_MODEL") || "",
       },
       {
         name: "EMA Fallback",
         key: Deno.env.get("EMA_CHAT_FREE_FALLBACK_API_KEY") || "",
         base: (Deno.env.get("EMA_CHAT_FREE_FALLBACK_BASE_URL") || "").replace(/\/+$/, ""),
         model: Deno.env.get("EMA_CHAT_FREE_FALLBACK_MODEL") || "",
+        visionModel: Deno.env.get("EMA_CHAT_FREE_FALLBACK_VISION_MODEL") || "",
       },
       {
         name: "GapGPT",
         key: Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "",
         base: (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, ""),
         model: Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini",
+        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
       },
     ].filter((provider) => provider.key && provider.base.startsWith("https://") && provider.model);
 
@@ -1076,7 +1078,8 @@ Deno.serve(async (request: Request) => {
     let lastFailure: string | null = null;
     for (let index = 0; index < candidates.length; index++) {
       const provider = candidates[index];
-      const providerPayload = { ...payload, model: provider.model || payload.model };
+      const containsImage = JSON.stringify(body.messages).includes("data:image/");
+      const providerPayload = { ...payload, model: (containsImage ? provider.visionModel : provider.model) || provider.model || payload.model };
       let upstream: Response;
       try {
         upstream = await fetch(provider.base + "/chat/completions", {
