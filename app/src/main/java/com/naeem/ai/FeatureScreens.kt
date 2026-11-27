@@ -138,12 +138,23 @@ fun HomeSpacesOrbit(onOpen: (Int) -> Unit) {
 @Composable
 fun FeatureHub(
     isEnglish: Boolean = false,
+    accessToken: String = "",
+    gatewayUrl: String = "",
     onClose:()->Unit,onFinance:()->Unit,onHealth:()->Unit,onGames:()->Unit,
     onDiscover:()->Unit,onMusic:()->Unit,onPodcast:()->Unit,onVideo:()->Unit,onMemory:()->Unit,onAlbum:()->Unit,
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onJournal:()->Unit,onTrail:()->Unit,onSocial:()->Unit,
     onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {},onProductLens:()->Unit = {}
 ){
     var query by remember { mutableStateOf("") }
+    var hasPaidAccess by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf("free") }
+    LaunchedEffect(accessToken, gatewayUrl) {
+        hasPaidAccess = false
+        hasPaidAccess = false
+        if (accessToken.isNotBlank() && gatewayUrl.isNotBlank()) {
+            hasPaidAccess = runCatching { BillingClient(gatewayUrl).hasPaidAccess(accessToken) }.getOrDefault(false)
+        }
+    }
     var showFeatureMap by remember { mutableStateOf(false) }
     var orbitRotation by remember { mutableStateOf(0f) }
     data class Entry(
@@ -174,7 +185,7 @@ fun FeatureHub(
         Entry("پادکست","شنیدن و کشف برنامه‌های صوتی","پادکست‌های رایگان، RSS و پخش درون‌برنامه‌ای","پادکست‌های رایگان با فید عمومی را پیدا کن، قسمت‌ها را داخل ایما پخش کن و موارد دلخواهت را برای بعد نگه دار. امکان افزودن فید RSS عمومی هم وجود دارد.","فیدهای عمومی رایگان؛ بدون اشتراک پولی",Icons.Default.Podcasts,onPodcast,"پادکست صوتی برنامه شنیداری RSS"),
         Entry("جست‌وجوی تصویری","پیدا کردن محصول با عکس","دوربین هوشمند شناسایی کالا","از محصول عکس بگیر یا تصویرش را انتخاب کن؛ ایما نام، برند احتمالی و دسته‌بندی را تشخیص می‌دهد و برای پیدا کردن نمونه‌ها و فروشگاه‌ها در وب جست‌وجو می‌کند.","تشخیص تصویر با مدل بینایی متصل؛ جست‌وجوی وب",Icons.Default.ImageSearch,onProductLens,"لنز تصویری گوگل لنز شناسایی محصول عکس دوربین جستجوی کالا خرید محصول"),
         Entry("استودیو ایما","تدوین حرفه‌ای ویدیو","تایم‌لاین و خروجی MP4","چند ویدیو را وارد کن، پیش‌نمایش بگیر، ترتیب کلیپ‌ها را تغییر بده و آن‌ها را روی گوشی به یک فایل MP4 تبدیل کن. ابزارهای تدوین پیشرفته در حال توسعه‌اند.","تدوین و خروجی محلی؛ بدون API",Icons.Default.MovieCreation,onVideo,"ویدیو تدوین ادیت مونتاژ تایم لاین کپ کات فیلم سازی"),
-        Entry("ویدیوساز حرفه‌ای","تولید ویدیو با هوش مصنوعی","مدل‌های سینمایی و کنترل کیفیت","ساخت ویدیو از متن یا عکس با مدل‌هایی مثل Kling، Seedance و Gemini Omni. پس از اتصال API می‌توانی مدل، مدت، رزولوشن و نسبت تصویر را انتخاب کنی.","رابط آماده؛ اتصال API پس از خرید",Icons.Default.AutoAwesome,onProfessionalVideo,"ویدیوساز حرفه ای هوش مصنوعی تولید ویدیو عکس به ویدیو text to video image to video Kling Seedance Veo Gemini"),
+        Entry("تولید ویدیو رایگان","ساخت ویدیو با هوش مصنوعی","تولید ویدیو از متن یا تصویر","ویدیو را از متن یا تصویر بساز. دسترسی رایگان وابسته به اعتبار و سهمیه‌ی سرویس سازنده است و ممکن است همیشه یا نامحدود در دسترس نباشد؛ از کیف پول ایما برای این بخش کسر نمی‌شود.","سرویس تولید ویدیو با سهمیه‌ی رایگان محدود",Icons.Default.AutoAwesome,onProfessionalVideo,"تولید ویدیو رایگان هوش مصنوعی عکس به ویدیو text to video image to video Kling Seedance Veo Gemini"),
         Entry("موسیقی","آهنگ و هنرمند","جست‌وجو و کشف موسیقی","حال‌وهوا، سبک یا هنرمند موردعلاقه‌ات را در گفتگو بگو؛ مغز هوشمند پیشنهاد می‌دهد و جست‌وجو و پیش‌نمایش موسیقی در همین بخش انجام می‌شود.","پیشنهاد از دستیار: از طریق گفتگو",Icons.Default.MusicNote,onMusic,"موسیقی آهنگ"),
         Entry("تحلیل اینستاگرام","رشد و عملکرد پیج","اتصال حساب و تحلیل محتوا","آمار پیج را وارد کن تا مغز هوشمند نرخ تعامل، بازدید و عملکرد محتوا را بررسی و برای رشد پیشنهاد بدهد. تحلیل خودکار حساب پس از اتصال رسمی و دریافت مجوزهای Meta ممکن می‌شود.","تحلیل دستی: آماده؛ اتصال رسمی: نیازمند تنظیم Meta",Icons.Default.Insights,onSocial,"اینستاگرام شبکه اجتماعی تحلیل پیج رشد محتوا") ,
         Entry("تنظیمات","اتصال و حریم خصوصی","مدیریت اتصال و امنیت","از اینجا مدل هوش مصنوعی، نشانی سرویس و کلید API را تنظیم می‌کنی؛ این اتصال، مسیر ارتباط مغز هوشمند با گفتگو و ابزارهای برنامه است.","مرکز تنظیمات مغز هوشمند",Icons.Default.Settings,onSettings,"تنظیمات اتصال"),
@@ -201,7 +212,7 @@ fun FeatureHub(
         "سینما" to "Cinema", "فیلم و پوستر" to "Movies & posters",
         "پادکست" to "Podcasts", "شنیدن و کشف برنامه‌های صوتی" to "Discover and listen to podcasts",
         "استودیو ایما" to "EMA Studio", "تدوین حرفه‌ای ویدیو" to "Video editing",
-        "ویدیوساز حرفه‌ای" to "AI video studio", "تولید ویدیو با هوش مصنوعی" to "AI video generation",
+        "تولید ویدیو رایگان" to "Free video generation", "ساخت ویدیو با هوش مصنوعی" to "AI video generation",
         "موسیقی" to "Music", "آهنگ و هنرمند" to "Songs & artists",
         "تحلیل اینستاگرام" to "Instagram analytics", "رشد و عملکرد پیج" to "Account growth & performance",
         "تنظیمات" to "Settings", "اتصال و حریم خصوصی" to "Connections & privacy",
@@ -266,9 +277,9 @@ fun FeatureHub(
         "استودیو ایما" to Triple(
             "Import several videos, preview them, rearrange clips, and export a single MP4 on your phone. Advanced editing tools are still in development.",
             "On-device editing and export; no API required", "Basic editing available"),
-        "ویدیوساز حرفه‌ای" to Triple(
-            "Generate videos from text or images with cinematic models such as Kling, Seedance, and Gemini Omni. Model, duration, resolution, and aspect ratio options become available when the API is connected.",
-            "Interface ready; provider connection requires configuration", "Connection pending"),
+        "تولید ویدیو رایگان" to Triple(
+            "Create videos from text or images. Free access depends on the provider's available trial credits and quota; it may be limited and is not guaranteed to be unlimited.",
+            "Free provider quota when available; no EMA wallet deduction", "Limited free quota"),
         "موسیقی" to Triple(
             "Tell EMA the mood, genre, or artist you like. It can suggest music and help search and preview tracks in this space.",
             "Recommendations through chat", "Available"),
@@ -295,6 +306,8 @@ fun FeatureHub(
             aiStatus = copy?.third ?: entry.aiStatus
         )
     } else entries
+    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "جست‌وجوی تصویری", "تحلیل اینستاگرام")
+    fun isPaid(entry: Entry) = entry.title in paidTitles
     fun hubText(fa: String, en: String) = if (isEnglish) en else fa
 
     if (showFeatureMap) {
@@ -304,7 +317,8 @@ fun FeatureHub(
         )
         return
     }
-    val filtered=displayEntries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
+    val categoryEntries = displayEntries.filter { if (selectedCategory == "paid") isPaid(it) else !isPaid(it) }
+    val filtered=categoryEntries.filter{query.isBlank()||it.title.contains(query,true)||it.subtitle.contains(query,true)||it.keywords.contains(query,true)}
     val gold=SupraGlass.Ice
     val champagne=SupraGlass.Silver
     val hubBg=SupraGlass.Night
@@ -325,11 +339,26 @@ fun FeatureHub(
                         Surface(color = Color(0xFF252D37), shape = RoundedCornerShape(10.dp)) {
                             Text(entry.aiStatus, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = Color(0xFFD4DCE6), style = MaterialTheme.typography.labelSmall)
                         }
+                        if (isPaid(entry) && !hasPaidAccess) {
+                            Text(
+                                hubText("برای استفاده از این ابزار باید حساب ایما را فعال کنی یا کیف پولت را شارژ کنی. ورود مهمان فقط به ابزارهای رایگان دسترسی دارد.",
+                                    "Activate an EMA plan or add wallet credit to use this tool. Guest access is limited to free tools."),
+                                color = Color(0xFFFFD18A), style = MaterialTheme.typography.bodySmall,
+                                textAlign = if (isEnglish) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End
+                            )
+                        }
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { selectedEntry = null; entry.action() }) {
-                        Text(hubText("ورود به این بخش", "Open this space"), color = Color(0xFFE0E6EE))
+                    TextButton(onClick = {
+                        selectedEntry = null
+                        if (isPaid(entry) && !hasPaidAccess) onWallet() else entry.action()
+                    }) {
+                        Text(
+                            if (isPaid(entry) && !hasPaidAccess) hubText("خرید حساب / شارژ کیف پول", "Get access / add credit")
+                            else hubText("ورود به این بخش", "Open this space"),
+                            color = Color(0xFFE0E6EE)
+                        )
                     }
                 },
                 dismissButton = {
@@ -369,8 +398,29 @@ fun FeatureHub(
             colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=gold,unfocusedBorderColor=SupraGlass.Edge,
                 focusedContainerColor=Color(0x16FFFFFF),unfocusedContainerColor=Color(0x16FFFFFF),cursorColor=gold))
         Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = selectedCategory == "free",
+                onClick = { selectedCategory = "free"; selectedEntry = null },
+                label = { Text(hubText("ابزارهای رایگان", "Free tools")) },
+                leadingIcon = { Icon(Icons.Default.CheckCircle, null) }
+            )
+            FilterChip(
+                selected = selectedCategory == "paid",
+                onClick = { selectedCategory = "paid"; selectedEntry = null },
+                label = { Text(hubText("ابزارهای پولی", "Paid tools")) },
+                leadingIcon = { Icon(Icons.Default.Lock, null) }
+            )
+        }
+        if (selectedCategory == "paid" && !hasPaidAccess) {
+            Text(
+                hubText("این ابزارها برای همه قابل مشاهده‌اند؛ برای استفاده باید حساب بخری یا کیف پولت را شارژ کنی.",
+                    "These tools are visible to everyone. A plan or wallet credit is required to use them."),
+                color = Color(0xFFFFD18A), style = MaterialTheme.typography.bodySmall
+            )
+        }
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-            Text(if(query.isBlank()) hubText("فضاهای ایما", "EMA spaces") else hubText("نتایج جست‌وجو", "Search results"),color=champagne,fontWeight=FontWeight.SemiBold)
+            Text(if(query.isBlank()) hubText(if (selectedCategory == "free") "ابزارهای رایگان" else "ابزارهای پولی", if (selectedCategory == "free") "Free tools" else "Paid tools") else hubText("نتایج جست‌وجو", "Search results"),color=champagne,fontWeight=FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
             Text(if(isEnglish) "${filtered.size} items" else "${filtered.size} مورد",color=Color(0xFF8E98A5),style=MaterialTheme.typography.labelSmall)
         }
@@ -391,7 +441,9 @@ fun FeatureHub(
                         Color(0xFFB9D8FF), Color(0xFF76AEE5), Color(0xFF5E9BD8)
                     )[entries.indexOf(entry).coerceAtLeast(0) % 6]
                     Surface(
-                        onClick = { entry.action() },
+                        onClick = {
+                            if (isPaid(entry) && !hasPaidAccess) selectedEntry = entry else entry.action()
+                        },
                         modifier = Modifier.fillMaxWidth().height(142.dp),
                         shape = RoundedCornerShape(22.dp),
                         color = SupraGlass.Glass,
@@ -412,7 +464,10 @@ fun FeatureHub(
                                 Icon(entry.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(entry.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, style = MaterialTheme.typography.titleSmall)
+                                    if (isPaid(entry)) Icon(Icons.Default.Lock, null, tint = Color(0xFFFFD18A), modifier = Modifier.size(13.dp))
+                                }
                                 Text(entry.subtitle, color = Color(0xFFBAC5D3), maxLines = 2, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             }
                             Text(hubText("ورود به بخش", "Open space"), color = gold, style = MaterialTheme.typography.labelSmall)
