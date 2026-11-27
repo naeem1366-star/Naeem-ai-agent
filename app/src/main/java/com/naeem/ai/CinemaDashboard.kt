@@ -49,6 +49,7 @@ private data class CinemaProvider(
 private val cinemaProviders = listOf(
     CinemaProvider("Internet Archive", "فیلم‌های کلاسیک، مستقل و آثار آزاد برای تماشای رایگان", "https://archive.org/details/movies", "بین‌المللی", "بدون حساب؛ آرشیو آثار آزاد و عمومی"),
     CinemaProvider("Netzkino", "مجموعه‌ای از فیلم‌های رایگان با پشتیبانی تبلیغات", "https://www.netzkino.de/", "آلمان و برخی مناطق", "بدون ثبت‌نام؛ دسترسی محتوا منطقه‌ای است"),
+    CinemaProvider("Parsimondo · سینمای فارسی", "فیلم و سریال ایرانی از کانال‌های رسمی صاحبان حق پخش", "https://parsimondo.de/fa/", "بین‌المللی", "بیش از ۳۲۰۰ عنوان رایگان طبق معرفی سرویس؛ بدون ثبت‌نام"),
     CinemaProvider("Pluto TV", "کانال‌های زنده و فیلم‌های درخواستی رایگان", "https://pluto.tv/", "بسته به کشور", "رایگان با تبلیغات؛ فهرست کشورها متفاوت است"),
     CinemaProvider("ARTE", "سینمای هنری، مستند و سریال‌های منتخب", "https://www.arte.tv/", "اروپا و برخی مناطق", "بسیاری از محتواها بدون حساب؛ محدودیت پخش منطقه‌ای"),
     CinemaProvider("ZDF Mediathek", "فیلم، سریال، مستند و برنامه‌های تلویزیونی", "https://www.zdf.de/", "آلمان", "بدون حساب؛ بعضی آثار فقط در آلمان"),
