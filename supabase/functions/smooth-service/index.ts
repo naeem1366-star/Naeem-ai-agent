@@ -230,6 +230,194 @@ Deno.serve(async (request: Request) => {
       }
     }
 
+    // Paid AI tools use NetArz only. Wallet authorization, reservation and settlement stay server-side.
+    if (request.method === "POST" && route === "/v1/ai/paid/chat/completions") {
+      const body = await jsonBody(request);
+      const feature = String(body?.feature || "");
+      const allowedFeatures = new Set(["think_room", "future_gateway", "social_analytics"]);
+      if (!allowedFeatures.has(feature)) {
+        return reply({ error: { code: "PAID_FEATURE_NOT_ALLOWED", message: "این قابلیت در فهرست ابزارهای هوش مصنوعی پولی تعریف نشده است." } }, 403);
+      }
+      if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) {
+        return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
+      }
+      if (new TextEncoder().encode(JSON.stringify(body.messages)).length > 1_500_000) {
+        return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
+      }
+
+      const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+      const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+      const model = String(Deno.env.get("CHAT_PRIMARY_MODEL") || body?.model || "gpt-4o-mini").trim();
+      if (!netarzKey || !netarzBase.startsWith("https://")) {
+        return reply({ error: { code: "NETARZ_NOT_CONFIGURED", message: "اتصال امن NetArz روی سرور تنظیم نشده است." } }, 503);
+      }
+
+      const profiles = await serviceFetch(`ema_profiles?select=status&user_id=eq.${userId}&limit=1`);
+      if (!Array.isArray(profiles) || profiles.length === 0 || profiles[0].status !== "active") {
+        return reply({ error: { code: "ACCOUNT_NOT_ACTIVE", message: "حساب کاربری برای استفاده از قابلیت پولی فعال نیست." } }, 403);
+      }
+      const admins = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
+      const isAdmin = Array.isArray(admins) && admins.length > 0;
+      const now = new Date().toISOString();
+      const [walletRows, subscriptionRows] = await Promise.all([
+        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(now)}&ends_at=gt.${encodeURIComponent(now)}&limit=1`),
+      ]);
+      const walletBalance = Number(walletRows?.[0]?.balance_toman || 0);
+      const hasActiveSubscription = Array.isArray(subscriptionRows) && subscriptionRows.length > 0;
+
+      const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1");
+      const billing = billingRows?.[0] || {};
+      const pricingRows = await serviceFetch(`ema_pricing_rules?select=input_usd_per_million,output_usd_per_million&model=eq.${encodeURIComponent(model)}&enabled=eq.true&limit=1`);
+      const pricing = pricingRows?.[0] || null;
+      const inputRate = Number(pricing?.input_usd_per_million || 0);
+      const outputRate = Number(pricing?.output_usd_per_million || 0);
+      const usdToToman = Number(billing.usd_to_toman || 0);
+      const markupBps = Math.max(0, Number(billing.markup_bps || 0));
+      const walletBillingReady = billing.ai_billing_enabled === true && !!pricing &&
+        inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0;
+      if (!isAdmin && !hasActiveSubscription && walletBalance > 0 && !walletBillingReady) {
+        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن اعتبار کیف پول، قیمت مدل NetArz و نرخ تبدیل دلار به تومان باید در پنل مدیریت تنظیم شود." } }, 503);
+      }
+
+      const maxTokens = Math.max(1, Math.min(1600, Number(body?.max_tokens) || 1200));
+      const serializedMessages = JSON.stringify(body.messages);
+      const estimatedInputTokens = Math.max(1, Math.ceil(serializedMessages.length / 3) + 64);
+      const reserveUsd = ((estimatedInputTokens * inputRate) + (maxTokens * outputRate)) / 1_000_000;
+      const reserveToman = Math.max(1, Math.ceil(reserveUsd * usdToToman * (1 + markupBps / 10000) * 1.5));
+      const reservationKey = crypto.randomUUID();
+      let reservationId: string | null = null;
+      // Prefer per-request wallet billing when configured and sufficiently funded.
+      // An active subscription remains a valid included-access path when wallet billing is not used.
+      if (!isAdmin && walletBalance > 0 && !hasActiveSubscription && !walletBillingReady) {
+        return reply({ error: { code: "AI_BILLING_NOT_ENABLED", message: "سامانه محاسبه و کسر اعتبار هوش مصنوعی هنوز توسط مدیر فعال نشده است." } }, 503);
+      }
+      if (!isAdmin && walletBalance <= 0 && !hasActiveSubscription) {
+        return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
+      }
+      if (!isAdmin && walletBillingReady && walletBalance >= reserveToman) {
+        const reservation = await serviceFetch("rpc/ema_reserve_wallet", {
+          method: "POST",
+          body: JSON.stringify({
+            p_user_id: userId,
+            p_amount_toman: reserveToman,
+            p_reference: reservationKey,
+            p_feature: feature,
+            p_model: model,
+          }),
+        });
+        if (reservation?.ok) {
+          reservationId = String(reservation.reservation_id || "");
+          if (!reservationId) {
+            return reply({ error: { code: "AI_RESERVATION_FAILED", message: "رزرو اعتبار هوش مصنوعی انجام نشد." } }, 503);
+          }
+        } else if (!hasActiveSubscription) {
+          return reply({
+            error: {
+              code: reservation?.code || "INSUFFICIENT_AI_CREDIT",
+              message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن.",
+              balance_toman: reservation?.balance_toman ?? walletBalance,
+              required_toman: reservation?.required_toman ?? reserveToman,
+            },
+          }, 402);
+        }
+      } else if (!isAdmin && !hasActiveSubscription && walletBalance < reserveToman) {
+        return reply({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن." } }, 402);
+      }
+
+      try {
+        const upstream = await fetch(`${netarzBase}/chat/completions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${netarzKey}`, "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            model,
+            messages: body.messages,
+            stream: false,
+            max_tokens: maxTokens,
+            temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.7,
+          }),
+          signal: AbortSignal.timeout(90000),
+        });
+        const raw = await upstream.text();
+        if (!upstream.ok) {
+          if (reservationId) {
+            await serviceFetch("rpc/ema_release_wallet", {
+              method: "POST",
+              body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_http_${upstream.status}` }),
+            }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
+          }
+          console.error("EMA NetArz paid AI failed", { status: upstream.status, detail: raw.slice(0, 180) });
+          return reply({ error: { code: "NETARZ_PROVIDER_ERROR", message: `پاسخ NetArz ناموفق بود (HTTP ${upstream.status}). اعتبار و مدل انتخابی را بررسی کن.` } }, 502);
+        }
+
+        let result: any;
+        try { result = JSON.parse(raw); } catch {
+          if (reservationId) {
+            await serviceFetch("rpc/ema_release_wallet", {
+              method: "POST",
+              body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "invalid_provider_json" }),
+            }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
+          }
+          return reply({ error: { code: "NETARZ_INVALID_RESPONSE", message: "پاسخ NetArz در قالب معتبر دریافت نشد." } }, 502);
+        }
+
+        const usage = result?.usage || {};
+        const inputTokens = Math.max(0, Number(usage.prompt_tokens ?? estimatedInputTokens));
+        const outputTokens = Math.max(0, Number(usage.completion_tokens ?? maxTokens));
+        const actualUsd = ((inputTokens * inputRate) + (outputTokens * outputRate)) / 1_000_000;
+        if (reservationId) {
+          const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(actualUsd * usdToToman * (1 + markupBps / 10000))));
+          await serviceFetch("rpc/ema_settle_wallet", {
+            method: "POST",
+            body: JSON.stringify({
+              p_reservation_id: reservationId,
+              p_actual_toman: actualToman,
+              p_provider: "NetArz",
+              p_input_tokens: inputTokens,
+              p_output_tokens: outputTokens,
+              p_provider_cost_usd: actualUsd,
+            }),
+          });
+        } else {
+          const usageEvents = await serviceFetch("ema_usage_events?select=id", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({
+              user_id: userId,
+              reservation_id: null,
+              feature,
+              provider: "NetArz",
+              model,
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              provider_cost_usd: actualUsd,
+              charged_toman: 0,
+              metadata: { access: isAdmin ? "admin" : "subscription", pricing_configured: !!pricing },
+            }),
+          });
+          const usageEventId = usageEvents?.[0]?.id;
+          if (usageEventId) {
+            await serviceFetch("ema_provider_cost_ledger", {
+              method: "POST",
+              headers: { Prefer: "return=minimal" },
+              body: JSON.stringify({ user_id: userId, usage_event_id: usageEventId, provider: "NetArz", model, cost_usd: actualUsd }),
+            });
+          }
+        }
+        console.log("EMA paid AI request completed", { provider: "NetArz", feature, model, user_id: userId });
+        return reply(result);
+      } catch (error) {
+        if (reservationId) {
+          await serviceFetch("rpc/ema_release_wallet", {
+            method: "POST",
+            body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "provider_request_failed" }),
+          }).catch((releaseError) => console.error("EMA paid AI reservation release failed", releaseError instanceof Error ? releaseError.message : "unknown"));
+        }
+        console.error("EMA NetArz paid AI request failed", error instanceof Error ? error.message : "network error");
+        return reply({ error: { code: "NETARZ_UNAVAILABLE", message: "سرویس NetArz موقتاً در دسترس نیست؛ اعتبار رزروشده آزاد شد." } }, 503);
+      }
+    }
+
     // Billing routes are served by this same function so Android can use one secure gateway URL.
     if (route.startsWith("/v1/billing/")) {
       if (request.method === "GET" && route === "/v1/billing/admin/dashboard") {

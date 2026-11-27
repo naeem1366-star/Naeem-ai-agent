@@ -747,6 +747,7 @@ fun NaeemApp(
     var showSports by remember { mutableStateOf(false) }
     var showTrail by remember { mutableStateOf(false) }
     var showSocialAnalytics by remember { mutableStateOf(false) }
+    var pendingPaidFeature by remember { mutableStateOf<String?>(null) }
     var showMarkets by remember { mutableStateOf(false) }
     var showWrapped by remember { mutableStateOf(false) }
     var showMemory by remember { mutableStateOf(false) }
@@ -815,7 +816,7 @@ fun NaeemApp(
     }
     val listState = rememberLazyListState()
     val client = remember { ChatClient() }
-    suspend fun sendChat(text: String, image: String? = null): String {
+    suspend fun sendChat(text: String, image: String? = null, paidFeature: String? = null): String {
         val gateway = BuildConfig.CHAT_GATEWAY_URL.trim()
         check(gateway.isNotBlank()) {
             if (isEnglish) "EMA secure chat service is not configured. Please try again later."
@@ -826,7 +827,11 @@ fun NaeemApp(
             if (isEnglish) "Your session has expired. Please sign in again."
             else "نشست ورود منقضی شده؛ لطفاً دوباره وارد حساب شو."
         }
-        return client.sendViaGateway(gateway, currentAccessToken, model, text, image)
+        return if (paidFeature != null) {
+            client.sendViaPaidGateway(gateway, currentAccessToken, paidFeature, model, text)
+        } else {
+            client.sendViaGateway(gateway, currentAccessToken, model, text, image)
+        }
     }
     val imageClient = remember { ImageGenerationClient() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -1106,6 +1111,8 @@ fun NaeemApp(
                     albumImages = dataStore.images()
                     messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))
                 } else {
+                    val featureForThisMessage = pendingPaidFeature
+                    pendingPaidFeature = null
                     val actionReply = routeAssistantIntent(finalQuestion)
                     if (actionReply != null) {
                         messages.add(ChatMessage(actionReply, false))
@@ -1132,7 +1139,7 @@ fun NaeemApp(
                             val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
                             if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
                         }
-                        sendChat(memoryAwarePrompt, imageToSend)
+                        sendChat(memoryAwarePrompt, imageToSend, featureForThisMessage)
                     }
                     messages.add(ChatMessage(answer, false))
                     if (speakAnswer) playAnswer(answer)
@@ -1714,9 +1721,8 @@ fun NaeemApp(
                     ModuleScreenBackdrop("discover") {
                         ThinkRoomScreen(
                             onClose = { showThinkRoom = false },
-                            baseUrl = baseUrl,
-                            model = model,
-                            apiKey = apiKey
+                            gatewayUrl = BuildConfig.CHAT_GATEWAY_URL,
+                            accessToken = chatAccessToken
                         )
                     }
                 }
@@ -1728,9 +1734,8 @@ fun NaeemApp(
                     ModuleScreenBackdrop("wrapped") {
                         FutureGatewayScreen(
                             onClose = { showFutureGateway = false },
-                            baseUrl = baseUrl,
-                            model = model,
-                            apiKey = apiKey
+                            gatewayUrl = BuildConfig.CHAT_GATEWAY_URL,
+                            accessToken = chatAccessToken
                         )
                     }
                 }
@@ -1834,7 +1839,7 @@ fun NaeemApp(
                     ModuleScreenBackdrop("social") {
                         SocialAnalyticsDashboard(
                             onClose = { showSocialAnalytics = false },
-                            onAskAi = { question -> showSocialAnalytics = false; prompt = question }
+                            onAskAi = { question -> showSocialAnalytics = false; pendingPaidFeature = "social_analytics"; prompt = question }
                         )
                     }
                 }
@@ -2106,6 +2111,7 @@ fun NaeemApp(
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(if (isEnglish) "Provider connection (local tools)" else "اتصال سرویس‌دهنده (ابزارهای محلی)")
                         Text(if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) { if (isEnglish) "Secure chat: server gateway is not configured in this build. Saving a provider key here does not activate chat." else "چت امن: نشانی درگاه سرور در این نسخه تنظیم نشده؛ ذخیره کلید سرویس‌دهنده در این صفحه، چت را فعال نمی‌کند." } else { if (isEnglish) "Secure chat gateway: configured" else "درگاه امن چت: تنظیم شده" }, color = if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) Color(0xFFFFC28A) else Color(0xFF9BD7B0), style = MaterialTheme.typography.bodySmall)
+                        Text(if (isEnglish) "Paid AI spaces (Think Room, Future Gateway, Instagram analysis) use NetArz through EMA's secure server. Do not enter the NetArz API key on this screen." else "قابلیت‌های پولی هوش مصنوعی (اتاق فکر، به آینده وارد شو و تحلیل اینستاگرام) از طریق سرور امن ایما به NetArz وصل می‌شوند؛ کلید NetArz را در این صفحه وارد نکن.", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                             OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text(appText("نت‌ارز", isEnglish), color = Gold) }
                             OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }

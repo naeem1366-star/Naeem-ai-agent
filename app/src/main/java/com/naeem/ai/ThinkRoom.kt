@@ -109,9 +109,8 @@ private class ThinkRoomStore(context: Context) {
 @Composable
 fun ThinkRoomScreen(
     onClose: () -> Unit,
-    baseUrl: String,
-    model: String,
-    apiKey: String
+    gatewayUrl: String,
+    accessToken: String
 ) {
     val context = LocalContext.current
     val store = remember { ThinkRoomStore(context) }
@@ -211,7 +210,7 @@ fun ThinkRoomScreen(
                                         "پژوهشگر" -> "در نقش پژوهشگر دقیق پاسخ بده؛ ادعاها را از شواهد جدا کن، اطلاعات نامطمئن را مشخص کن و برای راستی‌آزمایی منبع بخواه."
                                         else -> "هم‌فکر عمیق و صریح باش؛ سؤال‌های لازم را مشخص کن، مزایا و معایب را بسنج و پیشنهاد عملی بده."
                                     }
-                                    answer = ChatClient().send(baseUrl, model, apiKey,
+                                    answer = ChatClient().sendViaPaidGateway(gatewayUrl, accessToken, "think_room", "gpt-4o-mini",
                                         "تو اتاق فکر یک اپلیکیشن هستی. فقط فارسی روان بنویس. $instruction پاسخ را ساختارمند، کاربردی و بدون ادعای اطلاعات بررسی‌نشده ارائه کن. اگر داده به‌روز لازم است، صریح بگو باید در جست‌وجوی وب بررسی شود.\n\nموضوع کاربر:\n$prompt")
                                 } catch (e: Exception) { error = e.message ?: "پاسخی دریافت نشد." }
                                 finally { busy = false }
@@ -315,7 +314,7 @@ fun ThinkRoomScreen(
                                 val findings = GoogleResearchClient.search(topic)
                                 val sources = findings.joinToString("\n\n") { "- ${it.title}\n${it.snippet}\nمنبع: ${it.url}" }
                                 val promptText = "تو میز تحلیل چندجانبه اتاق فکر هستی. فقط فارسی پاسخ بده. موضوع را از پنج دیدگاه بررسی کن: ۱) استراتژیست: هدف، بازار، منابع و امکان‌پذیری ۲) طراح: راه‌حل‌های خلاقانه و فرصت‌ها ۳) منتقد: فرض‌های نادرست، ریسک‌ها و نقاط کور ۴) پژوهشگر: ارزیابی شواهد و کیفیت منابع وب ۵) جمع‌بندی بی‌طرفانه و پیشنهاد قدم بعدی. اطلاعات زیر از جست‌وجوی گوگل به دست آمده‌اند؛ آن‌ها را شواهد اولیه بدان، نه حقیقت قطعی. ادعاها را با منبع مربوط مشخص کن و اگر منابع اختلاف دارند، اختلاف را توضیح بده. اگر نتیجه‌ای موجود نیست، صادقانه بگو.\nموضوع: " + topic + "\n\nنتایج جست‌وجوی گوگل:\n" + sources
-                                answer = ChatClient().send(baseUrl, model, apiKey, promptText)
+                                answer = ChatClient().sendViaPaidGateway(gatewayUrl, accessToken, "think_room", "gpt-4o-mini", promptText)
                             } catch (e: Exception) { error = e.message ?: "تحلیل انجام نشد. اگر گوگل کپچا نشان داد، اتصال یا دسترسی شبکه را بررسی کن." }
                             finally { busy = false }
                         }

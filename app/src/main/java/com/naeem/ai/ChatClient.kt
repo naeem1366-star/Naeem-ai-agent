@@ -124,6 +124,64 @@ class ChatClient {
         }
     }
 
+    suspend fun sendViaPaidGateway(
+        gatewayUrl: String,
+        accessToken: String,
+        feature: String,
+        model: String,
+        prompt: String
+    ): String = withContext(Dispatchers.IO) {
+        val root = gatewayUrl.trim().trimEnd('/')
+        require(root.startsWith("https://", ignoreCase = true)) { "نشانی درگاه امن هوش مصنوعی تنظیم نشده است." }
+        require(accessToken.isNotBlank() && accessToken.count { it == '.' } == 2 && accessToken.none { it.isWhitespace() }) {
+            "نشست ورود معتبر نیست؛ دوباره وارد حساب شو."
+        }
+        require(feature in setOf("think_room", "future_gateway", "social_analytics")) {
+            "این قابلیت در مسیر هوش مصنوعی پولی تعریف نشده است."
+        }
+        require(prompt.isNotBlank()) { "متنی برای ارسال وجود ندارد." }
+        val payload = JSONObject()
+            .put("feature", feature)
+            .put("model", model.trim().ifBlank { "gpt-4o-mini" })
+            .put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
+            .put("stream", false)
+            .put("max_tokens", 1200)
+        val request = Request.Builder()
+            .url("$root/v1/ai/paid/chat/completions")
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                val detail = runCatching {
+                    val json = JSONObject(raw)
+                    json.optJSONObject("error")?.optString("message")
+                        ?.takeIf { it.isNotBlank() } ?: json.optString("message").ifBlank { raw.take(600) }
+                }.getOrDefault(raw.take(600))
+                val hint = when (response.code) {
+                    401 -> "برای ادامه دوباره وارد حساب شو."
+                    402 -> "برای این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است."
+                    403 -> "دسترسی این قابلیت برای حساب فعال نیست."
+                    503 -> "سرویس پولی NetArz یا تنظیمات قیمت‌گذاری آن هنوز آماده نیست."
+                    else -> ""
+                }
+                throw IllegalStateException("خطای هوش مصنوعی پولی (HTTP ${response.code}): $detail $hint".trim())
+            }
+            val content = JSONObject(raw).getJSONArray("choices").getJSONObject(0)
+                .getJSONObject("message").opt("content")
+            when (content) {
+                is String -> content
+                is JSONArray -> buildString {
+                    for (i in 0 until content.length()) append(content.optJSONObject(i)?.optString("text").orEmpty())
+                }.ifBlank { "پاسخی دریافت نشد." }
+                else -> "پاسخی دریافت نشد."
+            }
+        }
+    }
+
     suspend fun send(baseUrl: String, model: String, apiKey: String, prompt: String, imageBase64: String? = null): String =
         withContext(Dispatchers.IO) {
             val cleanKey = apiKey.trim().let { value ->
