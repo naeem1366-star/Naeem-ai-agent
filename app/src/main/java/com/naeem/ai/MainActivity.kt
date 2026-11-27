@@ -1755,7 +1755,7 @@ fun NaeemApp(
         if (showDiscover) {
             Dialog(onDismissRequest = { showDiscover = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    ModuleScreenBackdrop("discover") { DiscoverDashboard(onClose = { showDiscover = false }, onAskAi = { question -> showDiscover = false; prompt = question }) }
+                    ModuleScreenBackdrop("discover") { CinemaDashboard(onClose = { showDiscover = false }) }
                 }
             }
         }
