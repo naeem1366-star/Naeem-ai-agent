@@ -131,6 +131,11 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
     val selected= remember{mutableStateListOf<StudioTrack>()}
     var tab by remember(initialTab){mutableStateOf(initialTab)}
     var hasPaidAccess by remember{mutableStateOf(false)}
+    var query by remember{mutableStateOf("")}
+    var source by remember{mutableStateOf("همه")}
+    var results by remember{mutableStateOf<List<StudioTrack>>(emptyList())}
+    var loading by remember{mutableStateOf(false)}
+    var message by remember{mutableStateOf("")}
     LaunchedEffect(gatewayUrl,accessToken){
         hasPaidAccess = if(accessToken.isBlank()) false else runCatching{BillingClient(gatewayUrl).hasPaidAccess(accessToken)}.getOrDefault(false)
         if(!hasPaidAccess && tab=="ساخت موسیقی"){
@@ -138,11 +143,6 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
             message="ساخت موسیقی با هوش مصنوعی به اشتراک فعال یا اعتبار کیف پول نیاز دارد."
         }
     }
-    var query by remember{mutableStateOf("")}
-    var source by remember{mutableStateOf("همه")}
-    var results by remember{mutableStateOf<List<StudioTrack>>(emptyList())}
-    var loading by remember{mutableStateOf(false)}
-    var message by remember{mutableStateOf("")}
     var clientId by remember{mutableStateOf(store.clientId())}
     var settings by remember{mutableStateOf(false)}
     var albumDialog by remember{mutableStateOf(false)}
