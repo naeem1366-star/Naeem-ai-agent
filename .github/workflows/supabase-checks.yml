@@ -1,13 +1,13 @@
 name: Supabase Edge Function checks
 on:
   push:
-    branches: ["fix/ema-free-chat-gapgpt", "feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt"]
+    branches: ["fix/ema-free-chat-gapgpt", "feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing"]
     paths:
       - "supabase/functions/**"
       - "supabase/migrations/**"
       - ".github/workflows/supabase-checks.yml"
   pull_request:
-    branches: ["feature/ema-asi-platform", "feature/ema-provider-account-monitoring"]
+    branches: ["feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing"]
     paths:
       - "supabase/functions/**"
       - "supabase/migrations/**"
