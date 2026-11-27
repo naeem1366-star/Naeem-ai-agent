@@ -861,6 +861,26 @@ fun NaeemApp(
     var conversationMode by remember { mutableStateOf(false) }
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val wakePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
+    var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
+    val wakePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[android.Manifest.permission.RECORD_AUDIO] == true) {
+            runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
+                .onSuccess {
+                    wakeAssistantEnabled = true
+                    wakePrefs.edit().putBoolean("enabled", true).apply()
+                }
+                .onFailure {
+                    wakeAssistantEnabled = false
+                    wakePrefs.edit().putBoolean("enabled", false).apply()
+                }
+        } else {
+            wakeAssistantEnabled = false
+            wakePrefs.edit().putBoolean("enabled", false).apply()
+        }
+    }
 
     fun stopSpeech() {
         speechJob?.cancel()
@@ -1346,6 +1366,35 @@ fun NaeemApp(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            IconButton(
+                                onClick = {
+                                    if (wakeAssistantEnabled) {
+                                        context.stopService(Intent(context, VoiceWakeService::class.java))
+                                        wakeAssistantEnabled = false
+                                        wakePrefs.edit().putBoolean("enabled", false).apply()
+                                    } else {
+                                        val needed = mutableListOf<String>()
+                                        if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                            needed.add(android.Manifest.permission.RECORD_AUDIO)
+                                        }
+                                        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                                            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                            needed.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                        if (needed.isEmpty()) {
+                                            runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
+                                                .onSuccess {
+                                                    wakeAssistantEnabled = true
+                                                    wakePrefs.edit().putBoolean("enabled", true).apply()
+                                                }
+                                                .onFailure { wakeAssistantEnabled = false }
+                                        } else wakePermissionLauncher.launch(needed.toTypedArray())
+                                    }
+                                },
+                                modifier = Modifier.size(44.dp).background(if (wakeAssistantEnabled) Color(0xFF3D8065) else Panel, CircleShape)
+                            ) {
+                                Icon(Icons.Default.GraphicEq, contentDescription = "دستیار همیشه‌آماده ایما", tint = if (wakeAssistantEnabled) Color.White else Gold)
+                            }
                             IconButton(
                                 onClick = {
                                     if (conversationMode) {
