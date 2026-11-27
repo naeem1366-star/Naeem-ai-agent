@@ -27,11 +27,11 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-data class SportLog(val id:String,val title:String,val category:String,val date:Long,val minutes:Int,val distance:Double,val sets:Int,val reps:Int,val weight:Double,val notes:String)
+data class SportLog(val id:String,val title:String,val category:String,val date:Long,val minutes:Int,val distance:Double,val sets:Int,val reps:Int,val weight:Double,val notes:String,val calories:Int=0)
 class SportStore(context:Context){
  private val prefs=context.getSharedPreferences("naeem_sports_v1",Context.MODE_PRIVATE)
- fun load():List<SportLog> = runCatching{val a=JSONArray(prefs.getString("logs","[]"));(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{o->SportLog(o.optString("id"),o.optString("title"),o.optString("category"),o.optLong("date"),o.optInt("minutes"),o.optDouble("distance"),o.optInt("sets"),o.optInt("reps"),o.optDouble("weight"),o.optString("notes"))}}}.getOrDefault(emptyList())
- fun save(logs:List<SportLog>){val a=JSONArray();logs.take(500).forEach{a.put(JSONObject().put("id",it.id).put("title",it.title).put("category",it.category).put("date",it.date).put("minutes",it.minutes).put("distance",it.distance).put("sets",it.sets).put("reps",it.reps).put("weight",it.weight).put("notes",it.notes))};prefs.edit().putString("logs",a.toString()).apply()}
+ fun load():List<SportLog> = runCatching{val a=JSONArray(prefs.getString("logs","[]"));(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{o->SportLog(o.optString("id"),o.optString("title"),o.optString("category"),o.optLong("date"),o.optInt("minutes"),o.optDouble("distance"),o.optInt("sets"),o.optInt("reps"),o.optDouble("weight"),o.optString("notes"),o.optInt("calories"))}}}.getOrDefault(emptyList())
+ fun save(logs:List<SportLog>){val a=JSONArray();logs.take(500).forEach{a.put(JSONObject().put("id",it.id).put("title",it.title).put("category",it.category).put("date",it.date).put("minutes",it.minutes).put("distance",it.distance).put("sets",it.sets).put("reps",it.reps).put("weight",it.weight).put("notes",it.notes).put("calories",it.calories))};prefs.edit().putString("logs",a.toString()).apply()}
 }
 @Composable
 fun SportsDashboard(onClose:()->Unit){
@@ -43,7 +43,7 @@ fun SportsDashboard(onClose:()->Unit){
  var goal by remember{mutableStateOf("افزایش قدرت")};var selectedPlan by remember{mutableStateOf("قدرت پایه")}
  val bg=Color.Transparent;val panel=SupraGlass.Glass;val accent=SupraGlass.Ice;val muted=SupraGlass.Muted
  val today=java.util.Calendar.getInstance().apply{set(java.util.Calendar.HOUR_OF_DAY,0);set(java.util.Calendar.MINUTE,0);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0)}.timeInMillis
- val week=logs.filter{it.date>=today-6L*24*60*60*1000};val weekMinutes=week.sumOf{it.minutes}
+ val week=logs.filter{it.date>=today-6L*24*60*60*1000};val weekMinutes=week.sumOf{it.minutes};val weekCalories=week.sumOf{it.calories}
  val volume=week.sumOf{it.sets.toLong()*it.reps.toLong()*(it.weight*100).toLong()/100L}
  val number=remember{java.text.NumberFormat.getNumberInstance(Locale("fa","IR"))}
  val plans=mapOf("قدرت پایه" to listOf("اسکوات","پرس سینه","زیربغل قایقی","پرس سرشانه","ددلیفت رومانیایی","پلانک"),"عضله‌سازی" to listOf("پرس سینه دمبل","لت سیم‌کش","اسکوات جام","پرس بالا سینه","جلو بازو","پشت بازو"),"چربی‌سوزی و آمادگی" to listOf("پیاده‌روی تند","دوچرخه ثابت","اسکوات وزن بدن","شنا سوئدی","طناب","حرکات مرکزی"),"انعطاف و ریکاوری" to listOf("کشش همسترینگ","باز کردن لگن","کشش سینه","حرکت گربه گاو","تنفس آرام","پیاده‌روی سبک"))
@@ -55,7 +55,7 @@ fun SportsDashboard(onClose:()->Unit){
   Spacer(Modifier.height(10.dp))
   when(tab){
    "تمرین"->LazyColumn(verticalArrangement=Arrangement.spacedBy(11.dp),contentPadding=PaddingValues(bottom=88.dp)){
-    item{Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(22.dp)){Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){Text("خلاصهٔ هفت روز اخیر",color=accent,fontWeight=FontWeight.Bold);Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){SportMetric("جلسه‌ها",week.size.toString(),Modifier.weight(1f),accent,panel);SportMetric("دقیقه تمرین",number.format(weekMinutes),Modifier.weight(1f),accent,panel);SportMetric("حجم وزنه",number.format(volume),Modifier.weight(1f),accent,panel)};Text("هدف فعلی: "+goal,color=muted,style=MaterialTheme.typography.labelSmall)}}}
+    item{Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(22.dp)){Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){Text("خلاصهٔ هفت روز اخیر",color=accent,fontWeight=FontWeight.Bold);Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){SportMetric("جلسه‌ها",week.size.toString(),Modifier.weight(1f),accent,panel);SportMetric("دقیقه تمرین",number.format(weekMinutes),Modifier.weight(1f),accent,panel);SportMetric("کالری سوزانده",number.format(weekCalories),Modifier.weight(1f),accent,panel);SportMetric("حجم وزنه",number.format(volume),Modifier.weight(1f),accent,panel)};Text("هدف فعلی: "+goal,color=muted,style=MaterialTheme.typography.labelSmall)}}}
     item{Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(22.dp)){Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){Text("ثبت جلسهٔ تمرین",color=accent,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
      Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("قدرتی","هوازی","انعطاف","ورزش تیمی","طبیعت‌گردی").forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it,style=MaterialTheme.typography.labelSmall)},colors=FilterChipDefaults.filterChipColors(selectedContainerColor=accent,selectedLabelColor=bg,containerColor=bg,labelColor=Color.White))}}
      OutlinedTextField(title,{title=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text(if(category=="قدرتی")"نام حرکت (مثلاً اسکوات)" else "نوع فعالیت")})
