@@ -715,6 +715,10 @@ fun NaeemApp(
     val cloudMemoryClient = remember { EmaMemoryClient() }
     val deepSearchClient = remember { DeepSearchClient() }
     var memories by remember { mutableStateOf(dataStore.memories()) }
+    var cloudMemoryItems by remember { mutableStateOf<List<EmaCloudMemory>>(emptyList()) }
+    var cloudMemorySyncEnabled by remember { mutableStateOf(dataStore.memorySyncEnabled()) }
+    var cloudMemoryStatus by remember { mutableStateOf("") }
+    var cloudMemoryLoading by remember { mutableStateOf(false) }
     var albumImages by remember { mutableStateOf(dataStore.images()) }
     val ledgerStore = remember { LedgerStore(context) }
     var ledgerEntries by remember { mutableStateOf(ledgerStore.entries()) }
@@ -2036,26 +2040,123 @@ fun NaeemApp(
             }
         }
 
+        LaunchedEffect(showMemory) {
+            if (showMemory) {
+                cloudMemoryLoading = true
+                cloudMemoryStatus = ""
+                val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                if (token.isNotBlank()) {
+                    val profile = runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, token) }.getOrNull()
+                    if (profile != null) {
+                        cloudMemorySyncEnabled = profile.memorySyncEnabled
+                        dataStore.setMemorySyncEnabled(profile.memorySyncEnabled)
+                    }
+                    val items = runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, token) }
+                    items.onSuccess { cloudMemoryItems = it }
+                        .onFailure { cloudMemoryStatus = "حافظه ابری هنوز در دسترس نیست؛ اطلاعات محلی حفظ شده‌اند." }
+                } else {
+                    cloudMemoryStatus = "برای دیدن حافظه ابری وارد حساب شو."
+                }
+                cloudMemoryLoading = false
+            }
+        }
+
         if (showMemory) {
             AlertDialog(
                 onDismissRequest = { showMemory = false },
                 containerColor = Panel,
                 title = { Text(appText("حافظه ایما", isEnglish), color = Gold) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(appText("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", isEnglish), color = Muted, style = MaterialTheme.typography.bodySmall)
+                    Column(
+                        Modifier.fillMaxWidth().heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("حافظه محلی روی همین گوشی می‌ماند؛ حافظه حساب با ورود به دستگاه‌های دیگر همگام می‌شود.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("همگام‌سازی حافظه ابری", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                Text(if (cloudMemorySyncEnabled) "فعال · متصل به حساب کاربری" else "خاموش · فقط حافظه محلی", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Switch(
+                                checked = cloudMemorySyncEnabled,
+                                onCheckedChange = { enabled ->
+                                    cloudMemorySyncEnabled = enabled
+                                    dataStore.setMemorySyncEnabled(enabled)
+                                    scope.launch {
+                                        val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                        if (token.isNotBlank()) {
+                                            val profile = runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, token) }.getOrNull()
+                                            if (profile != null) {
+                                                runCatching {
+                                                    cloudMemoryClient.saveProfile(
+                                                        BuildConfig.CHAT_GATEWAY_URL, token,
+                                                        profile.displayName, profile.preferences, enabled
+                                                    )
+                                                }.onFailure { cloudMemoryStatus = "تنظیم همگام‌سازی در سرور ذخیره نشد." }
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                        if (cloudMemoryLoading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold)
+                        if (cloudMemoryStatus.isNotBlank()) Text(cloudMemoryStatus, color = Color(0xFFFFD28A), style = MaterialTheme.typography.labelSmall)
                         OutlinedTextField(value = memoryDraft, onValueChange = { memoryDraft = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(appText("مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند", isEnglish)) })
+                        Text("حافظه‌های این گوشی", color = Gold, fontWeight = FontWeight.Bold)
+                        if (memories.isEmpty()) Text("هنوز نکته محلی ذخیره نشده است.", color = Muted, style = MaterialTheme.typography.bodySmall)
                         memories.forEach { item ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(item, modifier = Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.bodySmall)
-                                TextButton(onClick = { dataStore.deleteMemory(item); memories = dataStore.memories() }) { Text(appText("حذف", isEnglish), color = Color(0xFFFF8B80)) }
+                                TextButton(onClick = {
+                                    dataStore.deleteMemory(item)
+                                    memories = dataStore.memories()
+                                    val cloudItem = cloudMemoryItems.firstOrNull { it.content == item }
+                                    if (cloudItem != null) scope.launch {
+                                        val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                        if (token.isNotBlank()) runCatching { cloudMemoryClient.deleteMemory(BuildConfig.CHAT_GATEWAY_URL, token, cloudItem.id) }
+                                        cloudMemoryItems = cloudMemoryItems.filterNot { it.id == cloudItem.id }
+                                    }
+                                }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                            }
+                        }
+                        Text("حافظه‌های حساب", color = Gold, fontWeight = FontWeight.Bold)
+                        if (cloudMemoryItems.isEmpty()) Text("حافظه ابری ثبت‌شده‌ای نمایش داده نمی‌شود.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        cloudMemoryItems.forEach { item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(item.content, color = Color.White, style = MaterialTheme.typography.bodySmall)
+                                    Text(item.type, color = Muted, style = MaterialTheme.typography.labelSmall)
+                                }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                        if (token.isNotBlank()) {
+                                            runCatching { cloudMemoryClient.deleteMemory(BuildConfig.CHAT_GATEWAY_URL, token, item.id) }
+                                                .onSuccess { cloudMemoryItems = cloudMemoryItems.filterNot { it.id == item.id } }
+                                                .onFailure { cloudMemoryStatus = "حذف حافظه ابری ناموفق بود." }
+                                        }
+                                    }
+                                }) { Text("حذف", color = Color(0xFFFF8B80)) }
                             }
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (memoryDraft.isNotBlank()) { dataStore.addMemory(memoryDraft); memories = dataStore.memories(); memoryDraft = "" }
+                        if (memoryDraft.isNotBlank()) {
+                            val note = memoryDraft.trim()
+                            dataStore.addMemory(note)
+                            memories = dataStore.memories()
+                            memoryDraft = ""
+                            if (cloudMemorySyncEnabled) scope.launch {
+                                val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                if (token.isNotBlank()) {
+                                    runCatching { cloudMemoryClient.saveMemory(BuildConfig.CHAT_GATEWAY_URL, token, note) }
+                                        .onSuccess { cloudMemoryItems = (cloudMemoryItems + it).distinctBy { item -> item.id } }
+                                        .onFailure { cloudMemoryStatus = "نکته روی گوشی ذخیره شد؛ همگام‌سازی ابری ناموفق بود." }
+                                }
+                            }
+                        }
                     }) { Text(appText("ذخیره نکته", isEnglish), color = Gold) }
                 },
                 dismissButton = { TextButton(onClick = { showMemory = false }) { Text(appText("بستن", isEnglish), color = Muted) } }
