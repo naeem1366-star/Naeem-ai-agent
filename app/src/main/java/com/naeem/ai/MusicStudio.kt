@@ -130,6 +130,14 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
     val albums= remember{mutableStateListOf<StudioAlbum>().apply{addAll(store.load())}}
     val selected= remember{mutableStateListOf<StudioTrack>()}
     var tab by remember(initialTab){mutableStateOf(initialTab)}
+    var hasPaidAccess by remember{mutableStateOf(false)}
+    LaunchedEffect(gatewayUrl,accessToken){
+        hasPaidAccess = if(accessToken.isBlank()) false else runCatching{BillingClient(gatewayUrl).hasPaidAccess(accessToken)}.getOrDefault(false)
+        if(!hasPaidAccess && tab=="ساخت موسیقی"){
+            tab="کشف آهنگ"
+            message="ساخت موسیقی با هوش مصنوعی به اشتراک فعال یا اعتبار کیف پول نیاز دارد."
+        }
+    }
     var query by remember{mutableStateOf("")}
     var source by remember{mutableStateOf("همه")}
     var results by remember{mutableStateOf<List<StudioTrack>>(emptyList())}
@@ -210,7 +218,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
                     Triple("میز دی‌جی",Icons.Default.GraphicEq,"چیدن و میکس آهنگ‌ها"),
                     Triple("آلبوم‌ها",Icons.Default.Album,"مجموعه‌های ذخیره‌شده"),
                     Triple("ساخت موسیقی",Icons.Default.AutoAwesome,"ساخت قطعه با هوش مصنوعی")
-                )
+                ).filter { hasPaidAccess || it.first != "ساخت موسیقی" }
                 tools.chunked(2).forEach { rowTools ->
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         rowTools.forEach { item ->
@@ -245,7 +253,7 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
         }
         if(message.isNotBlank()) Text(message,color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
         when(tab){
-            "ساخت موسیقی"-> MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),gatewayUrl=gatewayUrl,accessToken=accessToken,onMessage={message=it})
+            "ساخت موسیقی"-> if(hasPaidAccess) MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),gatewayUrl=gatewayUrl,accessToken=accessToken,onMessage={message=it}) else Text("این قابلیت به اشتراک فعال یا اعتبار کیف پول نیاز دارد.",color=Color(0xFFFFB4A9))
             "کشف آهنگ"->{
                 OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("نام آهنگ، خواننده یا سبک")})
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
