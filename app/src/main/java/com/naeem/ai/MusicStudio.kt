@@ -218,13 +218,18 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
                     Triple("میز دی‌جی",Icons.Default.GraphicEq,"چیدن و میکس آهنگ‌ها"),
                     Triple("آلبوم‌ها",Icons.Default.Album,"مجموعه‌های ذخیره‌شده"),
                     Triple("ساخت موسیقی",Icons.Default.AutoAwesome,"ساخت قطعه با هوش مصنوعی")
-                ).filter { hasPaidAccess || it.first != "ساخت موسیقی" }
+                )
                 tools.chunked(2).forEach { rowTools ->
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         rowTools.forEach { item ->
                             val active = tab == item.first
                             Surface(
-                                onClick={tab=item.first},
+                                onClick={
+                                    tab=item.first
+                                    if (item.first == "ساخت موسیقی" && !hasPaidAccess) {
+                                        message = "ساخت موسیقی با هوش مصنوعی قابلیت پولی است. برای دیدن موجودی و شارژ اعتبار، کیف پول ایما را باز کن."
+                                    }
+                                },
                                 modifier=Modifier.weight(1f),
                                 color=if(active) Color(0xFF343B47) else Color(0xFF222A35),
                                 shape=RoundedCornerShape(12.dp),
@@ -235,7 +240,14 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
                                     Spacer(Modifier.width(8.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(item.first,color=Color.White,fontWeight=FontWeight.SemiBold,style=MaterialTheme.typography.bodyMedium)
-                                        Text(item.third,color=Color(0xFFA8ADB8),style=MaterialTheme.typography.labelSmall,maxLines=1)
+                                        Text(
+                                            if (item.first == "ساخت موسیقی" && !hasPaidAccess) "قابلیت پولی · قفل‌شده" else item.third,
+                                            color = if (item.first == "ساخت موسیقی" && !hasPaidAccess) Color(0xFFE7C77B) else Color(0xFFA8ADB8),
+                                            style = MaterialTheme.typography.labelSmall, maxLines = 1
+                                        )
+                                    }
+                                    if (item.first == "ساخت موسیقی" && !hasPaidAccess) {
+                                        Icon(Icons.Default.Lock, null, tint = Color(0xFFE7C77B), modifier = Modifier.size(18.dp))
                                     }
                                 }
                             }
@@ -253,7 +265,24 @@ fun MusicStudioDashboard(onClose:()->Unit,onAskAi:(String)->Unit,initialTab:Stri
         }
         if(message.isNotBlank()) Text(message,color=Color(0xFFD4D9E0),style=MaterialTheme.typography.bodySmall)
         when(tab){
-            "ساخت موسیقی"-> if(hasPaidAccess) MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),gatewayUrl=gatewayUrl,accessToken=accessToken,onMessage={message=it}) else Text("این قابلیت به اشتراک فعال یا اعتبار کیف پول نیاز دارد.",color=Color(0xFFFFB4A9))
+            "ساخت موسیقی"-> if(hasPaidAccess) {
+                MusicCreationPanel(modifier=Modifier.weight(1f).fillMaxWidth(),gatewayUrl=gatewayUrl,accessToken=accessToken,onMessage={message=it})
+            } else {
+                Column(
+                    Modifier.weight(1f).fillMaxWidth().background(Color(0xFF202A37),RoundedCornerShape(18.dp)).padding(20.dp),
+                    verticalArrangement=Arrangement.spacedBy(12.dp),
+                    horizontalAlignment=Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.Lock, null, tint = Color(0xFFE7C77B), modifier = Modifier.size(38.dp))
+                    Text("ساخت موسیقی با هوش مصنوعی", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Text("این ابزار پولی است و پیش از شروع تولید باید اعتبار کیف پول یا دسترسی حرفه‌ای فعال باشد. هزینه هر درخواست باید پیش از تأیید نهایی نمایش داده شود.", color = Color(0xFFBFC7D2), style = MaterialTheme.typography.bodyMedium)
+                    Button(onClick = { onAskAi("کیف پول ایما را باز کن") }) {
+                        Icon(Icons.Default.AccountBalanceWallet, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("مشاهده کیف پول و اعتبار")
+                    }
+                }
+            }
             "کشف آهنگ"->{
                 OutlinedTextField(query,{query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("نام آهنگ، خواننده یا سبک")})
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
