@@ -469,7 +469,7 @@ Deno.serve(async (request: Request) => {
           method: "GET", headers: { Accept: "video/mp4, application/octet-stream, */*" },
         });
         if (!contentResponse.ok) return reply({ error: { code: "NETARZ_VIDEO_DOWNLOAD_FAILED", message: "دریافت فایل ویدیوی نهایی ناموفق بود." } }, 502);
-        return new Response(await contentResponse.arrayBuffer(), {
+        return new Response(contentResponse.body, {
           status: 200, headers: { ...corsHeaders, "Content-Type": contentResponse.headers.get("Content-Type") || "video/mp4", "Cache-Control": "no-store" },
         });
       }
