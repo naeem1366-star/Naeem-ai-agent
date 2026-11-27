@@ -924,7 +924,7 @@ export default {
     const url = new URL(request.url);
     try {
       if (request.method === "GET" && url.pathname === "/health") return json({ ok: true, service: "naeem-ai-core" }, 200, headers);
-      if (request.method === "GET" && url.pathname === "/v1/market/public-snapshot") return withHeaders(await publicMarketSnapshot(url.searchParams.get("market") || ""), headers);
+      // Public, read-only market feeds; no provider credentials are required.\n      if (request.method === "GET" && url.pathname === "/v1/market/public-snapshot") return withHeaders(await publicMarketSnapshot(url.searchParams.get("market") || ""), headers);
       if (request.method === "GET" && url.pathname === "/v1/market/catalog") return withHeaders(marketCatalog(), headers);
       if (request.method === "GET" && url.pathname === "/v1/market/overview") return withHeaders(await marketOverview(request, env), headers);
       if (request.method === "GET" && url.pathname === "/v1/market/instruments") return withHeaders(await marketInstruments(request, env), headers);
