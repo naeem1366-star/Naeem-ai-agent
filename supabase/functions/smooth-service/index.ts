@@ -232,7 +232,7 @@ Deno.serve(async (request: Request) => {
 
     // Paid media tools use NetArz only. Provider secrets never leave this function.
     const mediaNetarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-    const mediaNetarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+    const mediaNetarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
     const mediaProviderFetch = async (path: string, init: RequestInit = {}) => {
       if (!mediaNetarzKey || !mediaNetarzBase.startsWith("https://")) throw new Error("NETARZ_NOT_CONFIGURED");
       return await fetch(mediaNetarzBase + path, {
@@ -456,7 +456,7 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    const mediaJobMatch = route.match(/^\\/v1\\/media\\/videos\\/([A-Za-z0-9_-]{1,160})(?:\\/(content))?$/);
+    const mediaJobMatch = route.match(/^\/v1\/media\/videos\/([A-Za-z0-9_-]{1,160})(?:\/(content))?$/);
     if (request.method === "GET" && mediaJobMatch) {
       const providerJobId = mediaJobMatch[1];
       const isContent = mediaJobMatch[2] === "content";
