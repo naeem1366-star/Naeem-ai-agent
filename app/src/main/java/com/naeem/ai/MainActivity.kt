@@ -834,7 +834,10 @@ fun NaeemApp(
         return if (paidFeature != null) {
             client.sendViaPaidGateway(gateway, currentAccessToken, paidFeature, model, text)
         } else {
-            client.sendViaGateway(gateway, currentAccessToken, model, text, image)
+            client.sendViaGateway(
+                gateway, currentAccessToken, model, text, image,
+                history = messages.dropLast(1).takeLast(16).map { it.fromUser to it.text }
+            )
         }
     }
     val imageClient = remember { ImageGenerationClient() }
