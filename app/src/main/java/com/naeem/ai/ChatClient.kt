@@ -13,10 +13,9 @@ import java.net.UnknownHostException
 
 class ChatClient {
     private val http = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
-        .callTimeout(70, TimeUnit.SECONDS)
         .build()
 
     suspend fun fetchModels(baseUrl: String, apiKey: String, type: String? = null): List<String> = withContext(Dispatchers.IO) {
