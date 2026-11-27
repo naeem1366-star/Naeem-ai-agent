@@ -231,6 +231,10 @@ class VoiceWakeService : Service() {
             speak("شنود هوشمند خاموش شد. ایما همچنان آماده شنیدن است.", true)
             return
         }
+        if (smartListening) {
+            processCommand(raw)
+            return
+        }
         if (commandArmed) {
             commandArmed = false
             processCommand(raw)
