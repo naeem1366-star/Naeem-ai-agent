@@ -2,9 +2,9 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway", "feature/ema-asi-platform"]
+    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard"]
   pull_request:
-    branches: ["feature/v2-foundation"]
+    branches: ["feature/v2-foundation", "feature/ema-asi-platform"]
 
 concurrency:
   group: android-apk-${{ github.ref }}
