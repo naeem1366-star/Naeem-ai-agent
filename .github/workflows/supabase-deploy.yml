@@ -21,4 +21,4 @@ jobs:
             echo "Missing GitHub Actions secret: SUPABASE_ACCESS_TOKEN" >&2
             exit 1
           fi
-          supabase functions deploy smooth-service --project-ref ifloyzpvgjgmneqgcggu
+          supabase functions deploy smooth-service --project-ref ifloyzpvgjgmneqgcggu --yes
