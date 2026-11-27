@@ -121,7 +121,7 @@ Deno.serve(async (request: Request) => {
       return reply({ identification: content });
     }
 
-    // Secure text-to-speech route with primary NetArz and automatic GapGPT fallback.
+    // Free text-to-speech uses GapGPT only. Never fall back to NetArz.
     if (request.method === "POST" && route === "/v1/audio/speech") {
       const body = await jsonBody(request);
       const input = String(body?.input || "").trim();
@@ -129,76 +129,67 @@ Deno.serve(async (request: Request) => {
         return reply({ error: { code: "INVALID_SPEECH_INPUT", message: "متن گفتار خالی یا بیش از حد طولانی است." } }, 400);
       }
 
-      const primaryKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-      const primaryBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
-      const secondaryKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      let secondaryBase = Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1";
-      while (secondaryBase.endsWith("/")) secondaryBase = secondaryBase.slice(0, -1);
-      const requestedModel = String(body?.model || "gpt-4o-mini-tts");
-      const requestedVoice = String(body?.voice || "nova");
+      const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+      let gapgptBase = Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1";
+      while (gapgptBase.endsWith("/")) gapgptBase = gapgptBase.slice(0, -1);
+      const speechModel = Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || String(body?.model || "gpt-4o-mini-tts");
+      const speechVoice = Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || String(body?.voice || "nova");
       const instructions = String(body?.instructions || "Speak Persian (Farsi) naturally and clearly.");
 
-      const speechProviders = [
-        ...(primaryKey && primaryBase.startsWith("https://") ? [{
-          name: "NetArz", key: primaryKey, base: primaryBase,
-          model: requestedModel, voice: requestedVoice,
-        }] : []),
-        ...(secondaryKey && secondaryBase.startsWith("https://") ? [{
-          name: "GapGPT", key: secondaryKey, base: secondaryBase,
-          model: Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || requestedModel,
-          voice: Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || requestedVoice,
-        }] : []),
-      ];
-      if (!speechProviders.length) {
-        return reply({ error: { code: "SPEECH_GATEWAY_NOT_CONFIGURED", message: "هیچ سرویس ساخت صدایی روی سرور تنظیم نشده است." } }, 503);
+      if (!gapgptKey || !gapgptBase.startsWith("https://")) {
+        return reply({ error: { code: "FREE_SPEECH_NOT_CONFIGURED", message: "سرویس صدای رایگان GapGPT روی سرور تنظیم نشده است." } }, 503);
       }
 
-      let lastStatus = 502;
-      let lastDetail = "";
-      for (const provider of speechProviders) {
-        try {
-          const upstream = await fetch(`${provider.base}/audio/speech`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${provider.key}`,
-              "Content-Type": "application/json",
-              Accept: "audio/mpeg, application/octet-stream, application/json",
+      try {
+        const upstream = await fetch(`${gapgptBase}/audio/speech`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${gapgptKey}`,
+            "Content-Type": "application/json",
+            Accept: "audio/mpeg, application/octet-stream, application/json",
+          },
+          body: JSON.stringify({
+            model: speechModel,
+            voice: speechVoice,
+            input,
+            instructions,
+            response_format: "mp3",
+          }),
+          signal: AbortSignal.timeout(120000),
+        });
+        if (!upstream.ok) {
+          const detail = (await upstream.text()).slice(0, 400);
+          console.error("EMA GapGPT free speech failed", { status: upstream.status, detail: detail.slice(0, 160) });
+          return reply({
+            error: {
+              code: "FREE_SPEECH_PROVIDER_ERROR",
+              message: `ساخت صدای رایگان با GapGPT ناموفق بود (HTTP ${upstream.status}). لطفاً بعداً دوباره تلاش کن.`,
             },
-            body: JSON.stringify({
-              model: provider.model,
-              voice: provider.voice,
-              input,
-              instructions,
-              response_format: "mp3",
-            }),
-            signal: AbortSignal.timeout(120000),
-          });
-          if (upstream.ok) {
-            console.log("EMA speech generated", { provider: provider.name, status: upstream.status });
-            return new Response(await upstream.arrayBuffer(), {
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
-                "Cache-Control": "no-store",
-              },
-            });
-          }
-          lastStatus = upstream.status;
-          lastDetail = (await upstream.text()).slice(0, 400);
-          console.error("EMA speech provider failed", { provider: provider.name, status: lastStatus, detail: lastDetail.slice(0, 160) });
-        } catch (error) {
-          lastStatus = 502;
-          lastDetail = error instanceof Error ? error.message : "provider request failed";
-          console.error("EMA speech provider request failed", { provider: provider.name, detail: lastDetail });
+          }, 503);
         }
+
+        const audio = await upstream.arrayBuffer();
+        if (!audio.byteLength) {
+          return reply({ error: { code: "FREE_SPEECH_EMPTY_RESPONSE", message: "GapGPT فایل صوتی خالی برگرداند." } }, 502);
+        }
+        console.log("EMA free speech generated", { provider: "GapGPT", status: upstream.status });
+        return new Response(audio, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
+            "Cache-Control": "no-store",
+          },
+        });
+      } catch (error) {
+        console.error("EMA GapGPT free speech request failed", error instanceof Error ? error.message : "network error");
+        return reply({
+          error: {
+            code: "FREE_SPEECH_PROVIDER_UNAVAILABLE",
+            message: "سرویس صدای رایگان GapGPT موقتاً در دسترس نیست؛ هیچ انتقالی به NetArz انجام نمی‌شود.",
+          },
+        }, 503);
       }
-      return reply({
-        error: {
-          code: "SPEECH_PROVIDERS_UNAVAILABLE",
-          message: `ساخت صدا در سرویس‌های اصلی و پشتیبان ناموفق بود (HTTP ${lastStatus}). ${lastDetail.slice(0, 220)}`,
-        },
-      }, lastStatus >= 400 && lastStatus < 600 ? lastStatus : 502);
     }
 
     // Billing routes are served by this same function so Android can use one secure gateway URL.
