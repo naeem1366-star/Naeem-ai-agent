@@ -1193,6 +1193,7 @@ fun NaeemApp(
                     val cloudProfile = if (accessTokenForMemory.isNotBlank()) {
                         runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }.getOrNull()
                     } else null
+                    val cloudSyncAllowed = dataStore.memorySyncEnabled() && cloudProfile?.memorySyncEnabled != false
                     if (explicitMemory.isNotBlank() && accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
                         runCatching {
                             cloudMemoryClient.saveMemory(
@@ -1201,7 +1202,6 @@ fun NaeemApp(
                             )
                         }
                     }
-                    val cloudSyncAllowed = dataStore.memorySyncEnabled() && cloudProfile?.memorySyncEnabled != false
                     val cloudPreferences = cloudProfile?.preferences ?: org.json.JSONObject()
                     val effectiveName = userName.ifBlank { cloudProfile?.displayName.orEmpty() }
                     val effectiveInterests = userInterests.ifBlank { cloudPreferences.optString("interests") }
