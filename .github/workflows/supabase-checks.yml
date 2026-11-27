@@ -1,0 +1,28 @@
+name: Supabase Edge Function checks
+on:
+  push:
+    branches: ["fix/ema-free-chat-gapgpt", "feature/ema-asi-platform"]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-checks.yml"
+  pull_request:
+    branches: ["feature/ema-asi-platform"]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deno-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check EMA secure gateway
+        run: deno check --no-lock supabase/functions/smooth-service/index.ts
