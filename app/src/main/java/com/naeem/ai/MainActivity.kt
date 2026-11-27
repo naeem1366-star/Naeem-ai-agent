@@ -1810,7 +1810,7 @@ fun NaeemApp(
             Dialog(onDismissRequest = { showProfessionalVideo = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
                     ModuleScreenBackdrop("music") {
-                        ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, baseUrl = baseUrl, apiKey = apiKey)
+                        ProfessionalVideoDashboard(onClose = { showProfessionalVideo = false }, gatewayUrl = BuildConfig.CHAT_GATEWAY_URL, accessToken = chatAccessToken)
                     }
                 }
             }
@@ -1831,7 +1831,7 @@ fun NaeemApp(
         if (showMusic) {
             Dialog(onDismissRequest = { showMusic = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
-                    ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }, initialTab = if (musicCreationStart) "ساخت موسیقی" else "کشف آهنگ") }
+                    ModuleScreenBackdrop("music") { MusicDashboard(onClose = { showMusic = false }, onAskAi = { question -> showMusic = false; prompt = question }, initialTab = if (musicCreationStart) "ساخت موسیقی" else "کشف آهنگ", gatewayUrl = BuildConfig.CHAT_GATEWAY_URL, accessToken = chatAccessToken) }
                 }
             }
         }
