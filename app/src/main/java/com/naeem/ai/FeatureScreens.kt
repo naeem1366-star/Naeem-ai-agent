@@ -235,10 +235,10 @@ fun FeatureHub(
             "Live market data and crypto screening; no profit guarantee", "Live data"),
         "اتاق فکر" to Triple(
             "Explore ideas with different thinking perspectives, search the web, and turn the results into a project and actionable steps.",
-            "Configured AI model and in-app web research", "Available"),
+            "Paid AI via NetArz and in-app web research", "Available"),
         "به آینده وارد شو" to Triple(
             "Choose from 12 thought experiments, from a council of critics and your future self to parallel worlds, unsolved cases, creative chaos, and a command room.",
-            "Experiences use the configured model; persistent memory and independent scheduling are not yet implemented", "Partially available"),
+            "Experiences use paid NetArz AI; persistent memory and independent scheduling are not yet implemented", "Partially available"),
         "اخبار مهم" to Triple(
             "The planned news service gathers important stories from reliable sources, removes duplicates, ranks them by topic and impact, and presents clear summaries with sources and publication times.",
             "Live news aggregation", "Not implemented yet"),
@@ -286,7 +286,7 @@ fun FeatureHub(
             "Recommendations through chat", "Available"),
         "تحلیل اینستاگرام" to Triple(
             "Enter account statistics to review engagement, views, and content performance and receive growth suggestions. Automatic account analysis requires official Meta authorization.",
-            "Manual analysis ready; official connection requires Meta setup", "Partially available"),
+            "Manual analysis ready; AI analysis via NetArz; official connection requires Meta setup", "Partially available"),
         "تنظیمات" to Triple(
             "Manage AI connection settings, service address, model, and privacy options. Provider credentials should be handled securely.",
             "AI connection and privacy center", "Available"),
