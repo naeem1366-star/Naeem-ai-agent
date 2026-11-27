@@ -144,6 +144,13 @@ Deno.serve(async (request: Request) => {
       return reply({ profile: rows?.[0] || null });
     }
 
+    if (route === "/v1/memory/learning-events" && request.method === "GET") {
+      const events = await serviceFetch(
+        `ema_learning_events?select=id,event_type,summary,status,created_at&user_id=eq.${userId}&order=created_at.desc&limit=20`
+      );
+      return reply({ events: events || [] });
+    }
+
     if (route === "/v1/memory/learning-events" && request.method === "POST") {
       const body = await jsonBody(request);
       const eventType = String(body?.eventType || "");
