@@ -117,13 +117,14 @@ fun MarketsDashboard(onClose: () -> Unit) {
         refresh()
     }
 
-    val categories = listOf("همه", "ارز", "طلا و فلزات", "رمزارز", "انرژی", "پیشنهاد خرید")
+    val categories = listOf("همه", "رمزارز", "دلار و ارز", "طلا", "بورس ایران", "بورس جهانی", "کالاها", "پیشنهاد خرید")
     val visible = quotes.filter { q ->
         when (selected) {
-            "ارز" -> q.family.contains("currency") || q.id in listOf("usd", "eur", "gbp", "aed", "cny", "usdt")
-            "طلا و فلزات" -> q.family.contains("gold") || q.family.contains("metal") || q.family.contains("coin") || q.id.contains("gold") || q.id.contains("silver") || q.id in listOf("xau", "xag", "gram18", "gram24", "ounce")
+            "دلار و ارز" -> q.family.contains("currency") || q.id in listOf("usd", "eur", "gbp", "aed", "cny", "usdt")
+            "طلا" -> q.family.contains("gold") || q.family.contains("coin") || q.id.contains("gold") || q.id in listOf("xau", "gram18", "gram24", "ounce")
             "رمزارز" -> q.family.contains("crypto") || q.id in listOf("btc", "eth", "sol", "xrp", "bnb", "doge", "trx", "ltc", "dot", "ton")
-            "انرژی" -> q.family.contains("commodity") || q.id.contains("oil") || q.id in listOf("brent", "wti", "natural-gas")
+            "کالاها" -> q.family.contains("commodity") || q.family.contains("metal") || q.id.contains("oil") || q.id in listOf("brent", "wti", "natural-gas", "xag", "silver")
+            "بورس ایران", "بورس جهانی" -> false
             else -> true
         }
     }
@@ -179,7 +180,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = MarketAccent) }
             } else if (visible.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(if (quotes.isEmpty()) "برای دریافت قیمت‌ها اتصال اینترنت را بررسی کن." else "برای این گروه فعلاً داده‌ای موجود نیست.", color = Color(0xFFB8BFCC))
+                    Text(when (selected) { "بورس ایران", "بورس جهانی" -> "اتصال منبع داده معتبر این بازار هنوز تکمیل نشده است؛ فعلاً داده‌ای نمایش داده نمی‌شود."; else -> if (quotes.isEmpty()) "برای دریافت قیمت‌ها اتصال اینترنت را بررسی کن." else "برای این گروه فعلاً داده‌ای موجود نیست." }, color = Color(0xFFB8BFCC))
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -208,7 +209,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 }
             }
 
-            Text("منبع داده: NerkhAra  •  نرخ‌های بازار آزاد ایران و بازار جهانی. قیمت‌ها صرفاً جهت اطلاع‌اند.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp).clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nerkhara.com/en/"))) })
+            Text("منبع قیمت‌های نمایش‌داده‌شده: NerkhAra  •  داده‌های بورس تا زمان اتصال منبع معتبر نمایش داده نمی‌شوند. قیمت‌ها صرفاً جهت اطلاع‌اند.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp).clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nerkhara.com/en/"))) })
         }
     }
 }
