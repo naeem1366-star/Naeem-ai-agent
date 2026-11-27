@@ -306,7 +306,7 @@ fun FeatureHub(
             aiStatus = copy?.third ?: entry.aiStatus
         )
     } else entries
-    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "جست‌وجوی تصویری", "تحلیل اینستاگرام")
+    val paidTitles = setOf("نبض بازار", "اتاق فکر", "به آینده وارد شو", "تحلیل اینستاگرام")
     fun isPaid(entry: Entry) = entry.title in paidTitles
     fun hubText(fa: String, en: String) = if (isEnglish) en else fa
 
