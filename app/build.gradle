@@ -5,10 +5,7 @@ plugins {
     id 'com.google.devtools.ksp'
 }
 
-def chatGatewayUrl = providers.gradleProperty('CHAT_GATEWAY_URL').orElse(providers.environmentVariable('CHAT_GATEWAY_URL')).getOrElse('').trim()
-if (chatGatewayUrl.isBlank()) {
-    chatGatewayUrl = 'https://ifloyzpvgjgmneqgcggu.supabase.co/functions/v1/smooth-service'
-}
+def chatGatewayUrl = 'https://ifloyzpvgjgmneqgcggu.supabase.co/functions/v1/smooth-service'
 
 android {
     namespace 'com.naeem.ai'
@@ -18,8 +15,8 @@ android {
         applicationId 'com.naeem.ai'
         minSdk 26
         targetSdk 35
-        versionCode 31
-        versionName '2.0.0-alpha28'
+        versionCode 32
+        versionName '2.0.0-alpha29'
         buildConfigField 'String', 'CHAT_GATEWAY_URL', '"' + chatGatewayUrl.replace('\\', '\\\\').replace('"', '\\"') + '"'
     }
 
