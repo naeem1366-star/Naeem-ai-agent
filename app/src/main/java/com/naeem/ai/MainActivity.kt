@@ -1191,17 +1191,39 @@ fun NaeemApp(
                             }
                         }
                     }
-                    val cloudMemories = if (accessTokenForMemory.isNotBlank()) {
+                    val cloudProfile = if (accessTokenForMemory.isNotBlank()) {
+                        runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }.getOrNull()
+                    } else null
+                    val cloudPreferences = cloudProfile?.preferences ?: org.json.JSONObject()
+                    val effectiveName = userName.ifBlank { cloudProfile?.displayName.orEmpty() }
+                    val effectiveInterests = userInterests.ifBlank { cloudPreferences.optString("interests") }
+                    val effectiveAbout = userAbout.ifBlank { cloudPreferences.optString("about") }
+                    val effectiveStyle = responseStyle.ifBlank { cloudPreferences.optString("responseStyle").ifBlank { "صمیمی و طبیعی" } }
+                    if (accessTokenForMemory.isNotBlank() &&
+                        (userName.isNotBlank() || userInterests.isNotBlank() || userAbout.isNotBlank())) {
+                        val mergedPreferences = org.json.JSONObject(cloudPreferences.toString())
+                        if (userInterests.isNotBlank()) mergedPreferences.put("interests", userInterests)
+                        if (userAbout.isNotBlank()) mergedPreferences.put("about", userAbout)
+                        if (responseStyle.isNotBlank()) mergedPreferences.put("responseStyle", responseStyle)
+                        runCatching {
+                            cloudMemoryClient.saveProfile(
+                                BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                effectiveName, mergedPreferences,
+                                cloudProfile?.memorySyncEnabled ?: true
+                            )
+                        }
+                    }
+                    val cloudMemories = if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
                         runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
                             .getOrDefault(emptyList()).map { it.content }
                     } else emptyList()
                     val allMemories = (memories + cloudMemories).distinct().takeLast(40)
                     val memoryContext = allMemories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
                     val profileContext = buildString {
-                        if (userName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $userName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
-                        if (userInterests.isNotBlank()) append("\nعلایق کاربر: $userInterests.")
-                        if (userAbout.isNotBlank()) append("\nدرباره کاربر: $userAbout.")
-                        append("\nلحن ترجیحی پاسخ: $responseStyle.")
+                        if (effectiveName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $effectiveName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
+                        if (effectiveInterests.isNotBlank()) append("\nعلایق کاربر: $effectiveInterests.")
+                        if (effectiveAbout.isNotBlank()) append("\nدرباره کاربر: $effectiveAbout.")
+                        append("\nلحن ترجیحی پاسخ: $effectiveStyle.")
                     }
                     val userContext = profileContext + memoryContext
                     val answer = if (searchMode) {
