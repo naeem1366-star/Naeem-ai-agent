@@ -125,7 +125,7 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.HEALTH, "add_food", ActionAccess.WRITE, mapOf("food" to foodName, "grams" to grams.toString(), "meal" to meal))
         }
 
-        val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
+        val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا", "پرس", "اسکوات", "ددلیفت", "وزنه", "بارفیکس").any { text.contains(it) }
         if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز", "زدم", "انجام دادم").any { text.contains(it) }) {
             val strength = listOf("وزنه", "باشگاه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
             val minutes = parseDurationMinutes(text)
