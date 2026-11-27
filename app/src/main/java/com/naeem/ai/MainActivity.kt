@@ -1611,6 +1611,8 @@ fun NaeemApp(
                 Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
                     ModuleScreenBackdrop("hub") { FeatureHub(
                         isEnglish = isEnglish,
+                        accessToken = chatAccessToken,
+                        gatewayUrl = BuildConfig.CHAT_GATEWAY_URL,
                         onClose = { showHub = false },
                         onFinance = { showHub = false; showFinance = true; ledgerEntries = ledgerStore.entries() },
                         onHealth = { showHub = false; showHealth = true },
