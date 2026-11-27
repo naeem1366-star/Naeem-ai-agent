@@ -291,6 +291,12 @@ class MainActivity : FragmentActivity() {
                             onExternalActivityReturned = {},
                             userEmail = authSession.value?.email.orEmpty(),
                             chatAccessToken = authSession.value?.accessToken.orEmpty(),
+                            chatAccessTokenProvider = {
+                                val refreshedSession = auth.restoreSession()
+                                authSession.value = refreshedSession
+                                if (refreshedSession == null) showAuthScreen.value = true
+                                refreshedSession?.accessToken.orEmpty()
+                            },
                             onRequestLogin = { showAuthScreen.value = true },
                             onSignOut = {
                                 authScope.launch {
@@ -639,7 +645,8 @@ fun NaeemApp(
     onSignOut: () -> Unit = {},
     onRequestLogin: () -> Unit = {},
     userEmail: String = "",
-    chatAccessToken: String = ""
+    chatAccessToken: String = "",
+    chatAccessTokenProvider: suspend () -> String = { chatAccessToken }
 ) {
     val context = LocalContext.current
     val profilePrefs = remember { context.getSharedPreferences("naeem_user_profile", Context.MODE_PRIVATE) }
@@ -814,7 +821,12 @@ fun NaeemApp(
             if (isEnglish) "EMA secure chat service is not configured. Please try again later."
             else "سرویس امن گفتگوی ایما هنوز روی سرور تنظیم نشده است. لطفاً کمی بعد دوباره تلاش کن."
         }
-        return client.sendViaGateway(gateway, chatAccessToken, model, text, image)
+        val currentAccessToken = chatAccessTokenProvider()
+        check(currentAccessToken.isNotBlank()) {
+            if (isEnglish) "Your session has expired. Please sign in again."
+            else "نشست ورود منقضی شده؛ لطفاً دوباره وارد حساب شو."
+        }
+        return client.sendViaGateway(gateway, currentAccessToken, model, text, image)
     }
     val imageClient = remember { ImageGenerationClient() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
