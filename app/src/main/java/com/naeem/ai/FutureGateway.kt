@@ -54,7 +54,7 @@ private val FutureText=Color(0xFFE7EBF1)
 private val FutureMuted=Color(0xFFA5AFBD)
 
 @Composable
-fun FutureGatewayScreen(onClose:()->Unit,baseUrl:String,model:String,apiKey:String){
+fun FutureGatewayScreen(onClose:()->Unit,gatewayUrl:String,accessToken:String){
  val scope= rememberCoroutineScope()
  var selected by remember { mutableStateOf<FutureMode?>(null) }
  var input by remember { mutableStateOf("") }
@@ -126,7 +126,7 @@ fun FutureGatewayScreen(onClose:()->Unit,baseUrl:String,model:String,apiKey:Stri
      scope.launch{
       try{
        val prompt="تو در بخش به آینده وارد شو هستی. فقط فارسی روان بنویس.\n\nتجربه: "+mode.title+"\nدستور: "+mode.instruction+"\n\nدرخواست کاربر:\n"+userText+"\n\nپاسخ دقیق، خلاق، ساختارمند و کاربردی بده. واقعیت، فرضیه و پیشنهاد را جدا کن و کاری را که انجام نداده‌ای ادعا نکن."
-       answer=ChatClient().send(baseUrl,model,apiKey,prompt)
+       answer=ChatClient().sendViaPaidGateway(gatewayUrl,accessToken,"future_gateway","gpt-4o-mini",prompt)
       }catch(e:Exception){error=e.message?:"ساخت تجربه ناموفق بود."}
       finally{busy=false}
      }
