@@ -14,6 +14,12 @@ class AssistantDataStore(context: Context) {
 
     fun memories(): List<String> = prefs.getStringSet("memories", emptySet())?.toList()?.sorted() ?: emptyList()
 
+    fun memorySyncEnabled(): Boolean = prefs.getBoolean("memory_sync_enabled", true)
+
+    fun setMemorySyncEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("memory_sync_enabled", enabled).apply()
+    }
+
     fun addMemory(value: String) {
         val clean = value.trim()
         if (clean.isBlank()) return
