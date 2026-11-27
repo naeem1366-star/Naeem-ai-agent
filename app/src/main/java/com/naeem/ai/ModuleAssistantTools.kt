@@ -129,9 +129,11 @@ object PersianAssistantIntentResolver {
         if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز", "زدم", "انجام دادم").any { text.contains(it) }) {
             val strength = listOf("وزنه", "باشگاه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
             val minutes = parseDurationMinutes(text)
-            val calories = Regex("""(\d+)\s*(?:کالری|کیلوکالری|kcal)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            val calories = Regex("""(\d+)\s*(?:کالری|کیلوکالری|kcal)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
+                ?: mapOf("صد کالری" to 100, "دویست کالری" to 200, "سیصد کالری" to 300, "چهارصد کالری" to 400, "پانصد کالری" to 500).entries.firstOrNull { text.contains(it.key) }?.value ?: 0
             val distance = Regex("""(\d+(?:\.\d+)?)\s*(کیلومتر|km)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
-            val reps = Regex("""(\d+)\s*(?:تا|تکرار|rep|reps)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            val reps = Regex("""(\d+)\s*(?:تا|تکرار|rep|reps)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
+                ?: mapOf("پنج تا" to 5, "هشت تا" to 8, "ده تا" to 10, "دوازده تا" to 12, "پانزده تا" to 15, "بیست تا" to 20).entries.firstOrNull { text.contains(it.key) }?.value ?: 0
             val sets = Regex("""(\d+)\s*(?:ست|set|sets)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: if (reps > 0) 1 else 0
             val weight = Regex("""(\d+(?:\.\d+)?)\s*(?:کیلو|kg)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
             val title = when {
