@@ -49,6 +49,8 @@ class VoiceWakeService : Service() {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var listening = false
+    private var listeningStartPending = false
+    private var consecutiveErrors = 0
     private var commandArmed = false
     private var smartListening = false
     private var restartAfterSpeech = false
@@ -98,7 +100,7 @@ class VoiceWakeService : Service() {
                     override fun onError(utteranceId: String?, errorCode: Int) = onError(utteranceId)
                 })
             }
-            main.postDelayed({ if (!destroyed) startListening() }, 900)
+            // Listening starts only after onStartCommand has entered foreground state.
         }
     }
 
@@ -112,8 +114,11 @@ class VoiceWakeService : Service() {
             return START_NOT_STICKY
         }
         startForeground(NOTIFICATION_ID, buildNotification())
-        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(PREF_ENABLED, true).apply()
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(PREF_ENABLED, true)
+            .putString("state", "starting")
+            .apply()
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification("در حال آماده‌سازی میکروفون و تشخیص گفتار…"))
         startListening()
         return START_NOT_STICKY
     }
@@ -155,7 +160,11 @@ class VoiceWakeService : Service() {
     private fun ensureRecognizer() {
         if (recognizer != null) return
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            speak("سرویس تشخیص گفتار روی این گوشی در دسترس نیست.", false)
+            setVoiceState("error")
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID, buildNotification("سرویس تشخیص گفتار روی این گوشی در دسترس نیست.")
+            )
+            stopSelf()
             return
         }
         recognizer = try {
@@ -169,22 +178,50 @@ class VoiceWakeService : Service() {
             SpeechRecognizer.createSpeechRecognizer(this)
         }
         recognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { listening = true }
+            override fun onReadyForSpeech(params: Bundle?) {
+                listeningStartPending = false
+                listening = true
+                consecutiveErrors = 0
+                setVoiceState("listening")
+            }
             override fun onBeginningOfSpeech() = Unit
             override fun onRmsChanged(rmsdB: Float) = Unit
             override fun onBufferReceived(buffer: ByteArray?) = Unit
-            override fun onEndOfSpeech() { listening = false }
+            override fun onEndOfSpeech() {
+                listening = false
+                listeningStartPending = false
+                setVoiceState("processing")
+            }
             override fun onError(error: Int) {
                 listening = false
+                listeningStartPending = false
                 if (destroyed) return
+                consecutiveErrors++
                 if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    setVoiceState("error")
                     stopSelf()
                     return
                 }
-                main.postDelayed({ startListening() }, if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) 1400 else 850)
+                if (consecutiveErrors >= 12) {
+                    setVoiceState("error")
+                    getSystemService(NotificationManager::class.java).notify(
+                        NOTIFICATION_ID, buildNotification("تشخیص گفتار چندین بار ناموفق بود. سرویس را خاموش و دوباره روشن کن.")
+                    )
+                    stopSelf()
+                    return
+                }
+                val delayMs = when (error) {
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 1600L
+                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
+                    SpeechRecognizer.ERROR_SERVER -> 2200L
+                    else -> 900L
+                }
+                main.postDelayed({ startListening() }, delayMs)
             }
             override fun onResults(results: Bundle?) {
                 listening = false
+                listeningStartPending = false
+                setVoiceState("processing")
                 val spoken = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull().orEmpty().trim()
                 handleRecognizedText(spoken)
@@ -195,13 +232,15 @@ class VoiceWakeService : Service() {
     }
 
     private fun startListening() {
-        if (destroyed || listening) return
+        if (destroyed || listening || listeningStartPending) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            setVoiceState("error")
             stopSelf()
             return
         }
         ensureRecognizer()
         val engine = recognizer ?: return
+        listeningStartPending = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
@@ -213,11 +252,12 @@ class VoiceWakeService : Service() {
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 800L)
         }
         runCatching {
-            engine.cancel()
             engine.startListening(intent)
         }.onFailure {
             listening = false
-            main.postDelayed({ startListening() }, 1200)
+            listeningStartPending = false
+            setVoiceState("error")
+            main.postDelayed({ startListening() }, 1400)
         }
     }
 
@@ -321,6 +361,10 @@ class VoiceWakeService : Service() {
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
     }
 
+    private fun setVoiceState(state: String) {
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("state", state).apply()
+    }
+
     private fun speak(text: String, listenAgain: Boolean) {
         restartAfterSpeech = listenAgain
         val engine = tts
@@ -355,10 +399,12 @@ class VoiceWakeService : Service() {
     override fun onDestroy() {
         destroyed = true
         listening = false
+        listeningStartPending = false
         restartAfterSpeech = false
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(PREF_ENABLED, false)
             .putBoolean("smart_listening", false)
+            .putString("state", "stopped")
             .apply()
         runCatching { recognizer?.cancel() }
         runCatching { recognizer?.destroy() }
