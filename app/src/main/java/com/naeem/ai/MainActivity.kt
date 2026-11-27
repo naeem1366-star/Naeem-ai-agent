@@ -1185,24 +1185,24 @@ fun NaeemApp(
                     if (explicitMemory.isNotBlank()) {
                         dataStore.addMemory(explicitMemory)
                         memories = dataStore.memories()
-                        if (accessTokenForMemory.isNotBlank()) {
-                            runCatching {
-                                cloudMemoryClient.saveMemory(
-                                    BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
-                                    explicitMemory, type = "note", source = "user_explicit"
-                                )
-                            }
-                        }
                     }
                     val cloudProfile = if (accessTokenForMemory.isNotBlank()) {
                         runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }.getOrNull()
                     } else null
+                    if (explicitMemory.isNotBlank() && accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false) {
+                        runCatching {
+                            cloudMemoryClient.saveMemory(
+                                BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                explicitMemory, type = "note", source = "user_explicit"
+                            )
+                        }
+                    }
                     val cloudPreferences = cloudProfile?.preferences ?: org.json.JSONObject()
                     val effectiveName = userName.ifBlank { cloudProfile?.displayName.orEmpty() }
                     val effectiveInterests = userInterests.ifBlank { cloudPreferences.optString("interests") }
                     val effectiveAbout = userAbout.ifBlank { cloudPreferences.optString("about") }
                     val effectiveStyle = responseStyle.ifBlank { cloudPreferences.optString("responseStyle").ifBlank { "صمیمی و طبیعی" } }
-                    if (accessTokenForMemory.isNotBlank() &&
+                    if (accessTokenForMemory.isNotBlank() && cloudProfile?.memorySyncEnabled != false &&
                         (userName.isNotBlank() || userInterests.isNotBlank() || userAbout.isNotBlank())) {
                         val mergedPreferences = org.json.JSONObject(cloudPreferences.toString())
                         if (userInterests.isNotBlank()) mergedPreferences.put("interests", userInterests)
