@@ -76,6 +76,47 @@ Deno.serve(async (request: Request) => {
   };
 
   try {
+    // Product lens: identify a photographed product using the server-side vision model.
+    if (request.method === "POST" && route === "/v1/vision/product") {
+      const body = await jsonBody(request);
+      const imageData = String(body?.image || "");
+      if (!imageData.startsWith("data:image/") || imageData.length > 5_500_000) {
+        return reply({ error: { code: "INVALID_PRODUCT_IMAGE", message: "عکس معتبر نیست یا حجم آن زیاد است." } }, 400);
+      }
+      const providerKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
+      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+      const visionModel = Deno.env.get("CHAT_VISION_MODEL") || "gpt-4o-mini";
+      if (!providerKey || !providerBase.startsWith("https://")) {
+        return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "سرویس تشخیص تصویر تنظیم نشده است." } }, 503);
+      }
+      const prompt = "Identify the main commercial product in this photo. Return concise Persian JSON only with keys product_name, brand, model, category, visual_description, search_query, confidence. Do not invent a brand or model; use empty string if uncertain. search_query should be a useful shopping search phrase in Persian and English.";
+      const upstream = await fetch(`${providerBase}/chat/completions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          model: visionModel,
+          messages: [{ role: "user", content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: imageData, detail: "high" } },
+          ] }],
+          max_tokens: 500,
+          temperature: 0.1,
+        }),
+        signal: AbortSignal.timeout(90000),
+      });
+      if (!upstream.ok) {
+        const detail = (await upstream.text()).slice(0, 500);
+        console.error("EMA product vision failed", { status: upstream.status, detail: detail.slice(0, 160) });
+        return reply({ error: { code: "VISION_PROVIDER_ERROR", message: `تشخیص تصویر ناموفق بود (HTTP ${upstream.status}).` } }, upstream.status);
+      }
+      const result = await upstream.json().catch(() => ({}));
+      const content = result?.choices?.[0]?.message?.content;
+      if (typeof content !== "string" || !content.trim()) {
+        return reply({ error: { code: "VISION_EMPTY_RESULT", message: "مدل نتوانست محصول را تشخیص دهد." } }, 502);
+      }
+      return reply({ identification: content });
+    }
+
     // Secure text-to-speech route: use the server-side provider key, never a phone-stored key.
     if (request.method === "POST" && route === "/v1/audio/speech") {
       const body = await jsonBody(request);
