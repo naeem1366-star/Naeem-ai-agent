@@ -126,12 +126,17 @@ object PersianAssistantIntentResolver {
         }
 
         val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
-        if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز").any { text.contains(it) }) {
+        if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز", "زدم", "انجام دادم").any { text.contains(it) }) {
             val strength = listOf("وزنه", "باشگاه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
             val minutes = parseDurationMinutes(text)
             val calories = Regex("""(\d+)\s*(?:کالری|کیلوکالری|kcal)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             val distance = Regex("""(\d+(?:\.\d+)?)\s*(کیلومتر|km)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
+            val reps = Regex("""(\d+)\s*(?:تا|تکرار|rep|reps)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            val sets = Regex("""(\d+)\s*(?:ست|set|sets)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: if (reps > 0) 1 else 0
+            val weight = Regex("""(\d+(?:\.\d+)?)\s*(?:کیلو|kg)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
             val title = when {
+                text.contains("پرس پا") -> "پرس پا"
+                text.contains("پرس سینه") -> "پرس سینه"
                 text.contains("باشگاه") || text.contains("بدنسازی") -> "تمرین باشگاه"
                 text.contains("دوچرخه") -> "دوچرخه‌سواری"
                 text.contains("دویدن") -> "دویدن"
@@ -151,7 +156,7 @@ object PersianAssistantIntentResolver {
             }
             return ready(AssistantModule.SPORTS, "add_workout", ActionAccess.WRITE, mapOf(
                 "title" to title, "category" to category, "minutes" to (minutes ?: 0).toString(),
-                "distance" to (distance ?: 0.0).toString(), "sets" to "0", "reps" to "0", "weight" to "0", "calories" to calories.toString(), "notes" to ""
+                "distance" to (distance ?: 0.0).toString(), "sets" to sets.toString(), "reps" to reps.toString(), "weight" to weight.toString(), "calories" to calories.toString(), "notes" to ""
             ))
         }
         if (text.contains("تمرین") || text.contains("ورزش")) {
@@ -319,7 +324,7 @@ class SportsAssistantTool(context: Context) : AssistantTool {
         "summary", "history" -> ActionValidation.Valid
         "add_workout" -> when {
             action.parameters["title"].isNullOrBlank() -> ActionValidation.NeedsClarification("نام فعالیت یا حرکت ورزشی چیست؟")
-            (action.parameters["minutes"]?.toIntOrNull() ?: 0) <= 0 && (action.parameters["distance"]?.toDoubleOrNull() ?: 0.0) <= 0.0 -> ActionValidation.NeedsClarification("مدت تمرین یا مسافت را هم بگو؛ مثلاً «نیم ساعت ورزش کردم».")
+            (action.parameters["minutes"]?.toIntOrNull() ?: 0) <= 0 && (action.parameters["distance"]?.toDoubleOrNull() ?: 0.0) <= 0.0 && (action.parameters["reps"]?.toIntOrNull() ?: 0) <= 0 -> ActionValidation.NeedsClarification("مدت تمرین، مسافت یا تعداد تکرار را هم بگو؛ مثلاً «نیم ساعت ورزش کردم» یا «۱۰ تا پرس پا زدم».")
             else -> ActionValidation.Valid
         }
         else -> ActionValidation.Invalid("این عملیات ورزشی پشتیبانی نمی‌شود.")
