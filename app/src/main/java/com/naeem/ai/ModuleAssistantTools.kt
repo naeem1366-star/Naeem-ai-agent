@@ -317,7 +317,11 @@ class SportsAssistantTool(context: Context) : AssistantTool {
     private val store = SportStore(context)
     override suspend fun validate(action: AssistantAction): ActionValidation = when (action.operation) {
         "summary", "history" -> ActionValidation.Valid
-        "add_workout" -> if (action.parameters["title"].isNullOrBlank()) ActionValidation.NeedsClarification("نام فعالیت یا حرکت ورزشی چیست؟") else ActionValidation.Valid
+        "add_workout" -> when {
+            action.parameters["title"].isNullOrBlank() -> ActionValidation.NeedsClarification("نام فعالیت یا حرکت ورزشی چیست؟")
+            (action.parameters["minutes"]?.toIntOrNull() ?: 0) <= 0 && (action.parameters["distance"]?.toDoubleOrNull() ?: 0.0) <= 0.0 -> ActionValidation.NeedsClarification("مدت تمرین یا مسافت را هم بگو؛ مثلاً «نیم ساعت ورزش کردم».")
+            else -> ActionValidation.Valid
+        }
         else -> ActionValidation.Invalid("این عملیات ورزشی پشتیبانی نمی‌شود.")
     }
     override suspend fun execute(action: AssistantAction): AssistantToolResult {
@@ -335,7 +339,7 @@ class SportsAssistantTool(context: Context) : AssistantTool {
                     p["minutes"]?.toIntOrNull() ?: 0, p["distance"]?.toDoubleOrNull() ?: 0.0,
                     p["sets"]?.toIntOrNull() ?: 0, p["reps"]?.toIntOrNull() ?: 0, p["weight"]?.toDoubleOrNull() ?: 0.0, p["notes"].orEmpty(), p["calories"]?.toIntOrNull() ?: 0)
                 store.save(listOf(log) + logs)
-                AssistantToolResult(true, "تمرین «" + log.title + "» ثبت شد؛ " + log.minutes + " دقیقه، " + log.distance + " کیلومتر" + if (log.calories > 0) "، " + log.calories + " کیلوکالری" else "" + ".")
+                AssistantToolResult(true, "تمرین «" + log.title + "» ثبت شد؛ " + log.minutes + " دقیقه، " + log.distance + " کیلومتر" + (if (log.calories > 0) "، " + log.calories + " کیلوکالری" else "") + ".")
             }
             else -> AssistantToolResult(false, "عملیات ورزشی ناشناخته است.")
         }
