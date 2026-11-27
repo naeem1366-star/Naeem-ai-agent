@@ -3,6 +3,7 @@ package com.naeem.ai
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
@@ -18,6 +19,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -138,6 +143,66 @@ private fun fetchPublicMarketQuotes(): List<MarketQuote> {
     return result
 }
 
+
+private fun fetchMarketHistory(quote: MarketQuote, range: String): List<Double> {
+    val client = OkHttpClient.Builder().callTimeout(java.time.Duration.ofSeconds(12)).build()
+    val (yahooRange, yahooInterval, binanceInterval, limit) = when (range) {
+        "1D" -> listOf("1d", "5m", "15m", 96)
+        "1W" -> listOf("5d", "15m", "1h", 168)
+        else -> listOf("1mo", "1d", "4h", 180)
+    }
+    fun get(url: String): String {
+        val request = Request.Builder().url(url).header("Accept", "application/json")
+            .header("User-Agent", "EMA-Market-Research/1.0").build()
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("HTTP ${response.code}")
+            response.body?.string() ?: error("پاسخ خالی")
+        }
+    }
+    return when {
+        quote.family == "crypto" -> {
+            val url = "https://data-api.binance.vision/api/v3/klines?symbol=${quote.id}&interval=$binanceInterval&limit=$limit"
+            val rows = org.json.JSONArray(get(url))
+            (0 until rows.length()).mapNotNull { i ->
+                rows.optJSONArray(i)?.optString(4)?.toDoubleOrNull()
+            }.filter { it > 0.0 }
+        }
+        quote.family == "global_stock" || quote.family == "commodity" -> {
+            val symbol = java.net.URLEncoder.encode(quote.id, "UTF-8")
+            val root = JSONObject(get("https://query1.finance.yahoo.com/v8/finance/chart/$symbol?range=$yahooRange&interval=$yahooInterval"))
+            val result = root.getJSONObject("chart").getJSONArray("result").getJSONObject(0)
+            val closes = result.getJSONObject("indicators").getJSONArray("quote").getJSONObject(0).getJSONArray("close")
+            (0 until closes.length()).mapNotNull { i ->
+                val value = if (closes.isNull(i)) null else closes.optDouble(i, Double.NaN)
+                value?.takeIf { it.isFinite() && it > 0.0 }
+            }
+        }
+        else -> emptyList()
+    }
+}
+
+@Composable
+private fun MarketHistoryChart(values: List<Double>, positive: Boolean, modifier: Modifier = Modifier) {
+    val lineColor = if (positive) Color(0xFF63D6A7) else Color(0xFFFF8C85)
+    Canvas(modifier = modifier) {
+        if (values.size < 2) return@Canvas
+        val low = values.minOrNull() ?: return@Canvas
+        val high = values.maxOrNull() ?: return@Canvas
+        val span = (high - low).takeIf { it > 0.0 } ?: (high * 0.01).coerceAtLeast(1.0)
+        repeat(4) { index ->
+            val y = size.height * index / 3f
+            drawLine(Color.White.copy(alpha = 0.09f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+        }
+        val path = Path()
+        values.forEachIndexed { index, value ->
+            val x = size.width * index / (values.size - 1).toFloat()
+            val y = size.height - (((value - low) / span).toFloat() * size.height * 0.82f + size.height * 0.08f)
+            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(path, lineColor, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
 @Composable
 fun MarketsDashboard(onClose: () -> Unit) {
     val context = LocalContext.current
@@ -148,6 +213,12 @@ fun MarketsDashboard(onClose: () -> Unit) {
     var error by remember { mutableStateOf("") }
     var updatedAt by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf("همه") }
+    var searchText by remember { mutableStateOf("") }
+    var selectedAsset by remember { mutableStateOf<MarketQuote?>(null) }
+    var historyRange by remember { mutableStateOf("1W") }
+    var historyValues by remember { mutableStateOf<List<Double>>(emptyList()) }
+    var historyLoading by remember { mutableStateOf(false) }
+    var historyError by remember { mutableStateOf("") }
 
     fun parsePayload(raw: String): List<MarketQuote> {
         val root = JSONObject(raw)
@@ -212,6 +283,17 @@ fun MarketsDashboard(onClose: () -> Unit) {
         refresh()
     }
 
+    LaunchedEffect(selectedAsset?.id, historyRange) {
+        val asset = selectedAsset ?: return@LaunchedEffect
+        historyLoading = true
+        historyError = ""
+        historyValues = emptyList()
+        val values = withContext(Dispatchers.IO) { runCatching { fetchMarketHistory(asset, historyRange) } }
+        values.onSuccess { historyValues = it; if (it.size < 2) historyError = "داده تاریخی معتبر برای این دارایی موجود نیست." }
+            .onFailure { historyError = "دریافت نمودار ناموفق بود؛ منبع داده موقتاً در دسترس نیست." }
+        historyLoading = false
+    }
+
     val categories = listOf("همه", "رمزارز", "دلار و ارز", "طلا", "بورس ایران", "بورس جهانی", "کالاها", "پیشنهاد خرید")
     val visible = quotes.filter { q ->
         when (selected) {
@@ -223,6 +305,8 @@ fun MarketsDashboard(onClose: () -> Unit) {
             "بورس جهانی" -> q.family == "global_stock"
             else -> true
         }
+    }.filter { q ->
+        searchText.isBlank() || q.name.contains(searchText, ignoreCase = true) || q.id.contains(searchText, ignoreCase = true)
     }
 
     val observedChanges = visible.mapNotNull { it.change }
@@ -266,6 +350,19 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 }
             }
 
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                singleLine = true,
+                placeholder = { Text("جست‌وجوی دارایی، نماد یا بازار", color = Color(0xFF8993A3), fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = MarketAccent) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MarketAccent, unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                    focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                    focusedContainerColor = MarketPanel, unfocusedContainerColor = MarketPanel
+                )
+            )
             if (error.isNotBlank()) {
                 Text(error, color = Color(0xFFFFA59D), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
@@ -295,6 +392,52 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 }
             }
 
+            if (selectedAsset != null && selected != "پیشنهاد خرید") {
+                val asset = selectedAsset!!
+                Column(
+                    Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        .background(MarketPanel, RoundedCornerShape(20.dp)).padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(asset.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("${asset.id.uppercase()} · ${asset.source}", color = Color(0xFF8993A3), fontSize = 10.sp)
+                        }
+                        IconButton(onClick = { selectedAsset = null }) { Icon(Icons.Default.Close, "بستن نمودار", tint = Color(0xFF9CA4B3)) }
+                    }
+                    Text("${formatted(asset.price)} ${unitLabel(asset.unit)}", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+                        listOf("1D", "1W", "1M").forEach { range ->
+                            FilterChip(
+                                selected = historyRange == range,
+                                onClick = { historyRange = range },
+                                label = { Text(range, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MarketAccent.copy(alpha = 0.2f),
+                                    selectedLabelColor = MarketAccent,
+                                    labelColor = Color(0xFFB8BFCC)
+                                )
+                            )
+                        }
+                    }
+                    when {
+                        historyLoading -> Box(Modifier.fillMaxWidth().height(132.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = MarketAccent, strokeWidth = 2.dp)
+                        }
+                        historyValues.size >= 2 -> {
+                            val positive = historyValues.last() >= historyValues.first()
+                            MarketHistoryChart(historyValues, positive, Modifier.fillMaxWidth().height(132.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("شروع: ${formatted(historyValues.first())}", color = Color(0xFF8993A3), fontSize = 10.sp)
+                                Text("پایان: ${formatted(historyValues.last())}", color = Color(0xFF8993A3), fontSize = 10.sp)
+                            }
+                        }
+                        else -> Text(historyError.ifBlank { "نمودار تاریخی برای این بازار هنوز پشتیبانی نمی‌شود." }, color = Color(0xFFB8BFCC), fontSize = 11.sp)
+                    }
+                    Text("نمودار بر اساس داده تاریخی منبع اعلام‌شده است؛ پیش‌بینی قیمت نیست.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+
             if (selected == "پیشنهاد خرید") {
                 CryptoAdvisorPanel(Modifier.weight(1f))
             } else if (quotes.isEmpty() && loading) {
@@ -307,7 +450,8 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 LazyColumn(contentPadding = PaddingValues(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     items(visible, key = { it.id }) { quote ->
                         Row(
-                            Modifier.fillMaxWidth().background(MarketPanel, RoundedCornerShape(17.dp)).padding(horizontal = 15.dp, vertical = 14.dp),
+                            Modifier.fillMaxWidth().background(MarketPanel, RoundedCornerShape(17.dp))
+                                .clickable { selectedAsset = quote }.padding(horizontal = 15.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
