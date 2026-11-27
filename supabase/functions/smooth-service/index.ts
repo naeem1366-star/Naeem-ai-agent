@@ -84,7 +84,7 @@ Deno.serve(async (request: Request) => {
         return reply({ error: { code: "INVALID_PRODUCT_IMAGE", message: "عکس معتبر نیست یا حجم آن زیاد است." } }, 400);
       }
       const providerKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
-      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
       const visionModel = Deno.env.get("CHAT_VISION_MODEL") || "gpt-4o-mini";
       if (!providerKey || !providerBase.startsWith("https://")) {
         return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "سرویس تشخیص تصویر تنظیم نشده است." } }, 503);
@@ -125,7 +125,7 @@ Deno.serve(async (request: Request) => {
         return reply({ error: { code: "INVALID_SPEECH_INPUT", message: "متن گفتار خالی یا بیش از حد طولانی است." } }, 400);
       }
       const providerKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
-      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
       if (!providerKey || !providerBase.startsWith("https://")) {
         return reply({ error: { code: "SPEECH_GATEWAY_NOT_CONFIGURED", message: "سرویس گفتار روی سرور تنظیم نشده است." } }, 503);
       }
