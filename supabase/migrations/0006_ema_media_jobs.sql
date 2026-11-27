@@ -9,6 +9,7 @@ create table if not exists public.ema_media_jobs (
   model text not null,
   reservation_id uuid references public.ema_usage_reservations(id),
   estimated_cost_usd numeric(18,8) not null default 0,
+  reserve_toman bigint not null default 0,
   size text not null default '',
   seconds integer not null default 0,
   status text not null default 'queued',
