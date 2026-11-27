@@ -205,7 +205,7 @@ Deno.serve(async (request: Request) => {
 
         // NetArz documents GET /me and GET /usage for live account monitoring.
         const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-        const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+        const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
         if (!netarzKey || !netarzBase.startsWith("https://")) {
           providerAccounts.push({ provider: "NetArz", status: "not_configured", checked_at: checkedAt });
         } else {
