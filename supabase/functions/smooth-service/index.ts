@@ -346,9 +346,9 @@ Deno.serve(async (request: Request) => {
     }
 
     const quotaDate = new Date().toISOString().slice(0, 10);
-    const quotaResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/ema_consume_chat_quota`, {
+    const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
       method: "POST",
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
       signal: AbortSignal.timeout(12000),
     }).catch((error) => {
@@ -363,9 +363,9 @@ Deno.serve(async (request: Request) => {
     }
 
     const refundFreeQuota = async () => {
-      const response = await fetch(`${supabaseUrl}/rest/v1/rpc/ema_refund_chat_quota`, {
+      const response = await fetch(supabaseUrl + "/rest/v1/rpc/ema_refund_chat_quota", {
         method: "POST",
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
         body: JSON.stringify({ p_user_id: userId, p_usage_date: quotaDate }),
         signal: AbortSignal.timeout(8000),
       }).catch(() => null);
@@ -382,9 +382,9 @@ Deno.serve(async (request: Request) => {
 
     let upstream: Response;
     try {
-      upstream = await fetch(`${freeBase}/chat/completions`, {
+      upstream = await fetch(freeBase + "/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${freeKey}`, "Content-Type": "application/json", Accept: "application/json" },
+        headers: { Authorization: "Bearer " + freeKey, "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(30000),
       });
