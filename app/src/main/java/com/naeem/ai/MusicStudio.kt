@@ -348,7 +348,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,gatewayUrl:String,acce
     val context=LocalContext.current
     val api=remember(gatewayUrl,accessToken){NetArzMediaGatewayClient(gatewayUrl,accessToken)}
     val scope=rememberCoroutineScope()
-    var model by remember{mutableStateOf(config.modelFor("music").ifBlank{"lyria-3.5"})}
+    var model by remember{mutableStateOf("lyria-3.5")}
     var models by remember{mutableStateOf(listOf("lyria-3.5","lyria-3-pro-preview","lyria-3-clip-preview","openrouter/google/lyria-3-pro-preview","openrouter/google/lyria-3-clip-preview","eleven-music-v1","eleven-sound-effects-v3","eleven-sound-effects-v2"))}
     var modelsLoading by remember{mutableStateOf(false)}
     var modelMenu by remember{mutableStateOf(false)}
@@ -404,7 +404,7 @@ private fun MusicCreationPanel(modifier:Modifier=Modifier,gatewayUrl:String,acce
                     Text("استودیوی ساخت موسیقی هوش مصنوعی",color=Color.White,fontWeight=FontWeight.Bold)
                 }
                 Text("ساخت موسیقی و جلوه صوتی با API پولی نت‌ارز؛ مستقل از ویدیوساز رایگان.",color=Color(0xFFB9C2CE),style=MaterialTheme.typography.bodySmall)
-                Text(if(musicApiKey.isBlank())"کلید API وارد نشده است؛ آن را در کادر زیر وارد و ذخیره کن." else "کلید API ذخیره شده و به‌صورت امن نگهداری می‌شود.",color=if(musicApiKey.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
+                Text(if(accessToken.isBlank())"برای ساخت موسیقی وارد حساب شو؛ کلید سرویس روی سرور نگهداری می‌شود." else "اتصال امن NetArz از طریق درگاه ایما فعال است.",color=if(accessToken.isBlank())Color(0xFFFFB4A9) else Color(0xFFB9E5C9),style=MaterialTheme.typography.labelSmall)
             }
         }
         if(accessToken.isBlank()) Text("برای ساخت موسیقی ابتدا وارد حساب ایما شو.",color=Color(0xFFFFB4A9),style=MaterialTheme.typography.bodySmall)
