@@ -864,6 +864,7 @@ fun NaeemApp(
     val wakePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
     var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
     var smartListeningEnabled by remember { mutableStateOf(wakePrefs.getBoolean("smart_listening", false)) }
+    var showVoiceHelp by remember { mutableStateOf(false) }
     DisposableEffect(wakePrefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             if (key == "enabled") wakeAssistantEnabled = prefs?.getBoolean("enabled", false) ?: false
@@ -1380,6 +1381,30 @@ fun NaeemApp(
                                 modifier = Modifier.size(44.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
                             ) {
                                 Icon(Icons.Default.GraphicEq, contentDescription = if (smartListeningEnabled) "شنود هوشمند ایما فعال است" else if (wakeAssistantEnabled) "آماده‌باش صوتی ایما فعال است" else "فعال‌کردن دستیار صوتی ایما", tint = if (smartListeningEnabled) Color.White else Gold)
+                            }
+                            IconButton(onClick = { showVoiceHelp = true }, modifier = Modifier.size(34.dp)) {
+                                Icon(Icons.Default.Info, contentDescription = "راهنمای دستیار صوتی ایما", tint = Gold, modifier = Modifier.size(19.dp))
+                            }
+                            if (showVoiceHelp) {
+                                AlertDialog(
+                                    onDismissRequest = { showVoiceHelp = false },
+                                    title = { Text(if (isEnglish) "EMA Life Assistant" else "دستیار زندگی ایما", color = Color.White, fontWeight = FontWeight.Bold) },
+                                    text = {
+                                        Text(
+                                            if (isEnglish) "1. Turn on voice standby with the sound-wave button.\n2. Say “EMA” — EMA replies “I’m here.”\n3. Say “be on the lookout” to enable smart listening; the control turns green.\n4. Say “EMA, stop listening” to stop smart listening and return to wake-word standby.\n5. Tap the sound-wave button again to stop the voice service completely.\n\nThe microphone remains active while the voice service is on, and Android shows an ongoing notification. In this version, spoken food and workout logging are supported; other categories are still being developed."
+                                            else "۱. دکمه موج صوتی را روشن کن تا ایما در حالت آماده‌باش قرار بگیرد.\n۲. بگو «ایما»؛ ایما جواب می‌دهد «در خدمتم».\n۳. بگو «ایما، به گوش باش» تا شنود هوشمند فعال شود و کلید سبز شود.\n۴. بگو «ایما، شنود رو خاموش کن» تا شنود هوشمند متوقف شود و ایما به حالت آماده‌باش برگردد.\n۵. برای خاموش‌کردن کامل میکروفون، دکمه موج صوتی را دوباره لمس کن.\n\nتا وقتی سرویس صوتی روشن است میکروفون فعال می‌ماند و اعلان دائمی اندروید نمایش داده می‌شود. در این نسخه ثبت صوتی غذا و تمرین فعال است؛ تحلیل سایر موضوعات هنوز در حال توسعه است.",
+                                            color = Color(0xFFD5DCE7),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            lineHeight = 22.sp
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = { showVoiceHelp = false }) { Text(if (isEnglish) "Got it" else "متوجه شدم", color = Gold) }
+                                    },
+                                    containerColor = Panel,
+                                    titleContentColor = Color.White,
+                                    textContentColor = Color(0xFFD5DCE7)
+                                )
                             }
                             IconButton(
                                 onClick = {
