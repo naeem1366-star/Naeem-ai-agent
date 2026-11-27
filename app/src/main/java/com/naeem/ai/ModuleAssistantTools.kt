@@ -128,7 +128,8 @@ object PersianAssistantIntentResolver {
         val isWorkout = listOf("تمرین", "ورزش", "باشگاه", "بدنسازی", "دوچرخه", "دوچرخه‌سواری", "دویدن", "پیاده‌روی", "شنا", "کوهنوردی", "یوگا").any { text.contains(it) }
         if (isWorkout && listOf("کردم", "رفتم", "ثبت", "امروز", "دیروز").any { text.contains(it) }) {
             val strength = listOf("وزنه", "باشگاه", "بدنسازی", "اسکوات", "پرس").any { text.contains(it) }
-            val minutes = Regex("""(\d+)\s*(دقیقه|min|minutes)""").find(text)?.groupValues?.get(1)?.toIntOrNull()
+            val minutes = parseDurationMinutes(text)
+            val calories = Regex("""(\d+)\s*(?:کالری|کیلوکالری|kcal)""").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             val distance = Regex("""(\d+(?:\.\d+)?)\s*(کیلومتر|km)""").find(text)?.groupValues?.get(1)?.toDoubleOrNull()
             val title = when {
                 text.contains("باشگاه") || text.contains("بدنسازی") -> "تمرین باشگاه"
@@ -150,7 +151,7 @@ object PersianAssistantIntentResolver {
             }
             return ready(AssistantModule.SPORTS, "add_workout", ActionAccess.WRITE, mapOf(
                 "title" to title, "category" to category, "minutes" to (minutes ?: 0).toString(),
-                "distance" to (distance ?: 0.0).toString(), "sets" to "0", "reps" to "0", "weight" to "0", "notes" to ""
+                "distance" to (distance ?: 0.0).toString(), "sets" to "0", "reps" to "0", "weight" to "0", "calories" to calories.toString(), "notes" to ""
             ))
         }
         if (text.contains("تمرین") || text.contains("ورزش")) {
@@ -189,6 +190,18 @@ object PersianAssistantIntentResolver {
             return ready(AssistantModule.FINANCE, "recent", ActionAccess.READ)
 
         return AssistantIntentResolution.NoMatch
+    }
+
+    private fun parseDurationMinutes(text: String): Int? {
+        Regex("""(\d+)\s*(?:دقیقه|min|minutes)""").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+        Regex("""(\d+)\s*ساعت""").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { return it * 60 }
+        return when {
+            text.contains("نیم ساعت") || text.contains("نیم‌ساعت") -> 30
+            text.contains("یک ساعت") || text.contains("یه ساعت") -> 60
+            text.contains("دو ساعت") -> 120
+            text.contains("سه ساعت") -> 180
+            else -> null
+        }
     }
 
     private fun parseGrams(text: String): Int? {
@@ -320,9 +333,9 @@ class SportsAssistantTool(context: Context) : AssistantTool {
                 val p = action.parameters
                 val log = SportLog(UUID.randomUUID().toString(), p.getValue("title"), p["category"].orEmpty(), System.currentTimeMillis(),
                     p["minutes"]?.toIntOrNull() ?: 0, p["distance"]?.toDoubleOrNull() ?: 0.0,
-                    p["sets"]?.toIntOrNull() ?: 0, p["reps"]?.toIntOrNull() ?: 0, p["weight"]?.toDoubleOrNull() ?: 0.0, p["notes"].orEmpty())
+                    p["sets"]?.toIntOrNull() ?: 0, p["reps"]?.toIntOrNull() ?: 0, p["weight"]?.toDoubleOrNull() ?: 0.0, p["notes"].orEmpty(), p["calories"]?.toIntOrNull() ?: 0)
                 store.save(listOf(log) + logs)
-                AssistantToolResult(true, "تمرین «" + log.title + "» ثبت شد؛ " + log.minutes + " دقیقه، " + log.distance + " کیلومتر.")
+                AssistantToolResult(true, "تمرین «" + log.title + "» ثبت شد؛ " + log.minutes + " دقیقه، " + log.distance + " کیلومتر" + if (log.calories > 0) "، " + log.calories + " کیلوکالری" else "" + ".")
             }
             else -> AssistantToolResult(false, "عملیات ورزشی ناشناخته است.")
         }
