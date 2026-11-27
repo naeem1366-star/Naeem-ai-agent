@@ -863,6 +863,15 @@ fun NaeemApp(
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
     val wakePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
     var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
+    var smartListeningEnabled by remember { mutableStateOf(wakePrefs.getBoolean("smart_listening", false)) }
+    DisposableEffect(wakePrefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == "enabled") wakeAssistantEnabled = prefs?.getBoolean("enabled", false) ?: false
+            if (key == "smart_listening") smartListeningEnabled = prefs?.getBoolean("smart_listening", false) ?: false
+        }
+        wakePrefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { wakePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     val wakePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -1368,9 +1377,9 @@ fun NaeemApp(
                                         } else wakePermissionLauncher.launch(needed.toTypedArray())
                                     }
                                 },
-                                modifier = Modifier.size(44.dp).background(if (wakeAssistantEnabled) Color(0xFF3D8065) else Panel, CircleShape)
+                                modifier = Modifier.size(44.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
                             ) {
-                                Icon(Icons.Default.GraphicEq, contentDescription = "دستیار همیشه‌آماده ایما", tint = if (wakeAssistantEnabled) Color.White else Gold)
+                                Icon(Icons.Default.GraphicEq, contentDescription = if (smartListeningEnabled) "شنود هوشمند ایما فعال است" else if (wakeAssistantEnabled) "آماده‌باش صوتی ایما فعال است" else "فعال‌کردن دستیار صوتی ایما", tint = if (smartListeningEnabled) Color.White else Gold)
                             }
                             IconButton(
                                 onClick = {
