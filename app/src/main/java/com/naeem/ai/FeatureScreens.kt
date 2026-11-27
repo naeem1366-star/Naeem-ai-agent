@@ -211,6 +211,7 @@ fun FeatureHub(
         "بازی‌ها" to "Games", "چالش و سرگرمی" to "Challenges & fun",
         "سینما" to "Cinema", "فیلم و پوستر" to "Movies & posters",
         "پادکست" to "Podcasts", "شنیدن و کشف برنامه‌های صوتی" to "Discover and listen to podcasts",
+        "تحلیل عکس" to "Image analysis", "تحلیل تصویر و شناسایی محصول" to "Image analysis & product recognition",
         "استودیو ایما" to "EMA Studio", "تدوین حرفه‌ای ویدیو" to "Video editing",
         "تولید ویدیو رایگان" to "Free video generation", "ساخت ویدیو با هوش مصنوعی" to "AI video generation",
         "موسیقی" to "Music", "آهنگ و هنرمند" to "Songs & artists",
