@@ -1,7 +1,7 @@
 name: EMA backend checks
 on:
   push:
-    branches: ["feature/ema-asi-platform"]
+    branches: ["feature/ema-asi-platform", "feature/ema-netarz-media-secure-routing"]
     paths:
       - "backend/auth-worker/**"
       - ".github/workflows/backend-checks.yml"
