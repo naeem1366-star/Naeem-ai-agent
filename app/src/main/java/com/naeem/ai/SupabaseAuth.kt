@@ -24,8 +24,13 @@ data class SupabaseAuthResult(val session: SupabaseSession? = null, val needsEma
 
 class SupabaseAuthClient(context: Context) {
     // EmaSupabaseConfig contains only the public client URL and publishable key.
-    private val http = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS).callTimeout(30, TimeUnit.SECONDS).build()
+    private val http = OkHttpClient.Builder()
+        .connectTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .build()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
     // Avoid a launch crash if Android Keystore is unavailable on a device.
     private val preferences: SharedPreferences = runCatching {
