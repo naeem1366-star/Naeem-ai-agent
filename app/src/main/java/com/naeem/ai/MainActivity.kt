@@ -727,6 +727,7 @@ fun NaeemApp(
     var showFinance by remember { mutableStateOf(false) }
     var showHub by remember { mutableStateOf(false) }
     var showWallet by remember { mutableStateOf(false) }
+    var showProductLens by remember { mutableStateOf(false) }
     var showHealth by remember { mutableStateOf(false) }
     var showJournal by remember { mutableStateOf(false) }
     var showGames by remember { mutableStateOf(false) }
@@ -1622,9 +1623,21 @@ fun NaeemApp(
                         onFuture = { showHub = false; showFutureGateway = true },
                          onProfessionalVideo = { showHub = false; showProfessionalVideo = true },
                          onPcControl = { showHub = false; showPcControl = true },
-                         onWallet = { showHub = false; showWallet = true }
+                         onWallet = { showHub = false; showWallet = true },
+                         onProductLens = { showHub = false; showProductLens = true }
                     ) }
                 }
+                }
+            }
+        }
+        if (showProductLens) {
+            Dialog(onDismissRequest = { showProductLens = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
+                    ProductLensDashboard(
+                        onClose = { showProductLens = false },
+                        gatewayUrl = BuildConfig.CHAT_GATEWAY_URL,
+                        accessToken = chatAccessToken
+                    )
                 }
             }
         }
