@@ -83,7 +83,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, gatewayUrl: String, accessTo
             videoData = null
             error = ""
             scope.launch {
-                runCatching { NetArzApiClient.mediaAsBase64(context, uri, 50L * 1024L * 1024L, "خواندن ویدیوی مرجع ناموفق بود.", "حجم ویدیوی مرجع بیشتر از ۵۰ مگابایت است.") }
+                runCatching { NetArzApiClient.mediaAsBase64(context, uri, 12L * 1024L * 1024L, "خواندن ویدیوی مرجع ناموفق بود.", "حجم ویدیوی مرجع بیشتر از ۱۲ مگابایت است.") }
                     .onSuccess { videoData = it; error = "" }
                     .onFailure { videoData = null; error = it.message ?: "خواندن ویدیوی مرجع ناموفق بود." }
             }
@@ -165,7 +165,7 @@ fun ProfessionalVideoDashboard(onClose: () -> Unit, gatewayUrl: String, accessTo
                     Text(if (videoUri == null) "انتخاب ویدیوی مرجع" else "تعویض ویدیوی مرجع")
                 }
                 if (videoUri != null) TextButton(onClick = { videoUri = null; videoData = null }) { Text("حذف ویدیو") }
-                Text("ویدیوی انتخاب‌شده به‌عنوان ورودی مدل ارسال می‌شود؛ حداکثر حجم فعلی ۵۰ مگابایت است.", color = muted, style = MaterialTheme.typography.labelSmall)
+                Text("ویدیوی انتخاب‌شده به‌عنوان ورودی مدل ارسال می‌شود؛ حداکثر حجم فعلی ۱۲ مگابایت است.", color = muted, style = MaterialTheme.typography.labelSmall)
             }
             if (model.imageInput) {
                 Text("تصویر ورودی", color = Color.White, fontWeight = FontWeight.Bold)
