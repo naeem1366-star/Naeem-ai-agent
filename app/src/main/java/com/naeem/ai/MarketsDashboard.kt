@@ -39,12 +39,85 @@ private data class MarketQuote(
     val unit: String,
     val change: Double?,
     val updated: String,
-    val stale: Boolean
+    val stale: Boolean,
+    val source: String = "NerkhAra"
 )
 
 private val MarketInk = Color.Transparent
 private val MarketPanel = SupraGlass.Glass
 private val MarketAccent = SupraGlass.Ice
+
+
+private fun fetchPublicMarketQuotes(): List<MarketQuote> {
+    val client = OkHttpClient.Builder().callTimeout(java.time.Duration.ofSeconds(9)).build()
+    fun get(url: String): String {
+        val request = Request.Builder().url(url).header("Accept", "application/json")
+            .header("User-Agent", "EMA-Market-Research/1.0").build()
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("HTTP ${response.code}")
+            response.body?.string() ?: error("Empty response")
+        }
+    }
+    val result = mutableListOf<MarketQuote>()
+    runCatching {
+        val arr = org.json.JSONArray(get("https://data-api.binance.vision/api/v3/ticker/24hr"))
+        val wanted = setOf("BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT")
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val symbol = o.optString("symbol")
+            if (symbol !in wanted) continue
+            result += MarketQuote(symbol, symbol.removeSuffix("USDT"), "crypto",
+                o.optDouble("lastPrice"), "USDT", o.optDouble("priceChangePercent"),
+                "Public API • Binance", false, "Binance public API")
+        }
+    }
+    val yahoo = listOf(
+        Triple("^GSPC", "S&P 500", "global_stock"),
+        Triple("^IXIC", "NASDAQ", "global_stock"),
+        Triple("^DJI", "Dow Jones", "global_stock"),
+        Triple("^N225", "Nikkei 225", "global_stock"),
+        Triple("GC=F", "Gold futures", "commodity"),
+        Triple("SI=F", "Silver futures", "commodity"),
+        Triple("CL=F", "WTI crude oil", "commodity"),
+        Triple("BZ=F", "Brent crude oil", "commodity"),
+        Triple("HG=F", "Copper futures", "commodity")
+    )
+    yahoo.forEach { (symbol, name, family) ->
+        runCatching {
+            val encoded = java.net.URLEncoder.encode(symbol, "UTF-8")
+            val root = JSONObject(get("https://query1.finance.yahoo.com/v8/finance/chart/$encoded?range=5d&interval=15m"))
+            val meta = root.getJSONObject("chart").getJSONArray("result").getJSONObject(0).getJSONObject("meta")
+            val price = meta.optDouble("regularMarketPrice", Double.NaN)
+            if (price.isNaN()) return@runCatching
+            val previous = meta.optDouble("chartPreviousClose", meta.optDouble("previousClose", 0.0))
+            val change = if (previous > 0) ((price - previous) / previous) * 100 else 0.0
+            val unit = meta.optString("currency", "USD")
+            result += MarketQuote(symbol, name, family, price, unit, change,
+                "Yahoo public chart", false, "Yahoo Finance public chart")
+        }
+    }
+    runCatching {
+        val root = JSONObject(get("https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,GBP,CHF,JPY"))
+        val rates = root.getJSONObject("rates")
+        for (currency in listOf("EUR", "GBP", "CHF", "JPY")) {
+            val value = rates.optDouble(currency, Double.NaN)
+            if (!value.isNaN()) result += MarketQuote("USD/$currency", "USD → $currency", "currency",
+                value, currency, null, root.optString("date"), false, "Frankfurter / ECB reference")
+        }
+    }
+    runCatching {
+        val url = "https://cdn.tsetmc.com/api/MarketData/GetMarketOverview/0"
+        val root = JSONObject(get(url))
+        val data = root.optJSONArray("marketOverview")
+        val o = data?.optJSONObject(0) ?: root.optJSONObject("marketOverview")
+        if (o != null && o.optDouble("indexLastValue", 0.0) > 0) {
+            result += MarketQuote("TEDPIX", "شاخص کل بورس تهران", "iran_stock",
+                o.optDouble("indexLastValue"), "واحد شاخص", o.optDouble("indexChange"),
+                "TSETMC public feed", false, "TSETMC public endpoint")
+        }
+    }
+    return result
+}
 
 @Composable
 fun MarketsDashboard(onClose: () -> Unit) {
@@ -74,7 +147,8 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 unit = o.optString("unit"),
                 change = if (o.isNull("change_pct")) null else o.optDouble("change_pct"),
                 updated = o.optString("updated_utc", root.optString("generated_utc")),
-                stale = o.optBoolean("stale", false)
+                stale = o.optBoolean("stale", false),
+                source = "NerkhAra"
             )
         }
     }
@@ -95,11 +169,13 @@ fun MarketsDashboard(onClose: () -> Unit) {
                     }
                 }
                 val parsed = parsePayload(result)
-                if (parsed.isEmpty()) kotlin.error("ساختار داده دریافتی قابل‌خواندن نیست.")
-                quotes = parsed
+                val publicQuotes = withContext(Dispatchers.IO) { fetchPublicMarketQuotes() }
+                quotes = (parsed + publicQuotes).distinctBy { it.id }
                 updatedAt = JSONObject(result).optString("generated_utc")
                 prefs.edit().putString("payload", result).apply()
             } catch (e: Exception) {
+                val publicOnly = withContext(Dispatchers.IO) { runCatching { fetchPublicMarketQuotes() }.getOrDefault(emptyList()) }
+                if (publicOnly.isNotEmpty()) quotes = publicOnly
                 error = e.message ?: "دریافت قیمت‌ها ناموفق بود."
                 if (quotes.isEmpty()) {
                     val cached = prefs.getString("payload", null)
@@ -124,7 +200,8 @@ fun MarketsDashboard(onClose: () -> Unit) {
             "طلا" -> q.family.contains("gold") || q.family.contains("coin") || q.id.contains("gold") || q.id in listOf("xau", "gram18", "gram24", "ounce")
             "رمزارز" -> q.family.contains("crypto") || q.id in listOf("btc", "eth", "sol", "xrp", "bnb", "doge", "trx", "ltc", "dot", "ton")
             "کالاها" -> q.family.contains("commodity") || q.family.contains("metal") || q.id.contains("oil") || q.id in listOf("brent", "wti", "natural-gas", "xag", "silver")
-            "بورس ایران", "بورس جهانی" -> false
+            "بورس ایران" -> q.family == "iran_stock"
+            "بورس جهانی" -> q.family == "global_stock"
             else -> true
         }
     }
@@ -191,7 +268,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(quote.name, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                Text("${quote.id.uppercase()}  •  ${if (quote.stale) "داده قدیمی" else "به‌روز"}  •  ${quote.updated.replace("T", " ")} UTC", color = Color(0xFF8D97A8), fontSize = 10.sp)
+                                Text("${quote.id.uppercase()}  •  ${quote.source}  •  ${if (quote.stale) "داده قدیمی" else "دریافت‌شده"}", color = Color(0xFF8D97A8), fontSize = 10.sp)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("${formatted(quote.price)} ${unitLabel(quote.unit)}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -209,7 +286,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
                 }
             }
 
-            Text("منبع قیمت‌های نمایش‌داده‌شده: NerkhAra  •  داده‌های بورس تا زمان اتصال منبع معتبر نمایش داده نمی‌شوند. قیمت‌ها صرفاً جهت اطلاع‌اند.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp).clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nerkhara.com/en/"))) })
+            Text("منابع عمومی بدون کلید: NerkhAra، Binance، Yahoo Finance، Frankfurter و TSETMC. نرخ مرجع ارز، نرخ آزاد ایران نیست. قیمت‌ها صرفاً جهت اطلاع‌اند.", color = Color(0xFF737E8E), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp).clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://nerkhara.com/en/"))) })
         }
     }
 }
