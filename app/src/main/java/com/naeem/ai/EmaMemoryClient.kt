@@ -106,6 +106,44 @@ class EmaMemoryClient {
         }
     }
 
+    suspend fun recordLearningEvent(
+        gatewayUrl: String,
+        accessToken: String,
+        eventType: String,
+        summary: String
+    ) = withContext(Dispatchers.IO) {
+        val root = gatewayUrl.trim().trimEnd('/')
+        val body = JSONObject().put("eventType", eventType).put("summary", summary.take(1800))
+        val request = Request.Builder()
+            .url("$root/v1/memory/learning-events")
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
+            .header("Authorization", "Bearer $accessToken")
+            .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) throw IllegalStateException(memoryError(response.code, raw))
+        }
+    }
+
+    suspend fun listLearningEvents(gatewayUrl: String, accessToken: String): List<String> =
+        withContext(Dispatchers.IO) {
+            val root = gatewayUrl.trim().trimEnd('/')
+            val request = Request.Builder()
+                .url("$root/v1/memory/learning-events")
+                .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
+                .header("Authorization", "Bearer $accessToken")
+                .get().build()
+            http.newCall(request).execute().use { response ->
+                val raw = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw IllegalStateException(memoryError(response.code, raw))
+                val events = JSONObject(raw).optJSONArray("events") ?: JSONArray()
+                (0 until events.length()).mapNotNull { i ->
+                    events.optJSONObject(i)?.optString("summary")?.takeIf { it.isNotBlank() }
+                }
+            }
+        }
+
     suspend fun getProfile(gatewayUrl: String, accessToken: String): EmaCloudProfile =
         withContext(Dispatchers.IO) {
             val root = gatewayUrl.trim().trimEnd('/')
