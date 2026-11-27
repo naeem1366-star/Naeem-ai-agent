@@ -14,15 +14,20 @@ Chat endpoint:
 
 The older `ema-api` function URL is obsolete for the current Android client.
 
-## Required Edge Function secrets
+## Edge Function environment and secrets
 
-Set these in Supabase Dashboard → Edge Functions → Secrets:
+Supabase injects the project environment variables into Edge Functions. The function reads:
 
-- `SUPABASE_URL` — project URL (normally provided by Supabase automatically)
-- `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY` — used to validate the user's access token
-- `SUPABASE_SERVICE_ROLE_KEY` — required for quota and privileged database operations; never expose it in the app
-- `CHAT_PRIMARY_API_KEY` — NetArz API key
-- `CHAT_SECONDARY_API_KEY` — GapGPT API key (fallback)
+- `SUPABASE_URL` — project URL (Supabase-provided)
+- `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY` — public client key used alongside the user's access token
+- `SUPABASE_SERVICE_ROLE_KEY` — privileged server key used for quota and database operations
+
+Do **not** try to create custom secrets with the reserved `SUPABASE_` prefix. Never expose the service-role key in the APK or GitHub.
+
+Create only the provider secrets in Supabase Dashboard → Edge Functions → Secrets:
+
+- `CHAT_PRIMARY_API_KEY` — NetArz API key (required for text chat)
+- `CHAT_SECONDARY_API_KEY` — GapGPT API key (optional fallback)
 
 Optional provider settings:
 
