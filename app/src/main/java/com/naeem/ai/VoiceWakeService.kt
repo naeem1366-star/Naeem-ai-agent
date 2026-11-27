@@ -229,7 +229,7 @@ class VoiceWakeService : Service() {
             return
         }
         val normalized = normalize(raw)
-        val wakeWords = listOf("ایما", "ایما جان", "ima", "hey ema", "هی ایما")
+        val wakeWords = listOf("ایما جان", "hey ema", "هی ایما", "ایما", "ima")
         val wake = wakeWords.firstOrNull { normalized.contains(it) }
         if (wake == null) {
             main.postDelayed({ startListening() }, 450)
