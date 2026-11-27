@@ -106,6 +106,25 @@ private fun fetchPublicMarketQuotes(): List<MarketQuote> {
         }
     }
     runCatching {
+        val root = JSONObject(get("https://call1.tgju.org/ajax.json"))
+        val current = root.optJSONObject("current") ?: error("TGJU feed shape changed")
+        val iranItems = listOf(
+            Triple("price_dollar_rl", "دلار آزاد", "currency"),
+            Triple("geram18", "طلای ۱۸ عیار", "gold"),
+            Triple("sekee", "سکه امامی", "gold"),
+            Triple("ons", "اونس جهانی طلا", "gold")
+        )
+        iranItems.forEach { (key, name, family) ->
+            val item = current.optJSONObject(key) ?: return@forEach
+            val raw = item.optString("p").replace(",", "").toDoubleOrNull() ?: return@forEach
+            val isGlobal = key == "ons"
+            val price = if (isGlobal) raw else raw / 10.0
+            val unit = if (isGlobal) "USD/oz" else "تومان"
+            result += MarketQuote(key, name, family, price, unit, null,
+                "TGJU public snapshot", false, "TGJU public feed")
+        }
+    }
+    runCatching {
         val url = "https://cdn.tsetmc.com/api/MarketData/GetMarketOverview/0"
         val root = JSONObject(get(url))
         val data = root.optJSONArray("marketOverview")
@@ -197,7 +216,7 @@ fun MarketsDashboard(onClose: () -> Unit) {
     val visible = quotes.filter { q ->
         when (selected) {
             "دلار و ارز" -> q.family.contains("currency") || q.id in listOf("usd", "eur", "gbp", "aed", "cny", "usdt")
-            "طلا" -> q.family.contains("gold") || q.family.contains("coin") || q.id.contains("gold") || q.id in listOf("xau", "gram18", "gram24", "ounce")
+            "طلا" -> q.family.contains("gold") || q.family.contains("coin") || q.id.contains("gold") || q.id in listOf("xau", "gram18", "gram24", "ounce", "geram18", "sekee", "ons")
             "رمزارز" -> q.family.contains("crypto") || q.id in listOf("btc", "eth", "sol", "xrp", "bnb", "doge", "trx", "ltc", "dot", "ton")
             "کالاها" -> q.family.contains("commodity") || q.family.contains("metal") || q.id.contains("oil") || q.id in listOf("brent", "wti", "natural-gas", "xag", "silver")
             "بورس ایران" -> q.family == "iran_stock"
