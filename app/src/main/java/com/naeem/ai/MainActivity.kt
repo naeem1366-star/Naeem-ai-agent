@@ -1096,7 +1096,12 @@ fun NaeemApp(
         scope.launch {
             try {
                 if (shouldGenerateImage) {
-                    val bitmap = imageClient.generate(baseUrl, apiKey, imageModel, finalQuestion)
+                    val bitmap = imageClient.generateViaGateway(
+                        BuildConfig.CHAT_GATEWAY_URL,
+                        chatAccessTokenProvider(),
+                        imageModel,
+                        finalQuestion
+                    )
                     dataStore.saveImage(bitmap, finalQuestion)
                     albumImages = dataStore.images()
                     messages.add(ChatMessage("تصویر ساخته شد و در آلبوم ذخیره شد.", false, bitmap.asImageBitmap()))

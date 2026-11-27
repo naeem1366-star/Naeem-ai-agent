@@ -87,9 +87,10 @@ Deno.serve(async (request: Request) => {
       if (!imageData.startsWith("data:image/") || imageData.length > 5_500_000) {
         return reply({ error: { code: "INVALID_PRODUCT_IMAGE", message: "عکس معتبر نیست یا حجم آن زیاد است." } }, 400);
       }
-      const providerKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-      const providerBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
-      const visionModel = Deno.env.get("CHAT_VISION_MODEL") || "gpt-4o-mini";
+      // Free image analysis uses GapGPT only. Never route this tool to paid NetArz.
+      const providerKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+      const providerBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
+      const visionModel = Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini";
       if (!providerKey || !providerBase.startsWith("https://")) {
         return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "سرویس تشخیص تصویر تنظیم نشده است." } }, 503);
       }
@@ -119,6 +120,43 @@ Deno.serve(async (request: Request) => {
         return reply({ error: { code: "VISION_EMPTY_RESULT", message: "مدل نتوانست محصول را تشخیص دهد." } }, 502);
       }
       return reply({ identification: content });
+    }
+
+    // Free image generation uses GapGPT only; no EMA wallet debit and no NetArz fallback.
+    if (request.method === "POST" && route === "/v1/images/generations") {
+      const body = await jsonBody(request);
+      const prompt = String(body?.prompt || "").trim();
+      const model = String(body?.model || Deno.env.get("CHAT_SECONDARY_IMAGE_MODEL") || "gpt-image-2").trim();
+      if (!prompt || prompt.length > 4000 || model.length > 120) {
+        return reply({ error: { code: "INVALID_IMAGE_REQUEST", message: "توضیح تصویر خالی یا بیش از حد طولانی است." } }, 400);
+      }
+      const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+      const gapgptBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
+      if (!gapgptKey || !gapgptBase.startsWith("https://")) {
+        return reply({ error: { code: "FREE_IMAGE_NOT_CONFIGURED", message: "سرویس ساخت تصویر رایگان GapGPT روی سرور تنظیم نشده است." } }, 503);
+      }
+      try {
+        const upstream = await fetch(gapgptBase + "/images/generations", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + gapgptKey, "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024", output_format: "png" }),
+          signal: AbortSignal.timeout(180000),
+        });
+        const raw = await upstream.text();
+        if (!upstream.ok) {
+          console.error("EMA GapGPT free image generation failed", { status: upstream.status, detail: raw.slice(0, 160) });
+          return reply({ error: { code: "FREE_IMAGE_PROVIDER_ERROR", message: "ساخت تصویر با GapGPT ناموفق بود (HTTP " + upstream.status + "). اعتبار و مدل تصویر را بررسی کن." } }, upstream.status);
+        }
+        let result: any;
+        try { result = JSON.parse(raw); } catch {
+          return reply({ error: { code: "FREE_IMAGE_INVALID_RESPONSE", message: "پاسخ GapGPT برای ساخت تصویر معتبر نبود." } }, 502);
+        }
+        console.log("EMA free image generated", { provider: "GapGPT", model });
+        return reply(result);
+      } catch (error) {
+        console.error("EMA GapGPT free image request failed", error instanceof Error ? error.message : "network error");
+        return reply({ error: { code: "FREE_IMAGE_PROVIDER_UNAVAILABLE", message: "سرویس ساخت تصویر GapGPT موقتاً در دسترس نیست؛ هیچ انتقالی به NetArz انجام نمی‌شود." } }, 503);
+      }
     }
 
     // Free text-to-speech uses GapGPT only. Never fall back to NetArz.

@@ -22,6 +22,63 @@ class ImageGenerationClient {
         .followRedirects(true)
         .build()
 
+    suspend fun generateViaGateway(
+        gatewayUrl: String,
+        accessToken: String,
+        model: String,
+        prompt: String
+    ): Bitmap = withContext(Dispatchers.IO) {
+        val root = gatewayUrl.trim().trimEnd('/')
+        require(root.startsWith("https://", ignoreCase = true)) { "نشانی درگاه امن ساخت تصویر تنظیم نشده است." }
+        require(accessToken.isNotBlank()) { "برای ساخت تصویر وارد حساب شو." }
+        require(prompt.isNotBlank()) { "توضیح تصویر را بنویس." }
+        val payload = JSONObject()
+            .put("model", model.trim().ifBlank { "gpt-image-2" })
+            .put("prompt", prompt.trim())
+            .put("n", 1)
+            .put("size", "1024x1024")
+            .put("output_format", "png")
+        val request = Request.Builder()
+            .url("$root/v1/images/generations")
+            .header("apikey", EmaSupabaseConfig.PUBLISHABLE_KEY)
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                val detail = runCatching {
+                    val json = JSONObject(raw)
+                    json.optJSONObject("error")?.optString("message")
+                        ?.takeIf { it.isNotBlank() } ?: json.optString("message").ifBlank { raw.take(600) }
+                }.getOrDefault(raw.take(600))
+                throw IllegalStateException("خطای ساخت تصویر با GapGPT (HTTP ${response.code}): $detail")
+            }
+            val responseJson = runCatching { JSONObject(raw) }.getOrElse {
+                throw IllegalStateException("پاسخ GapGPT برای تصویر JSON معتبر نیست.")
+            }
+            val imageItem = findImageObject(responseJson)
+                ?: throw IllegalStateException("پاسخ GapGPT داده یا لینک تصویر ندارد.")
+            val encodedValue = firstString(imageItem, "b64_json", "image_base64", "base64", "image")
+            val encodedImage = encodedValue?.let { value ->
+                if (value.startsWith("data:image/", true)) value.substringAfter("base64,", "")
+                else value
+            }?.takeIf { it.isNotBlank() }
+            val imageUrl = firstString(imageItem, "url", "image_url", "imageUrl")
+                ?.replace("\\/", "/")?.trim()
+                ?.takeIf { it.startsWith("https://", true) || it.startsWith("http://", true) }
+            val bytes = when {
+                !encodedImage.isNullOrBlank() -> decodeBase64(encodedImage)
+                    ?: throw IllegalStateException("داده تصویر برگشتی قابل رمزگشایی نیست.")
+                !imageUrl.isNullOrBlank() -> downloadImage(imageUrl)
+                else -> throw IllegalStateException("پاسخ GapGPT فاقد تصویر قابل استفاده است.")
+            }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                ?: throw IllegalStateException("تصویر برگشتی GapGPT قابل نمایش نیست.")
+        }
+    }
+
     suspend fun generate(
         baseUrl: String,
         apiKey: String,
