@@ -449,8 +449,8 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                         fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(18.dp))
                     Text(
-                        if (isEnglish) "EMA is inspired by understanding intent beyond literal words. You do not always need a precise command. Talk about your day, ideas, and concerns. With listening enabled, EMA can hear you and, with your permission, remember useful details."
-                        else "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nلازم نیست همیشه دستور مشخصی داشته باشی. می‌توانی با ایما صحبت کنی، از اتفاقات روزمره، ایده‌ها و دغدغه‌هایت بگویی. ایما با فعال‌کردن قابلیت شنیدن، صحبت‌هایت را دریافت می‌کند و با اجازه تو، نکات مهم را به خاطر می‌سپارد.",
+                        if (isEnglish) "EMA understands intent beyond literal words. You can talk naturally about your day, ideas, and plans. When you turn on the voice standby control, say “EMA” to hear “I’m here.” Then say “be on the lookout” to enable smart listening; say “EMA, stop listening” to turn smart listening off and return to wake-word standby. The microphone is active only while the voice service is enabled, with a visible Android notification. In this version, spoken food and workout logging are supported; broader online analysis and routing to all EMA spaces are still being completed."
+                        else "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nمی‌توانی طبیعی و راحت درباره اتفاقات روزمره، ایده‌ها و برنامه‌هایت صحبت کنی. وقتی کنترل آماده‌باش صوتی را روشن کنی، با گفتن «ایما» پاسخ «در خدمتم» را می‌شنوی. سپس با گفتن «ایما، به گوش باش» حالت شنود هوشمند فعال می‌شود؛ برای توقف آن بگو «ایما، شنود رو خاموش کن» تا ایما به حالت آماده‌باش برگردد. میکروفون فقط وقتی سرویس صوتی را خودت فعال کرده‌ای کار می‌کند و اعلان دائمی اندروید وضعیت آن را نشان می‌دهد. در این نسخه، ثبت صوتی غذا و تمرین پشتیبانی می‌شود؛ تحلیل آنلاین سایر موضوعات و هدایت کامل اطلاعات به همه فضاهای ایما هنوز در حال تکمیل است.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
                 } else {
                     Text(appText("ایما چه کارهایی انجام می‌دهد؟", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall,
@@ -2514,7 +2514,7 @@ private data class GuidedTourItem(val target: String, val title: String, val des
 
 private val guidedTourItems = listOf(
     GuidedTourItem("گوی هوشمند", "گفت‌وگو و درک درخواست", "سؤال بپرس، درباره روزت حرف بزن یا تصویر بفرست. دستیار موضوع را تشخیص می‌دهد و از ابزارهای متصل کمک می‌گیرد."),
-    GuidedTourItem("میکروفون", "صحبت کن، نه فقط تایپ", "با لمس میکروفون گفتارت به متن تبدیل می‌شود. میکروفون فقط با انتخاب تو فعال می‌شود و شنود دائمی وجود ندارد."),
+    GuidedTourItem("دستیار صوتی ایما", "آماده‌باش و شنود هوشمند", "با روشن‌کردن کنترل موج صوتی، ایما در حالت آماده‌باش می‌ماند. بگو «ایما» تا پاسخ «در خدمتم» را بشنوی؛ سپس «ایما، به گوش باش» را برای فعال‌کردن شنود هوشمند بگو. برای توقف بگو «ایما، شنود رو خاموش کن». فعلاً ثبت صوتی غذا و تمرین فعال است و تحلیل سایر موضوعات در حال توسعه است."),
     GuidedTourItem("منوی فضاها", "ابزار مناسب هر موضوع", "ورزش، تغذیه، مالی، سفر، اتاق فکر، حافظه و بقیه فضاها را از اینجا باز کن. برای نمونه، می‌توانی یک روایت روزانه بگویی تا بخش‌های مختلفش در روزنگار دسته‌بندی شوند."),
     GuidedTourItem("تأیید و گزارش", "اطلاعاتت را مرور کن", "پیش از عملیات مهم، جزئیات را بررسی و تأیید کن. از «روایت هفته و ماه» جمع‌بندی داده‌های ثبت‌شده را ببین؛ دکمه راهنما هم همیشه برای مرور دوباره در دسترس است.")
 )
@@ -2528,7 +2528,7 @@ private fun GuidedTourOverlay(step: Int, targetBounds: Rect, isEnglish: Boolean,
     val titlesEn = listOf("Conversation & understanding", "Speak, don't just type", "The right tool for every topic", "Review your information")
     val descriptionsEn = listOf(
         "Ask a question, talk about your day, or share an image. EMA identifies the topic and uses connected tools when available.",
-        "Tap the microphone to turn your speech into text. It only activates when you choose; there is no always-on listening.",
+        "Turn on EMA voice standby from the sound-wave control. Say “EMA” to hear “I’m here,” then “be on the lookout” to enable smart listening. Say “EMA, stop listening” to return to standby. Spoken food and workout logging are currently supported; broader smart analysis is still in development.",
         "Open sports, nutrition, finance, travel, think room, memory, and other spaces here. For example, tell EMA about your day and review the organized entries in your journal.",
         "Review and confirm important actions before they are saved. Use Weekly & monthly review to see summaries of recorded information. You can reopen this guide whenever you need."
     )
