@@ -6,7 +6,7 @@ on:
       - "backend/auth-worker/**"
       - ".github/workflows/backend-checks.yml"
   pull_request:
-    branches: ["feature/ema-asi-platform"]
+    branches: ["feature/ema-asi-platform", "feature/ema-netarz-paid-ai-routing-fix"]
     paths:
       - "backend/auth-worker/**"
       - ".github/workflows/backend-checks.yml"
