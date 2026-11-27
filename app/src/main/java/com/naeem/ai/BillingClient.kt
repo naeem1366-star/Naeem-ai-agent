@@ -24,7 +24,7 @@ class BillingClient(private val gatewayUrl:String) {
         val root=gatewayUrl.trim().trimEnd('/')
         require(root.startsWith("https://",true)) { "درگاه امن EMA هنوز برای این نسخه تنظیم نشده است." }
         require(token.isNotBlank()) { "نشست ورود منقضی شده است؛ دوباره وارد حساب شو." }
-        val builder=Request.Builder().url(root+path).header("Authorization","Bearer "+token).header("Accept","application/json")
+        val builder=Request.Builder().url(root+path).header("apikey",EmaSupabaseConfig.PUBLISHABLE_KEY).header("Authorization","Bearer "+token).header("Accept","application/json")
         val requestBody=body?.toString()?.toRequestBody("application/json; charset=utf-8".toMediaType())
         when(method) {
             "POST" -> builder.post(requestBody ?: "{}".toRequestBody("application/json".toMediaType()))
