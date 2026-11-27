@@ -13,6 +13,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -112,8 +113,11 @@ fun CinemaDashboard(onClose: () -> Unit) {
                         color = Color(0xFF121B29),
                         shape = RoundedCornerShape(15.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF29384B)),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { selected = provider; pageTitle = provider.name; pageError = "" }
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            selected = provider
+                            pageTitle = provider.name
+                            pageError = ""
+                        }
                     ) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Surface(color = Color(0xFF20334A), shape = RoundedCornerShape(12.dp)) {
