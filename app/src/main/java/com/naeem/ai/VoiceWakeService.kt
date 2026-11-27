@@ -50,6 +50,7 @@ class VoiceWakeService : Service() {
     private var ttsReady = false
     private var listening = false
     private var commandArmed = false
+    private var smartListening = false
     private var restartAfterSpeech = false
     private var destroyed = false
     private lateinit var router: AssistantActionRouter
@@ -65,6 +66,7 @@ class VoiceWakeService : Service() {
             )
         )
         createNotificationChannel()
+        smartListening = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("smart_listening", false)
         tts = TextToSpeech(applicationContext) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) {
@@ -111,6 +113,7 @@ class VoiceWakeService : Service() {
         }
         startForeground(NOTIFICATION_ID, buildNotification())
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(PREF_ENABLED, true).apply()
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
         startListening()
         return START_NOT_STICKY
     }
@@ -129,7 +132,7 @@ class VoiceWakeService : Service() {
         }
     }
 
-    private fun buildNotification(message: String = "برای صحبت بگو «ایما». برای خاموش‌کردن، توقف را بزن."): Notification {
+    private fun buildNotification(message: String? = null): Notification {
         val openApp = PendingIntent.getActivity(
             this, 7313, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -140,8 +143,8 @@ class VoiceWakeService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle("ایما آماده شنیدن است")
-            .setContentText("برای صحبت بگو «ایما». ممکن است سرویس گفتار گوشی از اینترنت استفاده کند. برای خاموش‌کردن، توقف را بزن.")
+            .setContentTitle(if (smartListening) "ایما در حالت شنود هوشمند است" else "ایما آماده شنیدن است")
+            .setContentText(message ?: if (smartListening) "شنود هوشمند فعال است. برای توقف بگو «ایما، شنود رو خاموش کن» یا دکمه توقف را بزن." else "برای شروع بگو «ایما». برای فعال‌سازی شنود هوشمند بگو «به گوش باش». برای خاموش‌کردن کامل، توقف را بزن.")
             .setContentIntent(openApp)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -223,6 +226,11 @@ class VoiceWakeService : Service() {
             main.postDelayed({ startListening() }, 500)
             return
         }
+        if (smartListening && isStopListeningPhrase(raw)) {
+            setSmartListening(false)
+            speak("شنود هوشمند خاموش شد. ایما همچنان آماده شنیدن است.", true)
+            return
+        }
         if (commandArmed) {
             commandArmed = false
             processCommand(raw)
@@ -246,6 +254,17 @@ class VoiceWakeService : Service() {
     }
 
     private fun processCommand(command: String) {
+        val normalized = normalize(command)
+        if (normalized.contains("به گوش باش") || normalized.contains("بگوش باش")) {
+            setSmartListening(true)
+            speak("شنود هوشمند فعال شد. برای توقف بگو ایما، شنود رو خاموش کن.", true)
+            return
+        }
+        if (isStopListeningPhrase(normalized)) {
+            setSmartListening(false)
+            speak("شنود هوشمند خاموش شد. ایما همچنان آماده شنیدن است.", true)
+            return
+        }
         scope.launch {
             val reply = when (val resolution = PersianAssistantIntentResolver.resolve(command)) {
                 AssistantIntentResolution.NoMatch ->
@@ -283,6 +302,21 @@ class VoiceWakeService : Service() {
         }
     }
 
+    private fun isStopListeningPhrase(value: String): Boolean {
+        val normalized = normalize(value)
+        return normalized.contains("شنود رو خاموش کن") ||
+            normalized.contains("شنود را خاموش کن") ||
+            normalized.contains("شنود رو متوقف کن") ||
+            normalized.contains("شنود را متوقف کن")
+    }
+
+    private fun setSmartListening(enabled: Boolean) {
+        smartListening = enabled
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("smart_listening", enabled).apply()
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
+    }
+
     private fun speak(text: String, listenAgain: Boolean) {
         restartAfterSpeech = listenAgain
         val engine = tts
@@ -318,7 +352,10 @@ class VoiceWakeService : Service() {
         destroyed = true
         listening = false
         restartAfterSpeech = false
-        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(PREF_ENABLED, false).apply()
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(PREF_ENABLED, false)
+            .putBoolean("smart_listening", false)
+            .apply()
         runCatching { recognizer?.cancel() }
         runCatching { recognizer?.destroy() }
         recognizer = null
