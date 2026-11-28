@@ -101,6 +101,34 @@ import kotlinx.coroutines.CompletableDeferred
 import com.naeem.ai.core.assistant.*
 import java.io.File
 
+internal fun pinEmaModuleShortcut(context: Context, moduleTitle: String, shortcutLabel: String) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+        android.widget.Toast.makeText(context, "میانبر صفحه اصلی در این نسخه اندروید پشتیبانی نمی‌شود.", android.widget.Toast.LENGTH_LONG).show()
+        return
+    }
+    val manager = context.getSystemService(android.content.pm.ShortcutManager::class.java)
+    if (manager == null || !manager.isRequestPinShortcutSupported) {
+        android.widget.Toast.makeText(context, "لانچر گوشی اجازه افزودن میانبر را نمی‌دهد.", android.widget.Toast.LENGTH_LONG).show()
+        return
+    }
+    val safeId = moduleTitle.lowercase().map { if (it.isLetterOrDigit()) it else '_' }.joinToString("").take(35)
+    val launch = Intent(context, MainActivity::class.java).apply {
+        action = "com.naeem.ai.OPEN_EMA_MODULE"
+        putExtra("ema_shortcut_module", moduleTitle)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    }
+    val shortcut = android.content.pm.ShortcutInfo.Builder(context, "ema_module_$safeId")
+        .setShortLabel(shortcutLabel.take(25))
+        .setLongLabel("EMA · $shortcutLabel")
+        .setIcon(android.graphics.drawable.Icon.createWithResource(context, R.mipmap.ic_launcher_round))
+        .setIntent(launch)
+        .build()
+    runCatching { manager.requestPinShortcut(shortcut, null) }
+        .onFailure {
+            android.widget.Toast.makeText(context, "افزودن میانبر ناموفق بود: ${it.message ?: "خطا"}", android.widget.Toast.LENGTH_LONG).show()
+        }
+}
+
 @Composable
 private fun GeminiStyleBackdrop(content: @Composable () -> Unit) {
     SupraGlassBackdrop { content() }
@@ -198,9 +226,17 @@ data class ChatMessage(val text: String, val fromUser: Boolean, val image: andro
 
 class MainActivity : FragmentActivity() {
     private val introCompleted = mutableStateOf(false)
+    private val shortcutModule = mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        shortcutModule.value = intent.getStringExtra("ema_shortcut_module")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        shortcutModule.value = intent.getStringExtra("ema_shortcut_module")
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val store = SecureConfigStore(this)
@@ -264,16 +300,50 @@ class MainActivity : FragmentActivity() {
                             auth,
                             isEnglish = appLanguage.value == "en",
                             onAuthenticated = { session -> authSession.value = session; guestMode.value = false; appPrefs.edit().putBoolean("guest_mode", false).apply(); showAuthScreen.value = false },
-                            onGuestAccess = { guestMode.value = true; appPrefs.edit().putBoolean("guest_mode", true).apply(); showAuthScreen.value = false }
+                            onGuestAccess = {
+                                authScope.launch {
+                                    runCatching { auth.signInAnonymously() }
+                                        .onSuccess { result ->
+                                            authSession.value = result.session
+                                            guestMode.value = true
+                                            appPrefs.edit().putBoolean("guest_mode", true).apply()
+                                            showAuthScreen.value = false
+                                        }
+                                        .onFailure { failure ->
+                                            authSession.value = null
+                                            guestMode.value = true
+                                            appPrefs.edit().putBoolean("guest_mode", true).apply()
+                                            showAuthScreen.value = false
+                                            // Keep guest access available locally if anonymous Auth is disabled;
+                                            // the secure cloud chat will ask for sign-in instead of crashing.
+                                        }
+                                }
+                            }
                         )
                     } else if (showAuthScreen.value) {
                         SupabaseAuthScreen(
                             auth,
                             isEnglish = appLanguage.value == "en",
                             onAuthenticated = { session -> authSession.value = session; guestMode.value = false; appPrefs.edit().putBoolean("guest_mode", false).apply(); showAuthScreen.value = false },
-                            onGuestAccess = { showAuthScreen.value = false }
+                            onGuestAccess = {
+                                authScope.launch {
+                                    runCatching { auth.signInAnonymously() }
+                                        .onSuccess { result ->
+                                            authSession.value = result.session
+                                            guestMode.value = true
+                                            appPrefs.edit().putBoolean("guest_mode", true).apply()
+                                            showAuthScreen.value = false
+                                        }
+                                        .onFailure {
+                                            authSession.value = null
+                                            guestMode.value = true
+                                            appPrefs.edit().putBoolean("guest_mode", true).apply()
+                                            showAuthScreen.value = false
+                                        }
+                                }
+                            }
                         )
-                    } else if (authSession.value != null && !profileCompleted.value) {
+                    } else if (authSession.value != null && !guestMode.value && !profileCompleted.value) {
                         UserProfileSetup(isEnglish = appLanguage.value == "en", onSave = { name, interests, about, style ->
                             profilePrefs.edit()
                                 .putString("user_name", name)
@@ -287,6 +357,7 @@ class MainActivity : FragmentActivity() {
                     } else {
                         NaeemApp(
                             store,
+                            requestedModule = shortcutModule.value,
                             onExternalActivityStarted = {},
                             onExternalActivityReturned = {},
                             userEmail = authSession.value?.email.orEmpty(),
@@ -401,6 +472,22 @@ private fun UserProfileSetup(isEnglish: Boolean = false, onSave: (String, String
 
 @Composable
 private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit) {
+    val context = LocalContext.current
+    val voicePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
+    var voiceEnabled by remember { mutableStateOf(voicePrefs.getBoolean("enabled", false)) }
+    var voiceStatus by remember { mutableStateOf("") }
+    val voicePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        if (permissions[android.Manifest.permission.RECORD_AUDIO] == true) {
+            runCatching {
+                context.startForegroundService(Intent(context, VoiceWakeService::class.java))
+                voicePrefs.edit().putBoolean("enabled", true).apply()
+                voiceEnabled = true
+                voiceStatus = "شنود صوتی روشن شد؛ برای خاموش‌کردن دوباره همین دکمه را بزن."
+            }.onFailure { voiceStatus = "راه‌اندازی شنود ناموفق بود: ${it.message ?: "خطای نامشخص"}" }
+        } else {
+            voiceStatus = "برای شنود، اجازه میکروفون لازم است. بدون این اجازه، ایما به میکروفون دسترسی ندارد."
+        }
+    }
     var page by remember { mutableIntStateOf(-1) }
     val silver = Color(0xFFE8EDF5)
     val muted = Color(0xFFB9C5D5)
@@ -452,7 +539,7 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                         if (isEnglish) "EMA understands intent beyond literal words. You can talk naturally about your day, ideas, and plans. When you turn on the voice standby control, say “EMA” to hear “I’m here.” Then say “be on the lookout” to enable smart listening; say “EMA, stop listening” to turn smart listening off and return to wake-word standby. The microphone is active only while the voice service is enabled, with a visible Android notification. In this version, spoken food and workout logging are supported; broader online analysis and routing to all EMA spaces are still being completed."
                         else "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nمی‌توانی طبیعی و راحت درباره اتفاقات روزمره، ایده‌ها و برنامه‌هایت صحبت کنی. وقتی کنترل آماده‌باش صوتی را روشن کنی، با گفتن «ایما» پاسخ «در خدمتم» را می‌شنوی. سپس با گفتن «ایما، به گوش باش» حالت شنود هوشمند فعال می‌شود؛ برای توقف آن بگو «ایما، شنود رو خاموش کن» تا ایما به حالت آماده‌باش برگردد. میکروفون فقط وقتی سرویس صوتی را خودت فعال کرده‌ای کار می‌کند و اعلان دائمی اندروید وضعیت آن را نشان می‌دهد. در این نسخه، ثبت صوتی غذا و تمرین پشتیبانی می‌شود؛ تحلیل آنلاین سایر موضوعات و هدایت کامل اطلاعات به همه فضاهای ایما هنوز در حال تکمیل است.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
-                } else {
+                } else if (page == 1) {
                     Text(appText("ایما چه کارهایی انجام می‌دهد؟", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
@@ -463,10 +550,23 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                     Spacer(Modifier.height(20.dp))
                     Text(appText("تو زندگی کن؛ ایما حواسش هست.", isEnglish), color = silver, style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                } else {
+                    Text(if (isEnglish) "EMA Voice Standby" else "شنود صوتی ایما", color = silver,
+                        style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        if (isEnglish) "When you enable this control, EMA keeps a microphone listening service running in the background. It can recognize the wake word and supported voice commands. Android shows a persistent notification while the microphone service is active. You can turn it off here or from inside EMA. Microphone permission is requested only when you press Enable. Voice standby can use battery and network, and Persian recognition depends on the speech service installed on your phone."
+                        else "با روشن‌کردن این گزینه، سرویس شنود میکروفون ایما در پس‌زمینه فعال می‌ماند تا فرمان بیدارباش و فرمان‌های صوتی پشتیبانی‌شده را تشخیص دهد. تا وقتی سرویس فعال است، اندروید اعلان دائمی وضعیت میکروفون را نشان می‌دهد. هر زمان بخواهی می‌توانی شنود را از همین صفحه یا داخل برنامه خاموش کنی. اجازه میکروفون فقط زمانی درخواست می‌شود که خودت دکمه روشن‌کردن را بزنی. این قابلیت ممکن است از باتری و اینترنت استفاده کند و کیفیت تشخیص فارسی به موتور گفتار نصب‌شده روی گوشی بستگی دارد.",
+                        color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp,
+                        textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
+                    Spacer(Modifier.height(12.dp))
+                    Text(if (isEnglish) "Privacy: EMA does not activate this microphone service until you explicitly enable it." else "حریم خصوصی: ایما تا زمانی که خودت شنود را روشن نکنی، این سرویس میکروفون را فعال نمی‌کند.",
+                        color = Color(0xFFB9D8FF), style = MaterialTheme.typography.bodyMedium,
+                        textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
                 }
                 Spacer(Modifier.height(24.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    repeat(2) { index ->
+                    repeat(3) { index ->
                         Box(Modifier.padding(horizontal = 4.dp).size(if (page == index) 9.dp else 7.dp)
                             .background(if (page == index) Color(0xFFDCE8FA) else Color(0x667D97BA), CircleShape))
                     }
@@ -476,13 +576,48 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                     Button(onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
                         shape = RoundedCornerShape(17.dp)) { Text(appText("ادامه", isEnglish), fontWeight = FontWeight.Bold) }
-                } else {
+                } else if (page == 1) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
                             shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", isEnglish), color = silver) }
-                        Button(onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                        Button(onClick = { page = 2 }, modifier = Modifier.weight(1f).height(54.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                            shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", isEnglish), fontWeight = FontWeight.Bold) }
+                            shape = RoundedCornerShape(17.dp)) { Text(appText("تنظیم شنود صوتی", isEnglish), fontWeight = FontWeight.Bold) }
+                    }
+                } else {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            onClick = {
+                                if (voiceEnabled) {
+                                    context.stopService(Intent(context, VoiceWakeService::class.java))
+                                    voicePrefs.edit().putBoolean("enabled", false).putBoolean("smart_listening", false).putString("state", "stopped").apply()
+                                    voiceEnabled = false
+                                    voiceStatus = "شنود صوتی خاموش شد."
+                                } else {
+                                    val needed = mutableListOf<String>()
+                                    if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) needed.add(android.Manifest.permission.RECORD_AUDIO)
+                                    if (android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) needed.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    if (needed.isEmpty()) {
+                                        runCatching {
+                                            context.startForegroundService(Intent(context, VoiceWakeService::class.java))
+                                            voicePrefs.edit().putBoolean("enabled", true).apply()
+                                            voiceEnabled = true
+                                            voiceStatus = "شنود صوتی روشن شد؛ اعلان وضعیت در نوار اعلان‌ها دیده می‌شود."
+                                        }.onFailure { voiceStatus = "راه‌اندازی شنود ناموفق بود: ${it.message ?: "خطای نامشخص"}" }
+                                    } else voicePermissionLauncher.launch(needed.toTypedArray())
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (voiceEnabled) Color(0xFF247B58) else Color(0xFFDCE8FA), contentColor = if (voiceEnabled) Color.White else Color(0xFF101A2A)),
+                            shape = RoundedCornerShape(17.dp)
+                        ) { Text(if (voiceEnabled) "خاموش‌کردن شنود صوتی" else "روشن‌کردن شنود صوتی", fontWeight = FontWeight.Bold) }
+                        if (voiceStatus.isNotBlank()) Text(voiceStatus, color = muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(onClick = { page = 1 }, modifier = Modifier.weight(1f).height(54.dp), shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", isEnglish), color = silver) }
+                            Button(onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
+                                shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", isEnglish), fontWeight = FontWeight.Bold) }
+                        }
                     }
                 }
             }
@@ -640,6 +775,7 @@ private fun appText(value: String, english: Boolean): String {
 @Composable
 fun NaeemApp(
     store: SecureConfigStore,
+    requestedModule: String? = null,
     onExternalActivityStarted: () -> Unit,
     onExternalActivityReturned: () -> Unit,
     onSignOut: () -> Unit = {},
@@ -680,6 +816,8 @@ fun NaeemApp(
     var selectedImage by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var imageMode by remember { mutableStateOf(false) }
     var prompt by remember { mutableStateOf("") }
+    var selectedFileText by remember { mutableStateOf<String?>(null) }
+    var selectedFileName by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
@@ -710,8 +848,13 @@ fun NaeemApp(
     var deleteConversationTarget by remember { mutableStateOf<StoredConversation?>(null) }
     var renameConversationDraft by remember { mutableStateOf("") }
     val dataStore = remember { AssistantDataStore(context) }
+    val cloudMemoryClient = remember { EmaMemoryClient() }
     val deepSearchClient = remember { DeepSearchClient() }
     var memories by remember { mutableStateOf(dataStore.memories()) }
+    var cloudMemoryItems by remember { mutableStateOf<List<EmaCloudMemory>>(emptyList()) }
+    var cloudMemorySyncEnabled by remember { mutableStateOf(dataStore.memorySyncEnabled()) }
+    var cloudMemoryStatus by remember { mutableStateOf("") }
+    var cloudMemoryLoading by remember { mutableStateOf(false) }
     var albumImages by remember { mutableStateOf(dataStore.images()) }
     val ledgerStore = remember { LedgerStore(context) }
     var ledgerEntries by remember { mutableStateOf(ledgerStore.entries()) }
@@ -759,6 +902,38 @@ fun NaeemApp(
     var showPlanner by remember { mutableStateOf(false) }
     var showThinkRoom by remember { mutableStateOf(false) }
     var showFutureGateway by remember { mutableStateOf(false) }
+    LaunchedEffect(requestedModule) {
+        when (requestedModule) {
+            "سفر و هم‌سفرها" -> showTravel = true
+            "Naeem Trail" -> showTrail = true
+            "باشگاه ورزش" -> showSports = true
+            "نبض بازار" -> showMarkets = true
+            "اتاق فکر" -> showThinkRoom = true
+            "به آینده وارد شو" -> showFutureGateway = true
+            "اخبار مهم" -> showNews = true
+            "یادآور دارو" -> showMedication = true
+            "نوت‌بوک" -> showPlanner = true
+            "دفتر مالی" -> { showFinance = true; ledgerEntries = ledgerStore.entries() }
+            "روایت هفته و ماه" -> showWrapped = true
+            "روزنگار من" -> showJournal = true
+            "سلامت و تغذیه" -> showHealth = true
+            "حافظه هوشمند" -> { showMemory = true; memories = dataStore.memories() }
+            "آلبوم تصاویر" -> { showAlbum = true; albumImages = dataStore.images() }
+            "بازی‌ها" -> showGames = true
+            "سینما" -> showDiscover = true
+            "پادکست" -> showPodcast = true
+            "تحلیل عکس" -> showProductLens = true
+            "استودیو ایما" -> showVideoCreator = true
+            "ساخت ویدیو رایگان مبتدی" -> showBeginnerVideo = true
+            "ساخت ویدیوی پیشرفته" -> showProfessionalVideo = true
+            "موسیقی" -> { showMusic = true; musicCreationStart = false }
+            "ساخت موسیقی با هوش مصنوعی" -> { showMusic = true; musicCreationStart = true }
+            "تحلیل اینستاگرام" -> showSocialAnalytics = true
+            "تنظیمات" -> showSettings = true
+            "اتصال به کامپیوتر" -> showPcControl = true
+            "کیف پول و اشتراک" -> showWallet = true
+        }
+    }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
@@ -831,33 +1006,57 @@ fun NaeemApp(
         return if (paidFeature != null) {
             client.sendViaPaidGateway(gateway, currentAccessToken, paidFeature, model, text)
         } else {
-            client.sendViaGateway(gateway, currentAccessToken, model, text, image)
+            client.sendViaGateway(
+                gateway, currentAccessToken, model, text, image,
+                history = messages.dropLast(1).takeLast(16).map { it.fromUser to it.text }
+            )
         }
     }
     val imageClient = remember { ImageGenerationClient() }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val textFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             try {
-                val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-                    ?: throw IllegalStateException("خواندن تصویر انتخاب‌شده ممکن نشد.")
-                val scale = minOf(1f, 1280f / maxOf(source.width, source.height).toFloat())
-                val resized = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true) else source
-                val output = ByteArrayOutputStream()
-                resized.compress(Bitmap.CompressFormat.JPEG, 82, output)
-                selectedImageBase64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
-                selectedImage = resized.asImageBitmap()
-                imageMode = false
+                val text = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: throw IllegalStateException("خواندن فایل انتخاب‌شده ممکن نشد.")
+                if (text.isBlank()) throw IllegalStateException("فایل انتخاب‌شده خالی است.")
+                if (text.length > 120_000) throw IllegalStateException("حجم متن فایل بیش از ۱۲۰ هزار نویسه است؛ لطفاً فایل کوچک‌تری انتخاب کن.")
+                selectedFileText = text
+                selectedFileName = uri.lastPathSegment?.substringAfterLast('/')?.take(90) ?: "فایل متنی"
                 error = ""
             } catch (e: Exception) {
-                selectedImageBase64 = null
-                selectedImage = null
-                error = e.message ?: "خطا در آماده‌سازی تصویر"
+                selectedFileText = null
+                selectedFileName = null
+                error = e.message ?: "خواندن فایل ناموفق بود."
+            }
+        }
+    }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val source = withContext(Dispatchers.IO) { decodeSampledImage(context, uri, 1600) }
+                        ?: throw IllegalStateException("خواندن تصویر انتخاب‌شده ممکن نشد.")
+                    val scale = minOf(1f, 1280f / maxOf(source.width, source.height).toFloat())
+                    val resized = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true) else source
+                    val output = ByteArrayOutputStream()
+                    resized.compress(Bitmap.CompressFormat.JPEG, 82, output)
+                    selectedImageBase64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+                    selectedImage = resized.asImageBitmap()
+                    imageMode = false
+                    error = ""
+                } catch (e: Exception) {
+                    selectedImageBase64 = null
+                    selectedImage = null
+                    error = e.message ?: "خطا در آماده‌سازی تصویر"
+                }
             }
         }
     }
     val audioClient = remember { AudioSpeechClient() }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var speechPlaying by remember { mutableStateOf(false) }
+    var speechCaption by remember { mutableStateOf("") }
+    var speechCaptionVisibleWords by remember { mutableIntStateOf(0) }
     var conversationMode by remember { mutableStateOf(false) }
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -865,6 +1064,7 @@ fun NaeemApp(
     var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
     var smartListeningEnabled by remember { mutableStateOf(wakePrefs.getBoolean("smart_listening", false)) }
     var showVoiceHelp by remember { mutableStateOf(false) }
+    var showComposerMenu by remember { mutableStateOf(false) }
     DisposableEffect(wakePrefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             if (key == "enabled") wakeAssistantEnabled = prefs?.getBoolean("enabled", false) ?: false
@@ -878,13 +1078,10 @@ fun NaeemApp(
     ) { permissions ->
         if (permissions[android.Manifest.permission.RECORD_AUDIO] == true) {
             runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
-                .onSuccess {
-                    wakeAssistantEnabled = true
-                    wakePrefs.edit().putBoolean("enabled", true).apply()
-                }
                 .onFailure {
                     wakeAssistantEnabled = false
                     wakePrefs.edit().putBoolean("enabled", false).apply()
+                    error = "فعال‌سازی شنود صوتی ناموفق بود: ${it.message ?: "خطای نامشخص"}"
                 }
         } else {
             wakeAssistantEnabled = false
@@ -900,6 +1097,7 @@ fun NaeemApp(
         mediaPlayer = null
         speechPlaying = false
         speechPaused = false
+        speechCaptionVisibleWords = 0
     }
 
     fun playAnswer(text: String, continueListening: Boolean = false) {
@@ -907,6 +1105,8 @@ fun NaeemApp(
         speechJob = scope.launch {
             speechPlaying = true
             speechPaused = false
+            speechCaption = text
+            speechCaptionVisibleWords = 0
             try {
                 val textChunks = audioClient.splitText(text)
                 for (textChunk in textChunks) {
@@ -937,7 +1137,20 @@ fun NaeemApp(
                             if (continuation.isActive) continuation.resumeWithException(IllegalStateException("پخش یکی از بخش‌های صدای فارسی ناموفق بود."))
                             true
                         }
-                        player.setOnPreparedListener { prepared -> if (continuation.isActive) prepared.start() }
+                        player.setOnPreparedListener { prepared ->
+                            if (continuation.isActive) {
+                                prepared.start()
+                                val wordsInChunk = textChunk.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                                scope.launch {
+                                    val wordDelay = (prepared.duration.toLong() / wordsInChunk.size.coerceAtLeast(1)).coerceIn(110L, 650L)
+                                    wordsInChunk.forEach {
+                                        if (!isActive || !speechPlaying) return@launch
+                                        speechCaptionVisibleWords = (speechCaptionVisibleWords + 1).coerceAtMost(speechCaption.split(Regex("\\s+")).size)
+                                        delay(wordDelay)
+                                    }
+                                }
+                            }
+                        }
                         continuation.invokeOnCancellation {
                             runCatching { player.release() }
                             generatedFile.delete()
@@ -1102,7 +1315,7 @@ fun NaeemApp(
     SideEffect { startVoiceCapture = beginListening }
 
     LaunchedEffect(Unit) {
-        if (welcomeAudioEnabled && apiKey.isNotBlank()) {
+        if (welcomeAudioEnabled && BuildConfig.CHAT_GATEWAY_URL.isNotBlank() && chatAccessToken.isNotBlank()) {
             delay(850)
             if (!busy && !speechPlaying) playAnswer("به ایما خوش آمدید. خوشحالم که دوباره اینجایی. هر وقت آماده‌ای، از من چیزی بپرس یا با صدای خودت صحبت کن.")
         }
@@ -1112,7 +1325,9 @@ fun NaeemApp(
         val question = prompt.trim()
         val imageToSend = selectedImageBase64
         val imagePreview = selectedImage
-        if ((question.isBlank() && imageToSend.isNullOrBlank()) || busy) return
+        val fileTextToSend = selectedFileText
+        val fileNameToSend = selectedFileName
+        if ((question.isBlank() && imageToSend.isNullOrBlank() && fileTextToSend.isNullOrBlank()) || busy) return
         // Intercept labelled credentials locally before they can enter chat history or leave the device.
         val parsedApiConfig = if (imageToSend.isNullOrBlank()) ApiConfigTextParser.parse(question) else null
         if (parsedApiConfig != null) {
@@ -1121,12 +1336,15 @@ fun NaeemApp(
             error = ""
             return
         }
-        val finalQuestion = question.ifBlank { "این تصویر را با جزئیات بررسی و تحلیل کن." }
-        val shouldGenerateImage = imageMode || isImageGenerationRequest(finalQuestion)
+        val fileContext = fileTextToSend?.let { "\n\nمحتوای فایل پیوست «${fileNameToSend ?: "فایل متنی"}»:\n$it" }.orEmpty()
+        val finalQuestion = (question.ifBlank { if (imageToSend != null) "این تصویر را با جزئیات بررسی و تحلیل کن." else "این فایل را بررسی کن." } + fileContext).trim()
+        val shouldGenerateImage = imageMode || (fileTextToSend == null && isImageGenerationRequest(finalQuestion))
         prompt = ""
         selectedImageBase64 = null
         selectedImage = null
-        messages.add(ChatMessage(if (shouldGenerateImage) "ساخت تصویر: $finalQuestion" else finalQuestion, true, imagePreview))
+        selectedFileText = null
+        selectedFileName = null
+        messages.add(ChatMessage(if (shouldGenerateImage) "ساخت تصویر: $question" else question + fileNameToSend?.let { "\n📎 $it" }.orEmpty(), true, imagePreview))
         busy = true
         error = ""
         scope.launch {
@@ -1150,26 +1368,88 @@ fun NaeemApp(
                         if (speakAnswer) playAnswer(actionReply)
                         return@launch
                     }
-                    val memoryContext = memories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
-                    val profileContext = buildString {
-                        if (userName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $userName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
-                        if (userInterests.isNotBlank()) append("\nعلایق کاربر: $userInterests.")
-                        if (userAbout.isNotBlank()) append("\nدرباره کاربر: $userAbout.")
-                        append("\nلحن ترجیحی پاسخ: $responseStyle.")
+                    val accessTokenForMemory = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                    val explicitMemory = when {
+                        question.contains("به خاطر بسپار") -> question.substringAfter("به خاطر بسپار").trim()
+                        question.contains("یادت باشه") -> question.substringAfter("یادت باشه").trim()
+                        else -> ""
                     }
-                    val userContext = profileContext + memoryContext
+                    if (explicitMemory.isNotBlank()) {
+                        dataStore.addMemory(explicitMemory)
+                        memories = dataStore.memories()
+                    }
+                    val cloudProfile = if (accessTokenForMemory.isNotBlank()) {
+                        runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }.getOrNull()
+                    } else null
+                    val cloudSyncAllowed = dataStore.memorySyncEnabled() && cloudProfile?.memorySyncEnabled != false
+                    if (explicitMemory.isNotBlank() && accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
+                        runCatching {
+                            cloudMemoryClient.saveMemory(
+                                BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                explicitMemory, type = "note", source = "user_explicit"
+                            )
+                        }
+                    }
+                    val cloudPreferences = cloudProfile?.preferences ?: org.json.JSONObject()
+                    val effectiveName = userName.ifBlank { cloudProfile?.displayName.orEmpty() }
+                    val effectiveInterests = userInterests.ifBlank { cloudPreferences.optString("interests") }
+                    val effectiveAbout = userAbout.ifBlank { cloudPreferences.optString("about") }
+                    val effectiveStyle = responseStyle.ifBlank { cloudPreferences.optString("responseStyle").ifBlank { "صمیمی و طبیعی" } }
+                    if (accessTokenForMemory.isNotBlank() && cloudSyncAllowed &&
+                        (userName.isNotBlank() || userInterests.isNotBlank() || userAbout.isNotBlank())) {
+                        val mergedPreferences = org.json.JSONObject(cloudPreferences.toString())
+                        if (userInterests.isNotBlank()) mergedPreferences.put("interests", userInterests)
+                        if (userAbout.isNotBlank()) mergedPreferences.put("about", userAbout)
+                        if (responseStyle.isNotBlank()) mergedPreferences.put("responseStyle", responseStyle)
+                        runCatching {
+                            cloudMemoryClient.saveProfile(
+                                BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                effectiveName, mergedPreferences,
+                                cloudProfile?.memorySyncEnabled ?: true
+                            )
+                        }
+                    }
+                    val learningType = when {
+                        question.contains("از این به بعد") || question.contains("ترجیح می‌دم") || question.contains("ترجیح میدهم") -> "preference_signal"
+                        question.trim().startsWith("نه") || question.contains("اشتباهه") || question.contains("منظورم این بود") || question.contains("اصلاحش کن") -> "correction"
+                        else -> null
+                    }
+                    if (learningType != null && accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
+                        runCatching {
+                            cloudMemoryClient.recordLearningEvent(
+                                BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory,
+                                learningType, question
+                            )
+                        }
+                    }
+                    val cloudMemories = if (accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
+                        runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
+                            .getOrDefault(emptyList()).map { it.content }
+                    } else emptyList()
+                    val cloudLearning = if (accessTokenForMemory.isNotBlank() && cloudSyncAllowed) {
+                        runCatching { cloudMemoryClient.listLearningEvents(BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory) }
+                            .getOrDefault(emptyList())
+                    } else emptyList()
+                    val allMemories = (memories + cloudMemories).distinct().takeLast(40)
+                    val memoryContext = allMemories.takeIf { it.isNotEmpty() }?.joinToString("\n") { "- $it" }?.let { "\n\nاطلاعاتی که کاربر قبلاً برای یادآوری ذخیره کرده:\n$it" }.orEmpty()
+                    val learningContext = cloudLearning.takeIf { it.isNotEmpty() }?.take(12)
+                        ?.joinToString("\n") { "- $it" }
+                        ?.let { "\n\nبازخوردها و اصلاحات قبلی کاربر (برای رعایت بهتر؛ موارد تأییدنشده را حقیقت قطعی فرض نکن):\n$it" }.orEmpty()
+                    val profileContext = buildString {
+                        if (effectiveName.isNotBlank()) append("\n\nنامی که کاربر دوست دارد با آن خطاب شود: $effectiveName. در شروع گفت‌وگو و در صورت طبیعی بودن، او را با همین نام خطاب کن؛ از تکرار بیش از حد اسم خودداری کن.")
+                        if (effectiveInterests.isNotBlank()) append("\nعلایق کاربر: $effectiveInterests.")
+                        if (effectiveAbout.isNotBlank()) append("\nدرباره کاربر: $effectiveAbout.")
+                        append("\nلحن ترجیحی پاسخ: $effectiveStyle.")
+                    }
+                    val userContext = profileContext + memoryContext + learningContext
                     val answer = if (searchMode) {
-                        val findings = deepSearchClient.search(finalQuestion, 8)
+                        val findings = deepSearchClient.search(finalQuestion, 8, BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
                         val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$userContext"
-                        val report = sendChat(researchPrompt, paidFeature = featureForThisMessage)
+                        val report = sendChat(researchPrompt, image = imageToSend, paidFeature = featureForThisMessage)
                         report + "\n\nمنابع بررسی‌شده:\n" + findings.mapIndexed { index, item -> "[${index + 1}] ${item.title} — ${item.url}" }.joinToString("\n")
                     } else {
                         val memoryAwarePrompt = "زمینه کاربر:\n$userContext\n\nدرخواست کاربر:\n$finalQuestion"
-                        if (finalQuestion.contains("به خاطر بسپار") || finalQuestion.contains("یادت باشه")) {
-                            val note = finalQuestion.replace("به خاطر بسپار", "").replace("یادت باشه", "").trim()
-                            if (note.isNotBlank()) { dataStore.addMemory(note); memories = dataStore.memories() }
-                        }
                         sendChat(memoryAwarePrompt, imageToSend, featureForThisMessage)
                     }
                     messages.add(ChatMessage(answer, false))
@@ -1289,6 +1569,8 @@ fun NaeemApp(
                             prompt = ""
                             selectedImage = null
                             selectedImageBase64 = null
+                            selectedFileText = null
+                            selectedFileName = null
                             imageMode = false
                             conversationMode = false
                             stopSpeech()
@@ -1312,53 +1594,90 @@ fun NaeemApp(
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        if (selectedImage != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Image(bitmap = selectedImage!!, contentDescription = "تصویر انتخاب‌شده", modifier = Modifier.size(64.dp), contentScale = ContentScale.Crop)
-                                Text(appText("تصویر آماده ارسال است", isEnglish), color = Muted, style = MaterialTheme.typography.labelMedium)
-                                TextButton(onClick = { selectedImage = null; selectedImageBase64 = null }) { Text(appText("حذف", isEnglish), color = Gold) }
+                        if (selectedImage != null || selectedFileName != null) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                            ) {
+                                if (selectedImage != null) {
+                                    Image(bitmap = selectedImage!!, contentDescription = "تصویر انتخاب‌شده", modifier = Modifier.size(48.dp), contentScale = ContentScale.Crop)
+                                }
+                                Text(
+                                    selectedFileName?.let { "📎 $it" } ?: "تصویر آماده ارسال است",
+                                    color = Muted, style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.weight(1f), maxLines = 1
+                                )
+                                TextButton(onClick = {
+                                    selectedImage = null; selectedImageBase64 = null
+                                    selectedFileText = null; selectedFileName = null
+                                }, contentPadding = PaddingValues(horizontal = 5.dp)) {
+                                    Text("حذف", color = Gold)
+                                }
                             }
                         }
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            TextButton(
+                            Box {
+                                IconButton(
+                                    onClick = { showComposerMenu = true },
+                                    enabled = !busy,
+                                    modifier = Modifier.size(36.dp)
+                                ) { Icon(Icons.Default.Add, contentDescription = "پیوست و ابزارها", tint = Gold, modifier = Modifier.size(22.dp)) }
+                                DropdownMenu(
+                                    expanded = showComposerMenu,
+                                    onDismissRequest = { showComposerMenu = false },
+                                    containerColor = Panel
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("پیوست فایل متنی") },
+                                        leadingIcon = { Icon(Icons.Default.AttachFile, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; textFilePicker.launch(arrayOf("text/*", "application/json", "application/xml")) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(if (imageMode) "خاموش‌کردن ساخت تصویر" else "ساخت تصویر") },
+                                        leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(if (searchMode) "خاموش‌کردن جست‌وجوی وب" else "جست‌وجوی وب") },
+                                        leadingIcon = { Icon(Icons.Default.TravelExplore, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; searchMode = !searchMode }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("راهنمای دستیار صوتی") },
+                                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                                        onClick = { showComposerMenu = false; showVoiceHelp = true }
+                                    )
+                                }
+                            }
+                            IconButton(
                                 onClick = { imagePicker.launch("image/*") },
                                 enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+                                modifier = Modifier.size(36.dp)
+                            ) { Icon(Icons.Default.Image, contentDescription = "افزودن تصویر", tint = Gold, modifier = Modifier.size(20.dp)) }
+                            IconButton(
+                                onClick = {
+                                    if (conversationMode) {
+                                        conversationMode = false
+                                        listening = false
+                                        mediaPlayer?.runCatching { stop() }; mediaPlayer?.release(); mediaPlayer = null
+                                    } else {
+                                        conversationMode = true
+                                        startVoiceCapture?.invoke()
+                                    }
+                                },
+                                enabled = !busy || conversationMode,
+                                modifier = Modifier.size(38.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape).onGloballyPositioned { micTargetBounds = it.boundsInWindow() }
                             ) {
-                                Text(appText("＋ عکس", isEnglish), color = Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                                Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
                             }
-                            TextButton(
-                                onClick = { imageMode = !imageMode; if (imageMode) { selectedImage = null; selectedImageBase64 = null } },
-                                enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
-                            ) {
-                                Text(appText(if (imageMode) "✦ تصویر روشن" else "✦ ساخت تصویر", isEnglish), color = if (imageMode) Color(0xFFD4D9E0) else Gold, fontSize = 11.sp, maxLines = 1, softWrap = false)
-                            }
-                            TextButton(
-                                onClick = { searchMode = !searchMode },
-                                enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
-                            ) {
-                                Text(appText(if (searchMode) "جست‌وجو روشن" else "⌕ جست‌وجوی عمیق", isEnglish), color = if (searchMode) Color(0xFFD4D9E0) else Gold, fontSize = 10.sp, maxLines = 1, softWrap = false)
-                            }
-                        }
-                        Row(
-                            verticalAlignment = Alignment.Bottom,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
                             IconButton(
                                 onClick = {
                                     if (wakeAssistantEnabled) {
                                         context.stopService(Intent(context, VoiceWakeService::class.java))
-                                        wakeAssistantEnabled = false
-                                        wakePrefs.edit().putBoolean("enabled", false).apply()
                                     } else {
                                         val needed = mutableListOf<String>()
                                         if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -1370,20 +1689,27 @@ fun NaeemApp(
                                         }
                                         if (needed.isEmpty()) {
                                             runCatching { context.startForegroundService(Intent(context, VoiceWakeService::class.java)) }
-                                                .onSuccess {
-                                                    wakeAssistantEnabled = true
-                                                    wakePrefs.edit().putBoolean("enabled", true).apply()
-                                                }
-                                                .onFailure { wakeAssistantEnabled = false }
+                                                .onFailure { error = "فعال‌سازی شنود صوتی ناموفق بود: ${it.message ?: "خطای نامشخص"}" }
                                         } else wakePermissionLauncher.launch(needed.toTypedArray())
                                     }
                                 },
-                                modifier = Modifier.size(44.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
+                                modifier = Modifier.size(38.dp).background(
+                                    when {
+                                        smartListeningEnabled -> Color(0xFF238653)
+                                        wakeAssistantEnabled -> Color(0xFF286B50)
+                                        else -> Panel
+                                    }, CircleShape
+                                )
                             ) {
-                                Icon(Icons.Default.GraphicEq, contentDescription = if (smartListeningEnabled) "شنود هوشمند ایما فعال است" else if (wakeAssistantEnabled) "آماده‌باش صوتی ایما فعال است" else "فعال‌کردن دستیار صوتی ایما", tint = if (smartListeningEnabled) Color.White else Gold)
-                            }
-                            IconButton(onClick = { showVoiceHelp = true }, modifier = Modifier.size(34.dp)) {
-                                Icon(Icons.Default.Info, contentDescription = "راهنمای دستیار صوتی ایما", tint = Gold, modifier = Modifier.size(19.dp))
+                                Icon(
+                                    Icons.Default.GraphicEq,
+                                    contentDescription = when {
+                                        smartListeningEnabled -> "شنود هوشمند فعال است"
+                                        wakeAssistantEnabled -> "شنود صوتی فعال است؛ برای توقف لمس کن"
+                                        else -> "فعال‌کردن شنود صوتی"
+                                    },
+                                    tint = if (wakeAssistantEnabled) Color.White else Gold
+                                )
                             }
                             if (showVoiceHelp) {
                                 AlertDialog(
@@ -1391,8 +1717,8 @@ fun NaeemApp(
                                     title = { Text(if (isEnglish) "EMA Life Assistant" else "دستیار زندگی ایما", color = Color.White, fontWeight = FontWeight.Bold) },
                                     text = {
                                         Text(
-                                            if (isEnglish) "1. Turn on voice standby with the sound-wave button.\n2. Say “EMA” — EMA replies “I’m here.”\n3. Say “be on the lookout” to enable smart listening; the control turns green.\n4. Say “EMA, stop listening” to stop smart listening and return to wake-word standby.\n5. Tap the sound-wave button again to stop the voice service completely.\n\nThe microphone remains active while the voice service is on, and Android shows an ongoing notification. In this version, spoken food and workout logging are supported; other categories are still being developed."
-                                            else "۱. دکمه موج صوتی را روشن کن تا ایما در حالت آماده‌باش قرار بگیرد.\n۲. بگو «ایما»؛ ایما جواب می‌دهد «در خدمتم».\n۳. بگو «ایما، به گوش باش» تا شنود هوشمند فعال شود و کلید سبز شود.\n۴. بگو «ایما، شنود رو خاموش کن» تا شنود هوشمند متوقف شود و ایما به حالت آماده‌باش برگردد.\n۵. برای خاموش‌کردن کامل میکروفون، دکمه موج صوتی را دوباره لمس کن.\n\nتا وقتی سرویس صوتی روشن است میکروفون فعال می‌ماند و اعلان دائمی اندروید نمایش داده می‌شود. در این نسخه ثبت صوتی غذا و تمرین فعال است؛ تحلیل سایر موضوعات هنوز در حال توسعه است.",
+                                            if (isEnglish) "1. Turn on voice standby with the sound-wave button.\n2. Say “EMA” — EMA replies “I’m here.”\n3. Say “be on the lookout” to enable smart listening; the control turns green.\n4. Say “EMA, stop listening” to stop smart listening and return to wake-word standby.\n5. Tap the sound-wave button again to stop the voice service completely.\n\nThe microphone remains active while the voice service is on, and Android shows an ongoing notification. Spoken commands are currently limited to the supported local assistant tools."
+                                            else "۱. دکمه موج صوتی را روشن کن تا ایما در حالت آماده‌باش قرار بگیرد.\n۲. بگو «ایما»؛ ایما جواب می‌دهد «در خدمتم».\n۳. بگو «ایما، به گوش باش» تا شنود هوشمند فعال شود و کلید سبز شود.\n۴. بگو «ایما، شنود رو خاموش کن» تا شنود هوشمند متوقف شود و ایما به حالت آماده‌باش برگردد.\n۵. برای خاموش‌کردن کامل میکروفون، دکمه موج صوتی را دوباره لمس کن.\n\nتا وقتی سرویس صوتی روشن است میکروفون فعال می‌ماند و اعلان دائمی اندروید نمایش داده می‌شود. اجرای فرمان‌های صوتی هنوز به ابزارهای پشتیبانی‌شده محدود است.",
                                             color = Color(0xFFD5DCE7),
                                             style = MaterialTheme.typography.bodyMedium,
                                             lineHeight = 22.sp
@@ -1406,27 +1732,11 @@ fun NaeemApp(
                                     textContentColor = Color(0xFFD5DCE7)
                                 )
                             }
-                            IconButton(
-                                onClick = {
-                                    if (conversationMode) {
-                                        conversationMode = false
-                                        listening = false
-                                        mediaPlayer?.runCatching { stop() }; mediaPlayer?.release(); mediaPlayer = null
-                                    } else {
-                                        conversationMode = true
-                                        startVoiceCapture?.invoke()
-                                    }
-                                },
-                                enabled = !busy || conversationMode,
-                                modifier = Modifier.size(48.dp).background(if (conversationMode || listening) Gold else Panel, CircleShape).onGloballyPositioned { micTargetBounds = it.boundsInWindow() }
-                            ) {
-                                Icon(Icons.Default.Mic, contentDescription = if (conversationMode) "پایان مکالمه صوتی" else "شروع مکالمه صوتی", tint = if (conversationMode || listening) Ink else Gold)
-                            }
                             OutlinedTextField(
                                 value = prompt, onValueChange = { prompt = it },
-                                modifier = Modifier.weight(1f).onGloballyPositioned { inputTargetBounds = it.boundsInWindow() },
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp).onGloballyPositioned { inputTargetBounds = it.boundsInWindow() },
                                 placeholder = { Text(appText(if (imageMode) "توضیح تصویری که می‌خواهی بسازم…" else if (conversationMode) "حالت مکالمه صوتی فعاله…" else "پیامت رو بنویس…", isEnglish), color = Muted) },
-                                maxLines = 4, shape = RoundedCornerShape(22.dp),
+                                minLines = 2, maxLines = 5, shape = RoundedCornerShape(22.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = Gold, unfocusedBorderColor = Color(0xFF3A3D45),
                                     focusedContainerColor = Color(0x16FFFFFF), unfocusedContainerColor = Color(0x10FFFFFF)
@@ -1434,10 +1744,10 @@ fun NaeemApp(
                             )
                             IconButton(
                                 onClick = { sendMessage(false) },
-                                enabled = !busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank()),
-                                modifier = Modifier.size(48.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Gold else Panel, CircleShape).onGloballyPositioned { sendTargetBounds = it.boundsInWindow() }
+                                enabled = !busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank() || !selectedFileText.isNullOrBlank()),
+                                modifier = Modifier.size(42.dp).background(if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank() || !selectedFileText.isNullOrBlank())) Gold else Panel, CircleShape).onGloballyPositioned { sendTargetBounds = it.boundsInWindow() }
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = if (imageMode) "ساخت تصویر" else "ارسال", tint = if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank())) Ink else Muted)
+                                Icon(Icons.Default.Send, contentDescription = if (imageMode) "ساخت تصویر" else "ارسال", tint = if (!busy && (prompt.isNotBlank() || !selectedImageBase64.isNullOrBlank() || !selectedFileText.isNullOrBlank())) Ink else Muted)
                             }
                         }
                     }
@@ -1484,15 +1794,23 @@ fun NaeemApp(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.height(34.dp))
-                        ThinkingOrb(diameter = 204.dp, active = true, onClick = { playThinkingOrbSound(context) })
-                        Spacer(Modifier.height(20.dp))
-                        Image(painter = painterResource(R.drawable.ic_brain_mark),
-                            contentDescription = "لوگوی ایما", modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
-                        Spacer(Modifier.height(7.dp))
+                        ThinkingOrb(diameter = 224.dp, active = true)
+                        Spacer(Modifier.height(12.dp))
+                        val captionWords = speechCaption.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                        val visibleCaption = captionWords.take(speechCaptionVisibleWords).joinToString(" ")
                         Text(
-                            appText("لمس گوی یا نوشتن پیام برای شروع", isEnglish),
-                            color = Color(0xFF879AB5),
-                            style = MaterialTheme.typography.labelMedium
+                            when {
+                                visibleCaption.isNotBlank() -> visibleCaption
+                                speechPlaying -> ""
+                                listening -> "در حال شنیدن صدای تو…"
+                                busy -> "دارم فکر می‌کنم…"
+                                else -> "هر وقت آماده‌ای، با من صحبت کن"
+                            },
+                            color = Color(0xFFDCEBFA),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            minLines = 2
                         )
                     }
                 }
@@ -1501,7 +1819,7 @@ fun NaeemApp(
                         Text(error, color = Color(0xFFFFC4C4), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (conversationMode || listening || speechPlaying || busy) {
+                if ((conversationMode || listening || speechPlaying || busy) && messages.isNotEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                         shape = RoundedCornerShape(26.dp),
@@ -1933,26 +2251,123 @@ fun NaeemApp(
             }
         }
 
+        LaunchedEffect(showMemory) {
+            if (showMemory) {
+                cloudMemoryLoading = true
+                cloudMemoryStatus = ""
+                val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                if (token.isNotBlank()) {
+                    val profile = runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, token) }.getOrNull()
+                    if (profile != null) {
+                        cloudMemorySyncEnabled = profile.memorySyncEnabled
+                        dataStore.setMemorySyncEnabled(profile.memorySyncEnabled)
+                    }
+                    val items = runCatching { cloudMemoryClient.listMemories(BuildConfig.CHAT_GATEWAY_URL, token) }
+                    items.onSuccess { cloudMemoryItems = it }
+                        .onFailure { cloudMemoryStatus = "حافظه ابری هنوز در دسترس نیست؛ اطلاعات محلی حفظ شده‌اند." }
+                } else {
+                    cloudMemoryStatus = "برای دیدن حافظه ابری وارد حساب شو."
+                }
+                cloudMemoryLoading = false
+            }
+        }
+
         if (showMemory) {
             AlertDialog(
                 onDismissRequest = { showMemory = false },
                 containerColor = Panel,
                 title = { Text(appText("حافظه ایما", isEnglish), color = Gold) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(appText("نکته‌هایی که اینجا ذخیره می‌کنی، در گفت‌وگوهای بعدی برای پاسخ بهتر استفاده می‌شوند.", isEnglish), color = Muted, style = MaterialTheme.typography.bodySmall)
+                    Column(
+                        Modifier.fillMaxWidth().heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("حافظه محلی روی همین گوشی می‌ماند؛ حافظه حساب با ورود به دستگاه‌های دیگر همگام می‌شود.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("همگام‌سازی حافظه ابری", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                Text(if (cloudMemorySyncEnabled) "فعال · متصل به حساب کاربری" else "خاموش · فقط حافظه محلی", color = Muted, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Switch(
+                                checked = cloudMemorySyncEnabled,
+                                onCheckedChange = { enabled ->
+                                    cloudMemorySyncEnabled = enabled
+                                    dataStore.setMemorySyncEnabled(enabled)
+                                    scope.launch {
+                                        val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                        if (token.isNotBlank()) {
+                                            val profile = runCatching { cloudMemoryClient.getProfile(BuildConfig.CHAT_GATEWAY_URL, token) }.getOrNull()
+                                            if (profile != null) {
+                                                runCatching {
+                                                    cloudMemoryClient.saveProfile(
+                                                        BuildConfig.CHAT_GATEWAY_URL, token,
+                                                        profile.displayName, profile.preferences, enabled
+                                                    )
+                                                }.onFailure { cloudMemoryStatus = "تنظیم همگام‌سازی در سرور ذخیره نشد." }
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                        if (cloudMemoryLoading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold)
+                        if (cloudMemoryStatus.isNotBlank()) Text(cloudMemoryStatus, color = Color(0xFFFFD28A), style = MaterialTheme.typography.labelSmall)
                         OutlinedTextField(value = memoryDraft, onValueChange = { memoryDraft = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(appText("مثلاً ترجیح می‌دهم پاسخ‌ها فارسی باشند", isEnglish)) })
+                        Text("حافظه‌های این گوشی", color = Gold, fontWeight = FontWeight.Bold)
+                        if (memories.isEmpty()) Text("هنوز نکته محلی ذخیره نشده است.", color = Muted, style = MaterialTheme.typography.bodySmall)
                         memories.forEach { item ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(item, modifier = Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.bodySmall)
-                                TextButton(onClick = { dataStore.deleteMemory(item); memories = dataStore.memories() }) { Text(appText("حذف", isEnglish), color = Color(0xFFFF8B80)) }
+                                TextButton(onClick = {
+                                    dataStore.deleteMemory(item)
+                                    memories = dataStore.memories()
+                                    val cloudItem = cloudMemoryItems.firstOrNull { it.content == item }
+                                    if (cloudItem != null) scope.launch {
+                                        val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                        if (token.isNotBlank()) runCatching { cloudMemoryClient.deleteMemory(BuildConfig.CHAT_GATEWAY_URL, token, cloudItem.id) }
+                                        cloudMemoryItems = cloudMemoryItems.filterNot { it.id == cloudItem.id }
+                                    }
+                                }) { Text("حذف", color = Color(0xFFFF8B80)) }
+                            }
+                        }
+                        Text("حافظه‌های حساب", color = Gold, fontWeight = FontWeight.Bold)
+                        if (cloudMemoryItems.isEmpty()) Text("حافظه ابری ثبت‌شده‌ای نمایش داده نمی‌شود.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        cloudMemoryItems.forEach { item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(item.content, color = Color.White, style = MaterialTheme.typography.bodySmall)
+                                    Text(item.type, color = Muted, style = MaterialTheme.typography.labelSmall)
+                                }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                        if (token.isNotBlank()) {
+                                            runCatching { cloudMemoryClient.deleteMemory(BuildConfig.CHAT_GATEWAY_URL, token, item.id) }
+                                                .onSuccess { cloudMemoryItems = cloudMemoryItems.filterNot { it.id == item.id } }
+                                                .onFailure { cloudMemoryStatus = "حذف حافظه ابری ناموفق بود." }
+                                        }
+                                    }
+                                }) { Text("حذف", color = Color(0xFFFF8B80)) }
                             }
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (memoryDraft.isNotBlank()) { dataStore.addMemory(memoryDraft); memories = dataStore.memories(); memoryDraft = "" }
+                        if (memoryDraft.isNotBlank()) {
+                            val note = memoryDraft.trim()
+                            dataStore.addMemory(note)
+                            memories = dataStore.memories()
+                            memoryDraft = ""
+                            if (cloudMemorySyncEnabled) scope.launch {
+                                val token = runCatching { chatAccessTokenProvider() }.getOrDefault("")
+                                if (token.isNotBlank()) {
+                                    runCatching { cloudMemoryClient.saveMemory(BuildConfig.CHAT_GATEWAY_URL, token, note) }
+                                        .onSuccess { cloudMemoryItems = (cloudMemoryItems + it).distinctBy { item -> item.id } }
+                                        .onFailure { cloudMemoryStatus = "نکته روی گوشی ذخیره شد؛ همگام‌سازی ابری ناموفق بود." }
+                                }
+                            }
+                        }
                     }) { Text(appText("ذخیره نکته", isEnglish), color = Gold) }
                 },
                 dismissButton = { TextButton(onClick = { showMemory = false }) { Text(appText("بستن", isEnglish), color = Muted) } }
@@ -2181,67 +2596,15 @@ fun NaeemApp(
                             Text(if (isEnglish) "Signed in as $userEmail" else "واردشده با $userEmail", color = Muted, style = MaterialTheme.typography.bodySmall)
                         }
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
-                        Text(if (isEnglish) "Provider connection (local tools)" else "اتصال سرویس‌دهنده (ابزارهای محلی)")
-                        Text(if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) { if (isEnglish) "Secure chat: server gateway is not configured in this build. Saving a provider key here does not activate chat." else "چت امن: نشانی درگاه سرور در این نسخه تنظیم نشده؛ ذخیره کلید سرویس‌دهنده در این صفحه، چت را فعال نمی‌کند." } else { if (isEnglish) "Secure chat gateway: configured" else "درگاه امن چت: تنظیم شده" }, color = if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) Color(0xFFFFC28A) else Color(0xFF9BD7B0), style = MaterialTheme.typography.bodySmall)
-                        Text(if (isEnglish) "Paid AI spaces (Think Room, Future Gateway, Instagram analysis) use NetArz through EMA's secure server. Do not enter the NetArz API key on this screen." else "قابلیت‌های پولی هوش مصنوعی (اتاق فکر، به آینده وارد شو و تحلیل اینستاگرام) از طریق سرور امن ایما به NetArz وصل می‌شوند؛ کلید NetArz را در این صفحه وارد نکن.", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text(appText("نت‌ارز", isEnglish), color = Gold) }
-                            OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }
-                            OutlinedButton(onClick = { switchApiProvider("https://api.gapgpt.ir/v1"); model = "gpt-4o-mini" }) { Text("GapGPT", color = Gold) }
-                        }
-                        Text(appText("نشانی سرویس (Base URL)", isEnglish))
-                        OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
-                        Text(appText("نام مدل گفتگو", isEnglish))
-                        OutlinedTextField(model, { model = it }, singleLine = true)
+                        Text(if (isEnglish) "Secure AI connection" else "اتصال امن هوش مصنوعی", color = Gold, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (isEnglish) "Chat and image generation use EMA's secure server gateway. Provider API keys are stored on the server and must not be entered on this phone. Free chat and image requests are routed to GapGPT when its server connection is enabled; paid media tools use NetArz."
+                            else "چت و تولید تصویر از درگاه امن سرور ایما استفاده می‌کنند. کلیدهای سرویس‌دهنده فقط روی سرور نگهداری می‌شوند و نباید در گوشی وارد شوند. چت و ساخت تصویر رایگان از مسیر GapGPT و ابزارهای رسانه‌ای پولی از مسیر NetArz انجام می‌شوند؛ فعال‌بودن کلیدهای سرور برای هر سرویس لازم است.",
+                            color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall
+                        )
                         Text(appText("شناسه مدل ساخت تصویر", isEnglish))
                         OutlinedTextField(imageModel, { imageModel = it }, singleLine = true)
-                        Text(appText("نوع مدل برای دریافت فهرست", isEnglish))
-                        Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf("chat" to if (isEnglish) "Chat" else "چت", "image" to if (isEnglish) "Image" else "تصویر", "audio_tts" to if (isEnglish) "Text to speech" else "متن به صدا", "audio_stt" to if (isEnglish) "Speech to text" else "صدا به متن", "video" to if (isEnglish) "Video" else "ویدیو", "music" to if (isEnglish) "Music" else "موسیقی", "embedding" to if (isEnglish) "Memory" else "حافظه").forEach { (type, label) ->
-                                FilterChip(selected = selectedModelType == type, onClick = { selectedModelType = type; availableModels = emptyList(); providerTestStatus = "" }, label = { Text(label) })
-                            }
-                        }
-                        Button(
-                            onClick = {
-                                testingProvider = true
-                                providerTestStatus = ""
-                                scope.launch {
-                                    try {
-                                        availableModels = client.fetchModels(baseUrl, apiKey, selectedModelType)
-                                        providerTestStatus = if (isEnglish) "Connection successful; " + availableModels.size + " model IDs received." else "اتصال موفق؛ " + availableModels.size + " شناسه مدل دریافت شد."
-                                    } catch (e: Exception) {
-                                        providerTestStatus = e.message ?: if (isEnglish) "Connection test failed." else "آزمایش اتصال ناموفق بود."
-                                    } finally {
-                                        testingProvider = false
-                                    }
-                                }
-                            },
-                            enabled = !testingProvider && apiKey.isNotBlank(),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(if (testingProvider) { if (isEnglish) "Testing connection…" else "در حال آزمایش اتصال…" } else { if (isEnglish) "Test connection & load models" else "آزمایش اتصال و دریافت مدل‌ها" })
-                        }
-                        if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
-                        if (availableModels.isNotEmpty()) {
-                            Text(appText("مدل‌های دسته انتخاب‌شده؛ روی شناسه بزن تا برای همان قابلیت ذخیره شود:", isEnglish), color = Muted, style = MaterialTheme.typography.labelSmall)
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                availableModels.take(30).forEach { modelId ->
-                                    TextButton(onClick = {
-                                        store.saveModelFor(selectedModelType, modelId)
-                                        when (selectedModelType) { "chat" -> model = modelId; "image" -> imageModel = modelId }
-                                        providerTestStatus = if (isEnglish) "Model $modelId saved for $selectedModelType." else "مدل $modelId برای دسته $selectedModelType ذخیره شد."
-                                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
-                                        Text(modelId, color = if ((selectedModelType == "chat" && model == modelId) || (selectedModelType == "image" && imageModel == modelId) || store.modelFor(selectedModelType) == modelId) Gold else Color.White, style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                            }
-                        }
-                        Text(appText("کلید API", isEnglish))
-                        OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
-                        Text(if (isEnglish) "Security: device encryption helps, but a provider API key must not be embedded in a public app. Production requests should go through EMA\u0027s secure server gateway." else "هشدار امنیتی: رمزگذاری گوشی مفید است، اما کلید API نباید در نسخه عمومی اپ قرار بگیرد. برای انتشار امن، درخواست‌ها باید از سرور واسط اختصاصی ایما عبور کنند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD28A))
+                        Text(if (isEnglish) "The chat provider, credentials, and paid service routing are managed securely by EMA's server. No API key is required here." else "انتخاب سرویس چت، اعتبارنامه‌ها و مسیر سرویس‌های پولی از سمت سرور ایما مدیریت می‌شود؛ در این قسمت نیازی به واردکردن کلید API نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(appText("پشتیبان‌گیری و بازیابی", isEnglish), color = Gold, fontWeight = FontWeight.SemiBold)
                         Text(if (isEnglish) "Creates an encrypted backup of finance, workouts, trips, memory, conversations, and the image album. Keep the password safe; recovery is impossible without it." else "از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -2482,52 +2845,6 @@ private fun ThinkingOrb(
             size = androidx.compose.ui.geometry.Size(radius * 1.68f, radius * 1.68f),
             style = Stroke(width = 2.4.dp.toPx())
         )
-    }
-}
-
-private fun playThinkingOrbSound(context: Context) {
-    runCatching {
-        val sampleRate = 44100
-        val durationSeconds = 0.52
-        val count = (sampleRate * durationSeconds).toInt()
-        val pcm = ShortArray(count) { index ->
-            val t = index.toDouble() / count
-            val envelope = kotlin.math.sin(Math.PI * t).let { it * it }
-            val glide = 310.0 + 360.0 * t
-            val fundamental = kotlin.math.sin(2.0 * Math.PI * glide * t * durationSeconds)
-            val overtone = kotlin.math.sin(2.0 * Math.PI * (glide * 1.51) * t * durationSeconds) * 0.28
-            val shimmer = kotlin.math.sin(2.0 * Math.PI * 940.0 * t * durationSeconds) * 0.08
-            ((fundamental + overtone + shimmer) * envelope * 4200.0).toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(pcm.size * 2)
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .build()
-        track.setVolume(0.42f)
-        val written = track.write(pcm, 0, pcm.size)
-        if (written > 0) {
-            track.play()
-            Handler(Looper.getMainLooper()).postDelayed({
-                runCatching {
-                    if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
-                    track.release()
-                }
-            }, 750L)
-        } else track.release()
     }
 }
 

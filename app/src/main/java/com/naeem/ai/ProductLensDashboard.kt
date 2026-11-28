@@ -50,7 +50,17 @@ fun ProductLensDashboard(onClose: () -> Unit, gatewayUrl: String, accessToken: S
  var searchQuery by remember { mutableStateOf("") }
  var findings by remember { mutableStateOf<List<WebFinding>>(emptyList()) }
  val client= remember { OkHttpClient.Builder().connectTimeout(25,TimeUnit.SECONDS).readTimeout(90,TimeUnit.SECONDS).build() }
- fun loadImage(uri:Uri) { scope.launch { runCatching { withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } } }.onSuccess { bitmap=it; findings=emptyList(); productName=""; status=if(it==null) "خواندن تصویر ممکن نشد." else "تصویر آماده است؛ محصول را شناسایی کن." }.onFailure { status=it.message ?: "باز کردن تصویر ناموفق بود." } } }
+ fun loadImage(uri:Uri) {
+  scope.launch {
+   runCatching { withContext(Dispatchers.IO) { decodeSampledImage(context, uri, 1600) } }
+    .onSuccess {
+     bitmap=it
+     findings=emptyList(); productName=""; brand=""; category=""; description=""
+     status=if(it==null) "خواندن تصویر ممکن نشد." else "تصویر آماده است؛ محصول را شناسایی کن."
+    }
+    .onFailure { status=it.message ?: "باز کردن تصویر ناموفق بود." }
+  }
+ }
  val gallery=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(::loadImage) }
  val camera=rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { image -> if(image!=null){bitmap=image;findings=emptyList();productName="";status="عکس گرفته شد؛ آماده شناسایی است."}else status="عکسی ثبت نشد." }
  fun identify() {
@@ -72,7 +82,10 @@ fun ProductLensDashboard(onClose: () -> Unit, gatewayUrl: String, accessToken: S
      if(!response.isSuccessful) throw IllegalStateException(runCatching{JSONObject(text).optJSONObject("error")?.optString("message")}.getOrNull() ?: "خطای سرور "+response.code)
      JSONObject(text).optString("identification")
     }}
-    val start=raw.indexOf('{');val parsed=JSONObject(raw.substring(if(start>=0) start else 0))
+    val cleanRaw=raw.replace("```json","").replace("```","").trim()
+    val start=cleanRaw.indexOf('{');val end=cleanRaw.lastIndexOf('}')
+    if(start<0 || end<start) throw IllegalStateException("پاسخ مدل تصویر قابل‌خواندن نبود.")
+    val parsed=JSONObject(cleanRaw.substring(start,end+1))
     productName=parsed.optString("product_name");brand=parsed.optString("brand");category=parsed.optString("category");description=parsed.optString("visual_description")
     searchQuery=parsed.optString("search_query").ifBlank{listOf(brand,productName).filter{it.isNotBlank()}.joinToString(" ")}
     if(productName.isBlank()) throw IllegalStateException("محصول دقیق تشخیص داده نشد؛ عکس واضح‌تری بگیر.")
@@ -93,7 +106,13 @@ fun ProductLensDashboard(onClose: () -> Unit, gatewayUrl: String, accessToken: S
     if(bitmap!=null) Image(bitmap!!.asImageBitmap(),null,Modifier.fillMaxWidth().heightIn(max=300.dp),contentScale=ContentScale.Fit)
     else Box(Modifier.fillMaxWidth().height(210.dp).background(Color(0xFF172438),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.ImageSearch,null,tint=Color(0xFF9CB9F4),modifier=Modifier.size(48.dp));Text("عکس محصول را انتخاب کن",color=Color(0xFFB7C4D6))}}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()){
-     Button(onClick={camera.launch(null)},modifier=Modifier.weight(1f),enabled=!loading){Icon(Icons.Default.CameraAlt,null);Spacer(Modifier.width(5.dp));Text("عکس گرفتن")}
+     Button(onClick={
+      runCatching { camera.launch(null) }
+       .onFailure {
+        status="برنامه دوربین روی گوشی در دسترس نیست؛ گالری را انتخاب کن."
+        runCatching { gallery.launch(arrayOf("image/*")) }
+       }
+     },modifier=Modifier.weight(1f),enabled=!loading){Icon(Icons.Default.CameraAlt,null);Spacer(Modifier.width(5.dp));Text("عکس گرفتن")}
      OutlinedButton(onClick={gallery.launch(arrayOf("image/*"))},modifier=Modifier.weight(1f),enabled=!loading){Icon(Icons.Default.PhotoLibrary,null);Spacer(Modifier.width(5.dp));Text("گالری")}
     }
     Button(onClick=::identify,modifier=Modifier.fillMaxWidth(),enabled=bitmap!=null&&!loading){Icon(Icons.Default.Search,null);Spacer(Modifier.width(6.dp));Text("شناسایی و جست‌وجوی محصول")}

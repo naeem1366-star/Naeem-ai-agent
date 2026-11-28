@@ -56,6 +56,16 @@ class SupabaseAuthClient(context: Context) {
         SupabaseAuthResult(session = session)
     }
 
+    suspend fun signInAnonymously(): SupabaseAuthResult = withContext(Dispatchers.IO) {
+        // Supabase anonymous sign-in creates a real short-lived Auth session, allowing
+        // the secure gateway to apply its normal per-user quota without collecting an email.
+        val data = post("/auth/v1/signup", JSONObject())
+        val session = parseSession(data)
+            ?: throw IOException("ورود مهمان انجام نشد؛ سرویس ورود مهمان در تنظیمات سرور فعال نیست.")
+        save(session)
+        SupabaseAuthResult(session = session)
+    }
+
     suspend fun signUp(email: String, password: String): SupabaseAuthResult = withContext(Dispatchers.IO) {
         val data = post("/auth/v1/signup", JSONObject().put("email", email.trim()).put("password", password))
         val session = parseSession(data)

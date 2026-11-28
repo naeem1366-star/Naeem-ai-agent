@@ -45,6 +45,8 @@ Optional settings:
 - `CHAT_FREE_MODEL` — default `gpt-4o-mini`
 - `CHAT_SECONDARY_MODEL` — fallback model setting if `CHAT_FREE_MODEL` is not set
 - `CHAT_PRIMARY_BASE_URL` — default `https://netarz.ir/api/ai/v1`
+- `NETARZ_API_KEY` — dedicated NetArz media API key (recommended; falls back to legacy `Netarz` / `CHAT_PRIMARY_API_KEY`).
+- `NETARZ_BASE_URL` — dedicated NetArz media base URL; default `https://netarz.ir/api/ai/v1`. Keep this separate from GapGPT/chat provider URLs.
 - `CHAT_PRIMARY_MODEL` — default `gpt-4o-mini`
 
 ## Free chat behavior

@@ -64,7 +64,8 @@ class ChatClient {
         accessToken: String,
         model: String,
         prompt: String,
-        imageBase64: String? = null
+        imageBase64: String? = null,
+        history: List<Pair<Boolean, String>> = emptyList()
     ): String = withContext(Dispatchers.IO) {
         val root = gatewayUrl.trim().trimEnd('/')
         require(root.startsWith("https://", ignoreCase = true)) { "نشانی درگاه امن چت تنظیم نشده است." }
@@ -83,9 +84,19 @@ class ChatClient {
                     JSONObject().put("url", "data:image/jpeg;base64,$imageBase64").put("detail", "auto")
                 ))
         }
+        val conversation = JSONArray()
+        history.takeLast(16).forEach { (fromUser, text) ->
+            if (text.isNotBlank()) {
+                conversation.put(JSONObject()
+                    .put("role", if (fromUser) "user" else "assistant")
+                    .put("content", text.take(12000)))
+            }
+        }
+        conversation.put(JSONObject().put("role", "user").put("content", userContent))
         val payload = JSONObject()
             .put("model", model.trim().ifBlank { "default" })
-            .put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", userContent)))
+            .put("messages", conversation)
+            .put("max_tokens", 3000)
             .put("stream", false)
         val request = Request.Builder()
             .url("$root/v1/chat/completions")

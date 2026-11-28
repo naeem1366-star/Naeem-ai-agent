@@ -2,9 +2,9 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-tools-free-paid-access", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing"]
+    branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-tools-free-paid-access", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory"]
   pull_request:
-    branches: ["feature/v2-foundation", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix"]
+    branches: ["feature/v2-foundation", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing"]
 
 concurrency:
   group: android-apk-${{ github.ref }}
