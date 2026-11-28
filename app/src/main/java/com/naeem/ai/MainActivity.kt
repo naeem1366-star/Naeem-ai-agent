@@ -1161,7 +1161,7 @@ fun NaeemApp(
     SideEffect { startVoiceCapture = beginListening }
 
     LaunchedEffect(Unit) {
-        if (welcomeAudioEnabled && apiKey.isNotBlank()) {
+        if (welcomeAudioEnabled && BuildConfig.CHAT_GATEWAY_URL.isNotBlank() && chatAccessToken.isNotBlank()) {
             delay(850)
             if (!busy && !speechPlaying) playAnswer("به ایما خوش آمدید. خوشحالم که دوباره اینجایی. هر وقت آماده‌ای، از من چیزی بپرس یا با صدای خودت صحبت کن.")
         }
@@ -2457,8 +2457,7 @@ fun NaeemApp(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        store.save(baseUrl.trim(), model.trim(), "")
-                        apiKey = ""
+                        store.save(baseUrl.trim(), model.trim(), apiKey.trim())
                         store.saveImageModel(imageModel)
                         store.saveModelFor("chat", model)
                         store.saveModelFor("image", imageModel)
