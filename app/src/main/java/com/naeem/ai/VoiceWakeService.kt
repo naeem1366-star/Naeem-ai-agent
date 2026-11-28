@@ -70,42 +70,9 @@ class VoiceWakeService : Service() {
             )
         )
         createNotificationChannel()
-        smartListening = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("smart_listening", false)
-        tts = TextToSpeech(applicationContext) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) {
-                val languageResult = tts?.setLanguage(Locale("fa", "IR"))
-                if (languageResult == TextToSpeech.LANG_MISSING_DATA ||
-                    languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsReady = false
-                }
-                tts?.setSpeechRate(0.94f)
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) = Unit
-                    override fun onDone(utteranceId: String?) {
-                        main.post {
-                            commandInFlight = false
-                            if (restartAfterSpeech && !destroyed) {
-                                restartAfterSpeech = false
-                                startListening()
-                            }
-                        }
-                    }
-                    @Deprecated("Deprecated in Java")
-                    override fun onError(utteranceId: String?) {
-                        main.post {
-                            commandInFlight = false
-                            if (restartAfterSpeech && !destroyed) {
-                                restartAfterSpeech = false
-                                main.postDelayed({ startListening() }, 700)
-                            }
-                        }
-                    }
-                    override fun onError(utteranceId: String?, errorCode: Int) = onError(utteranceId)
-                })
-            }
-            // Listening starts only after onStartCommand has entered foreground state.
-        }
+        smartListening = true
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("smart_listening", true).apply()
+        // Silent listening mode: no TTS engine is initialized or played.
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -240,6 +207,17 @@ class VoiceWakeService : Service() {
                     NOTIFICATION_ID, buildNotification("اتصال شنود ناپایدار شد؛ در حال تلاش مجدد…")
                 )
                 main.postDelayed({ startListening() }, delayMs)
+            }
+            override fun onSegmentResults(segmentResults: Bundle?) {
+                if (destroyed || commandInFlight) return
+                val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull().orEmpty().trim()
+                if (spoken.isNotBlank()) {
+                    segmentCommandHandled = true
+                    listening = true
+                    setVoiceState("listening")
+                    handleRecognizedText(spoken)
+                }
             }
             override fun onResults(results: Bundle?) {
                 listening = false
@@ -412,21 +390,11 @@ class VoiceWakeService : Service() {
     }
 
     private fun speak(text: String, listenAgain: Boolean) {
-        restartAfterSpeech = listenAgain
-        val engine = tts
-        if (!ttsReady || engine == null) {
-            getSystemService(NotificationManager::class.java).notify(
-                NOTIFICATION_ID,
-                buildNotification(text.take(180))
-            )
-            main.postDelayed({ commandInFlight = false; if (listenAgain) startListening() }, 900)
-            return
-        }
-        val utteranceId = UUID.randomUUID().toString()
-        val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-        if (result == TextToSpeech.ERROR) {
-            restartAfterSpeech = false
-            main.postDelayed({ commandInFlight = false; if (listenAgain) startListening() }, 900)
+        // Voice feedback is intentionally disabled. Keep the microphone session alive.
+        restartAfterSpeech = false
+        commandInFlight = false
+        if (!destroyed && !listening && !listeningStartPending) {
+            main.postDelayed({ startListening() }, 180)
         }
     }
 
