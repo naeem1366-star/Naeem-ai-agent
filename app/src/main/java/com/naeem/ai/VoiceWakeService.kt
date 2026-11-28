@@ -202,14 +202,6 @@ class VoiceWakeService : Service() {
                 listeningStartPending = false
                 setVoiceState("processing")
             }
-            override fun onSegmentResults(segmentResults: Bundle?) {
-                val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
-                if (spoken.isBlank() || !isCommandCandidate(spoken) || segmentCommandHandled) return
-                segmentCommandHandled = true
-                commandInFlight = true
-                runCatching { recognizer?.stopListening() }
-                handleRecognizedText(spoken)
-            }
             override fun onEndOfSegmentedSession() {
                 listening = false
                 listeningStartPending = false
