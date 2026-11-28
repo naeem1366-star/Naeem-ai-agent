@@ -1099,16 +1099,26 @@ Deno.serve(async (request: Request) => {
     if (!candidates.length) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "کلید NetArz و مسیر پشتیبان GapGPT روی سرور تنظیم نشده است." } }, 503);
 
     const quotaDate = new Date().toISOString().slice(0, 10);
-    const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
-      method: "POST",
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
-      signal: AbortSignal.timeout(12000),
-    }).catch((error) => { console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error"); return null; });
-    if (!quotaResponse?.ok) return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
-    if (await quotaResponse.json().catch(() => null) !== true) return reply({ error: { code: "DAILY_FREE_LIMIT_REACHED", message: "سهمیه رایگان امروز تمام شده است؛ فردا دوباره امتحان کن." } }, 429);
+    // Administrators must never be blocked by the end-user free-chat quota.
+    const adminRows = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
+    const isAdmin = Array.isArray(adminRows) && adminRows.length > 0;
+    let quotaConsumed = false;
+    if (!isAdmin) {
+      const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
+        method: "POST",
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
+        signal: AbortSignal.timeout(12000),
+      }).catch((error) => { console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error"); return null; });
+      if (!quotaResponse?.ok) return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
+      if (await quotaResponse.json().catch(() => null) !== true) return reply({ error: { code: "DAILY_FREE_LIMIT_REACHED", message: "سهمیه رایگان امروز تمام شده است؛ فردا دوباره امتحان کن." } }, 429);
+      quotaConsumed = true;
+    } else {
+      console.log("EMA admin chat quota bypass", { user_id: userId });
+    }
 
     const refundFreeQuota = async () => {
+      if (!quotaConsumed) return;
       const response = await fetch(supabaseUrl + "/rest/v1/rpc/ema_refund_chat_quota", {
         method: "POST",
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
@@ -1148,14 +1158,14 @@ Deno.serve(async (request: Request) => {
         });
         const providerText = await upstream.text();
         if (!upstream.ok) {
-          lastFailure = "http_" + upstream.status;
-          if (upstream.status === 408 || upstream.status === 429 || upstream.status >= 500) {
-            console.warn("EMA chat provider transient failure; trying next provider", { provider: provider.name, status: upstream.status });
-            continue;
-          }
-          await refundFreeQuota();
-          console.error("EMA chat provider rejected request", { provider: provider.name, status: upstream.status });
-          return reply({ error: { code: "CHAT_PROVIDER_REJECTED", message: "موتور گفت‌وگوی انتخاب‌شده درخواست را نپذیرفت؛ تنظیمات مدل و دسترسی آن باید بررسی شود." } }, 502);
+          const providerDetail = providerText.slice(0, 240);
+          lastFailure = provider.name + "_http_" + upstream.status;
+          // Provider account/billing, key, permission, model and transient errors
+          // must all fall through to the configured secondary provider.
+          console.warn("EMA chat provider rejected request; trying next provider", {
+            provider: provider.name, status: upstream.status, detail: providerDetail,
+          });
+          continue;
         }
         try { result = JSON.parse(providerText); } catch {
           lastFailure = "invalid_json";
