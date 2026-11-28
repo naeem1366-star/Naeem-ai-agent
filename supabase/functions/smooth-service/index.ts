@@ -403,7 +403,7 @@ Deno.serve(async (request: Request) => {
       }
       const [admins, wallets, subscriptions, settings] = await Promise.all([
         serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`),
-        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
         serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`),
         serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1"),
       ]);
@@ -715,22 +715,23 @@ Deno.serve(async (request: Request) => {
       const isAdmin = Array.isArray(admins) && admins.length > 0;
       const now = new Date().toISOString();
       const [walletRows, subscriptionRows] = await Promise.all([
-        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
         serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(now)}&ends_at=gt.${encodeURIComponent(now)}&limit=1`),
       ]);
-      const walletBalance = Number(walletRows?.[0]?.balance_toman || 0);
+      const walletBalance = Number(walletRows?.[0]?.balance_credits || 0);
       const hasActiveSubscription = Array.isArray(subscriptionRows) && subscriptionRows.length > 0;
 
-      const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1");
+      const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps,credits_per_toman&singleton=eq.true&limit=1");
       const billing = billingRows?.[0] || {};
       const pricingRows = await serviceFetch(`ema_pricing_rules?select=input_usd_per_million,output_usd_per_million&model=eq.${encodeURIComponent(model)}&enabled=eq.true&limit=1`);
       const pricing = pricingRows?.[0] || null;
       const inputRate = Number(pricing?.input_usd_per_million || 0);
       const outputRate = Number(pricing?.output_usd_per_million || 0);
       const usdToToman = Number(billing.usd_to_toman || 0);
+      const creditsPerToman = Number(billing.credits_per_toman || 0);
       const markupBps = Math.max(0, Number(billing.markup_bps || 0));
       const walletBillingReady = billing.ai_billing_enabled === true && !!pricing &&
-        inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0;
+        inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0 && creditsPerToman > 0;
       if (!isAdmin && !hasActiveSubscription && walletBalance > 0 && !walletBillingReady) {
         return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن اعتبار کیف پول، قیمت مدل NetArz و نرخ تبدیل دلار به تومان باید در پنل مدیریت تنظیم شود." } }, 503);
       }
@@ -740,6 +741,7 @@ Deno.serve(async (request: Request) => {
       const estimatedInputTokens = Math.max(1, Math.ceil(serializedMessages.length / 3) + 64);
       const reserveUsd = ((estimatedInputTokens * inputRate) + (maxTokens * outputRate)) / 1_000_000;
       const reserveToman = Math.max(1, Math.ceil(reserveUsd * usdToToman * (1 + markupBps / 10000) * 1.5));
+      const reserveCredits = Math.max(1, Math.ceil(reserveToman * creditsPerToman));
       const reservationKey = crypto.randomUUID();
       let reservationId: string | null = null;
       // Prefer per-request wallet billing when configured and sufficiently funded.
@@ -750,12 +752,12 @@ Deno.serve(async (request: Request) => {
       if (!isAdmin && walletBalance <= 0 && !hasActiveSubscription) {
         return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
       }
-      if (!isAdmin && walletBillingReady && walletBalance >= reserveToman) {
-        const reservation = await serviceFetch("rpc/ema_reserve_wallet", {
+      if (!isAdmin && walletBillingReady && walletBalance >= reserveCredits) {
+        const reservation = await serviceFetch("rpc/ema_reserve_credits", {
           method: "POST",
           body: JSON.stringify({
             p_user_id: userId,
-            p_amount_toman: reserveToman,
+            p_amount_credits: reserveCredits,
             p_reference: reservationKey,
             p_feature: feature,
             p_model: model,
@@ -771,8 +773,8 @@ Deno.serve(async (request: Request) => {
             error: {
               code: reservation?.code || "INSUFFICIENT_AI_CREDIT",
               message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن.",
-              balance_toman: reservation?.balance_toman ?? walletBalance,
-              required_toman: reservation?.required_toman ?? reserveToman,
+              balance_credits: reservation?.balance_credits ?? walletBalance,
+              required_credits: reservation?.required_credits ?? reserveToman,
             },
           }, 402);
         }
@@ -796,7 +798,7 @@ Deno.serve(async (request: Request) => {
         const raw = await upstream.text();
         if (!upstream.ok) {
           if (reservationId) {
-            await serviceFetch("rpc/ema_release_wallet", {
+            await serviceFetch("rpc/ema_release_credits", {
               method: "POST",
               body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_http_${upstream.status}` }),
             }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
@@ -808,7 +810,7 @@ Deno.serve(async (request: Request) => {
         let result: any;
         try { result = JSON.parse(raw); } catch {
           if (reservationId) {
-            await serviceFetch("rpc/ema_release_wallet", {
+            await serviceFetch("rpc/ema_release_credits", {
               method: "POST",
               body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "invalid_provider_json" }),
             }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
@@ -821,12 +823,14 @@ Deno.serve(async (request: Request) => {
         const outputTokens = Math.max(0, Number(usage.completion_tokens ?? maxTokens));
         const actualUsd = ((inputTokens * inputRate) + (outputTokens * outputRate)) / 1_000_000;
         if (reservationId) {
-          const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(actualUsd * usdToToman * (1 + markupBps / 10000))));
-          await serviceFetch("rpc/ema_settle_wallet", {
+          const actualToman = Math.max(0, Math.ceil(actualUsd * usdToToman * (1 + markupBps / 10000)));
+          const actualCredits = Math.min(reserveCredits, Math.ceil(actualToman * creditsPerToman));
+          await serviceFetch("rpc/ema_settle_credits", {
             method: "POST",
             body: JSON.stringify({
               p_reservation_id: reservationId,
-              p_actual_toman: actualToman,
+              p_actual_credits: actualCredits,
+              p_charged_toman: actualToman,
               p_provider: "NetArz",
               p_input_tokens: inputTokens,
               p_output_tokens: outputTokens,
@@ -863,7 +867,7 @@ Deno.serve(async (request: Request) => {
         return reply(result);
       } catch (error) {
         if (reservationId) {
-          await serviceFetch("rpc/ema_release_wallet", {
+          await serviceFetch("rpc/ema_release_credits", {
             method: "POST",
             body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "provider_request_failed" }),
           }).catch((releaseError) => console.error("EMA paid AI reservation release failed", releaseError instanceof Error ? releaseError.message : "unknown"));
@@ -956,12 +960,12 @@ Deno.serve(async (request: Request) => {
         const setting = settings?.[0] || {};
         const active = subscriptions?.[0] || null;
         return reply({
-          balanceToman: Number(wallets?.[0]?.balance_toman || 0),
+          balanceCredits: Number(wallets?.[0]?.balance_credits || 0),
           plans: plans || [],
           subscription: active ? { plan_name: active.ema_plans?.name || active.plan_id, ends_at: active.ends_at } : null,
           payment: {
             instructions: setting.instructions || "",
-            minTopupToman: Number(setting.min_topup_toman || 100000),
+            minTopupToman: Math.max(500000, Number(setting.min_topup_toman || 500000)),
             maxTopupToman: Number(setting.max_topup_toman || 50000000),
           },
           isAdmin: Array.isArray(admins) && admins.length > 0,
@@ -992,7 +996,7 @@ Deno.serve(async (request: Request) => {
         if (purpose === "wallet_topup") {
           const settings = await serviceFetch("ema_payment_settings?select=min_topup_toman,max_topup_toman&singleton=eq.true&limit=1");
           const value = Number(body.amountToman);
-          const min = Number(settings?.[0]?.min_topup_toman || 100000);
+          const min = Math.max(500000, Number(settings?.[0]?.min_topup_toman || 500000));
           const max = Number(settings?.[0]?.max_topup_toman || 50000000);
           if (!Number.isSafeInteger(value) || value < min || value > max) {
             return reply({ error: { code: "INVALID_TOPUP_AMOUNT", message: "مبلغ شارژ خارج از محدوده مجاز است." } }, 400);
