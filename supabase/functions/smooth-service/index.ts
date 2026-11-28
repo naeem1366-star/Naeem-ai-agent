@@ -88,9 +88,9 @@ Deno.serve(async (request: Request) => {
     return [
       {
         name: "NetArz", key: netarzKey, base: netarzBase,
-        model: Deno.env.get("NETARZ_CHAT_MODEL") || Deno.env.get("CHAT_PRIMARY_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+        model: Deno.env.get("NETARZ_CHAT_MODEL") || "gpt-6-luna",
         visionModel: Deno.env.get("NETARZ_VISION_MODEL") || Deno.env.get("CHAT_PRIMARY_VISION_MODEL") || Deno.env.get("CHAT_PRIMARY_MODEL") || "gpt-4o-mini",
-        imageModel: Deno.env.get("NETARZ_IMAGE_MODEL") || Deno.env.get("CHAT_PRIMARY_IMAGE_MODEL") || "gpt-image-1",
+        imageModel: Deno.env.get("NETARZ_IMAGE_MODEL") || "gemini-3.1-flash-lite-image",
         speechModel: Deno.env.get("NETARZ_TTS_MODEL") || Deno.env.get("CHAT_PRIMARY_TTS_MODEL") || "gpt-4o-mini-tts",
       },
       {
@@ -1094,7 +1094,9 @@ Deno.serve(async (request: Request) => {
       model: containsImage
         ? provider.visionModel
         : provider.name === "NetArz"
-          ? (String(body.model || "").trim() || provider.model)
+          ? ((!String(body.model || "").trim() || ["default", "gpt-4o-mini"].includes(String(body.model).trim()))
+              ? provider.model
+              : String(body.model).trim())
           : provider.model,
       messages: body.messages,
       stream: false,
