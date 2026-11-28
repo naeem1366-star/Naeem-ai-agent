@@ -37,7 +37,7 @@ This is an additive Android + Supabase Edge Function module. It does not replace
 
 ## Global kill switch semantics
 
-1. Only a user present in `ema_admin_users` can read/change the admin control endpoint.
+1. Only a user with role `superadmin` in `ema_admin_users` can read/change the owner control endpoint.
 2. Turning it OFF updates `ema_feature_controls.social_network.enabled=false`.
 3. Every non-admin social route checks the flag before doing work and returns HTTP 503 with the configured maintenance message while OFF.
 4. `/v1/social/status` and `/v1/social/admin/control` remain available so the app can render the disabled state and an administrator can turn the module back ON.
