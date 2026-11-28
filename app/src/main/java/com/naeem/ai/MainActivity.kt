@@ -876,6 +876,7 @@ fun NaeemApp(
     var pendingJournalDetail by remember { mutableStateOf<String?>(null) }
     var showFinance by remember { mutableStateOf(false) }
     var showHub by remember { mutableStateOf(false) }
+    var showEmaSocial by remember { mutableStateOf(false) }
     var showWallet by remember { mutableStateOf(false) }
     var showProductLens by remember { mutableStateOf(false) }
     var showHealth by remember { mutableStateOf(false) }
@@ -932,6 +933,7 @@ fun NaeemApp(
             "تنظیمات" -> showSettings = true
             "اتصال به کامپیوتر" -> showPcControl = true
             "کیف پول و اشتراک" -> showWallet = true
+            "شبکه اجتماعی ایما" -> showEmaSocial = true
         }
     }
     var memoryDraft by remember { mutableStateOf("") }
@@ -1063,12 +1065,14 @@ fun NaeemApp(
     val wakePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
     var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
     var smartListeningEnabled by remember { mutableStateOf(wakePrefs.getBoolean("smart_listening", false)) }
+    var wakeListeningReady by remember { mutableStateOf(wakePrefs.getBoolean("ready", false)) }
     var showVoiceHelp by remember { mutableStateOf(false) }
     var showComposerMenu by remember { mutableStateOf(false) }
     DisposableEffect(wakePrefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             if (key == "enabled") wakeAssistantEnabled = prefs?.getBoolean("enabled", false) ?: false
             if (key == "smart_listening") smartListeningEnabled = prefs?.getBoolean("smart_listening", false) ?: false
+            if (key == "ready") wakeListeningReady = prefs?.getBoolean("ready", false) ?: false
         }
         wakePrefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { wakePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
@@ -1504,6 +1508,9 @@ fun NaeemApp(
                         NavigationDrawerItem(label = { Text(appText("فضاهای من و ابزارها", isEnglish)) }, selected = false,
                             icon = { Icon(Icons.Default.Apps, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showHub = true } })
+                        NavigationDrawerItem(label = { Text(appText("شبکه اجتماعی ایما", isEnglish)) }, selected = false,
+                            icon = { Icon(Icons.Default.Groups, contentDescription = null) },
+                            onClick = { scope.launch { drawerState.close(); showEmaSocial = true } })
                         NavigationDrawerItem(label = { Text(appText("اتصال به کامپیوتر", isEnglish)) }, selected = false,
                             icon = { Icon(Icons.Default.Computer, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showPcControl = true } })
@@ -1695,7 +1702,7 @@ fun NaeemApp(
                                 },
                                 modifier = Modifier.size(38.dp).background(
                                     when {
-                                        smartListeningEnabled -> Color(0xFF238653)
+                                        smartListeningEnabled && wakeListeningReady -> Color(0xFF238653)
                                         wakeAssistantEnabled -> Color(0xFF286B50)
                                         else -> Panel
                                     }, CircleShape
@@ -1704,7 +1711,8 @@ fun NaeemApp(
                                 Icon(
                                     Icons.Default.GraphicEq,
                                     contentDescription = when {
-                                        smartListeningEnabled -> "شنود هوشمند فعال است"
+                                        smartListeningEnabled && wakeListeningReady -> "شنود هوشمند فعال است"
+                                        wakeAssistantEnabled && !wakeListeningReady -> "در حال اتصال به شنود؛ برای توقف لمس کن"
                                         wakeAssistantEnabled -> "شنود صوتی فعال است؛ برای توقف لمس کن"
                                         else -> "فعال‌کردن شنود صوتی"
                                     },
@@ -1991,6 +1999,16 @@ fun NaeemApp(
                             model = model,
                             apiKey = apiKey
                         )
+                    }
+                }
+            }
+        }
+
+        if (showEmaSocial) {
+            Dialog(onDismissRequest = { showEmaSocial = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
+                    ModuleScreenBackdrop("hub") {
+                        EmaSocialScreen(accessToken = chatAccessToken, isEnglish = isEnglish, onClose = { showEmaSocial = false })
                     }
                 }
             }
@@ -2598,8 +2616,8 @@ fun NaeemApp(
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(if (isEnglish) "Secure AI connection" else "اتصال امن هوش مصنوعی", color = Gold, fontWeight = FontWeight.SemiBold)
                         Text(
-                            if (isEnglish) "Chat and image generation use EMA's secure server gateway. Provider API keys are stored on the server and must not be entered on this phone. Free chat and image requests are routed to GapGPT when its server connection is enabled; paid media tools use NetArz."
-                            else "چت و تولید تصویر از درگاه امن سرور ایما استفاده می‌کنند. کلیدهای سرویس‌دهنده فقط روی سرور نگهداری می‌شوند و نباید در گوشی وارد شوند. چت و ساخت تصویر رایگان از مسیر GapGPT و ابزارهای رسانه‌ای پولی از مسیر NetArz انجام می‌شوند؛ فعال‌بودن کلیدهای سرور برای هر سرویس لازم است.",
+                            if (isEnglish) "EMA routes free chat, image generation, product vision, and generated speech through NetArz first, with GapGPT as an automatic fallback during temporary outages. Microphone transcription and wake-word detection still use Android's speech-recognition service. Paid AI and media features remain behind subscription or wallet-credit access. Provider API keys stay on the secure server and must not be entered on this phone."
+                            else "چت رایگان، ساخت تصویر، تشخیص تصویر و تبدیل متن به گفتار ابتدا از NetArz انجام می‌شوند و هنگام اختلال موقت، ایما خودکار به GapGPT برمی‌گردد. تبدیل صدای میکروفون به متن و تشخیص کلمه بیدارباش فعلاً از سرویس تشخیص گفتار اندروید استفاده می‌کند. قابلیت‌های هوش مصنوعی و رسانه‌ای پولی همچنان فقط با اشتراک یا اعتبار کیف پول فعال می‌شوند. کلیدهای API فقط روی سرور امن نگهداری می‌شوند و نباید در گوشی وارد شوند.",
                             color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall
                         )
                         Text(appText("شناسه مدل ساخت تصویر", isEnglish))

@@ -79,6 +79,70 @@ Deno.serve(async (request: Request) => {
     return rows[0].role as string;
   };
 
+  // NetArz pays for all free AI traffic; GapGPT is a failover only for transient outages.
+  const aiProviderConfigs = () => {
+    const netarzKey = Deno.env.get("NETARZ_API_KEY") || Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+    const netarzBase = (Deno.env.get("NETARZ_BASE_URL") || Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+    const gapKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+    const gapBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
+    return [
+      {
+        name: "NetArz", key: netarzKey, base: netarzBase,
+        model: Deno.env.get("NETARZ_CHAT_MODEL") || "gpt-6-luna",
+        visionModel: Deno.env.get("NETARZ_VISION_MODEL") || Deno.env.get("CHAT_PRIMARY_VISION_MODEL") || Deno.env.get("CHAT_PRIMARY_MODEL") || "gpt-4o-mini",
+        imageModel: Deno.env.get("NETARZ_IMAGE_MODEL") || "gemini-3.1-flash-lite-image",
+        speechModel: Deno.env.get("NETARZ_TTS_MODEL") || Deno.env.get("CHAT_PRIMARY_TTS_MODEL") || "gpt-4o-mini-tts",
+      },
+      {
+        name: "GapGPT", key: gapKey, base: gapBase,
+        model: Deno.env.get("CHAT_SECONDARY_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+        imageModel: Deno.env.get("CHAT_SECONDARY_IMAGE_MODEL") || "gpt-image-2",
+        speechModel: Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || "gpt-4o-mini-tts",
+      },
+    ].filter((provider) => provider.key && provider.base.startsWith("https://"));
+  };
+
+  const requestAiWithFallback = async (
+    path: string,
+    providers: ReturnType<typeof aiProviderConfigs>,
+    payloadFor: (provider: ReturnType<typeof aiProviderConfigs>[number]) => unknown,
+    timeoutMs: number,
+  ) => {
+    let lastFailure = "provider_unavailable";
+    for (const provider of providers) {
+      try {
+        const response = await fetch(provider.base + path, {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + provider.key,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payloadFor(provider)),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (response.ok) return { provider, response, raw: "" };
+        const raw = await response.text();
+        lastFailure = provider.name + "_http_" + response.status;
+        // Keep NetArz as the actual primary: only retryable upstream/rate-limit failures
+        // may fall through to GapGPT. Authentication, model, permission and credit errors
+        // must be shown instead of silently charging the secondary provider.
+        const retryable = response.status === 408 || response.status === 425 ||
+          response.status === 429 || response.status >= 500;
+        console.warn(retryable ? "EMA AI provider transient failure; trying fallback" : "EMA AI provider rejected request; fallback blocked", {
+          provider: provider.name, status: response.status, detail: raw.slice(0, 240),
+        });
+        if (!retryable) break;
+        continue;
+      } catch (error) {
+        lastFailure = provider.name + "_" + (error instanceof Error ? error.message : "network_error");
+        console.warn("EMA AI provider connection failed; trying fallback", { provider: provider.name });
+      }
+    }
+    return { provider: null, response: null, raw: "", error: lastFailure };
+  };
+
   try {
     // Account-scoped personal memory. All writes are server-side and tied to the verified Auth user.
     if (route === "/v1/memory/items" && request.method === "GET") {
@@ -167,14 +231,18 @@ Deno.serve(async (request: Request) => {
     }
 
     if (route === "/v1/ai/providers" && request.method === "GET") {
-      const configured = (key: string) => !!Deno.env.get(key)?.trim();
+      const providers = aiProviderConfigs();
+      const netarz = providers.find((provider) => provider.name === "NetArz");
+      const gapgpt = providers.find((provider) => provider.name === "GapGPT");
       return reply({
         chat: [
-          { id: "gapgpt", configured: configured("CHAT_SECONDARY_API_KEY") || configured("CHAT_SECONDARY_APLIKEY"), role: "primary" },
-          { id: "ema_primary", configured: configured("EMA_CHAT_FREE_PRIMARY_API_KEY"), role: "fallback" },
-          { id: "ema_fallback", configured: configured("EMA_CHAT_FREE_FALLBACK_API_KEY"), role: "secondary_fallback" },
+          { id: "netarz", configured: !!netarz, role: "primary" },
+          { id: "gapgpt", configured: !!gapgpt, role: "fallback" },
         ],
-        webSearch: { configured: configured("EMA_SEARCH_API_KEY"), provider: Deno.env.get("EMA_SEARCH_PROVIDER") || "brave" },
+        image: { primary: "NetArz", fallback: "GapGPT", configured: !!netarz || !!gapgpt },
+        vision: { primary: "NetArz", fallback: "GapGPT", configured: !!netarz || !!gapgpt },
+        speech: { primary: "NetArz", fallback: "GapGPT", configured: !!netarz || !!gapgpt },
+        webSearch: { configured: !!Deno.env.get("EMA_SEARCH_API_KEY"), provider: Deno.env.get("EMA_SEARCH_PROVIDER") || "brave" },
         memory: { available: true, storage: "account_scoped" },
       });
     }
@@ -210,154 +278,115 @@ Deno.serve(async (request: Request) => {
       return reply({ provider: "brave", searched_at: new Date().toISOString(), results });
     }
 
-    // Product lens: identify a photographed product using the server-side vision model.
+    // Free AI media uses NetArz first. GapGPT is only a transient-outage fallback.
     if (request.method === "POST" && route === "/v1/vision/product") {
       const body = await jsonBody(request);
       const imageData = String(body?.image || "");
       if (!imageData.startsWith("data:image/") || imageData.length > 5_500_000) {
         return reply({ error: { code: "INVALID_PRODUCT_IMAGE", message: "عکس معتبر نیست یا حجم آن زیاد است." } }, 400);
       }
-      // Free image analysis uses GapGPT only. Never route this tool to paid NetArz.
-      const providerKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      const providerBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
-      const visionModel = Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini";
-      if (!providerKey || !providerBase.startsWith("https://")) {
-        return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "سرویس تشخیص تصویر تنظیم نشده است." } }, 503);
-      }
+      const providers = aiProviderConfigs();
+      const available = providers.filter((provider) => provider.visionModel);
+      if (!available.length) return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "اتصال NetArz و مسیر پشتیبان تشخیص تصویر تنظیم نشده است." } }, 503);
       const prompt = "Identify the main commercial product in this photo. Return concise Persian JSON only with keys product_name, brand, model, category, visual_description, search_query, confidence. Do not invent a brand or model; use empty string if uncertain. search_query should be a useful shopping search phrase in Persian and English.";
-      const upstream = await fetch(`${providerBase}/chat/completions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          model: visionModel,
-          messages: [{ role: "user", content: [
-            { type: "text", text: prompt },
-            { type: "image_url", image_url: { url: imageData, detail: "high" } },
-          ] }],
-          max_tokens: 500,
-          temperature: 0.1,
-        }),
-        signal: AbortSignal.timeout(90000),
-      });
-      if (!upstream.ok) {
-        const detail = (await upstream.text()).slice(0, 500);
-        console.error("EMA product vision failed", { status: upstream.status, detail: detail.slice(0, 160) });
-        return reply({ error: { code: "VISION_PROVIDER_ERROR", message: `تشخیص تصویر ناموفق بود (HTTP ${upstream.status}).` } }, upstream.status);
+      const result = await requestAiWithFallback("/chat/completions", available, (provider) => ({
+        model: provider.visionModel,
+        messages: [{ role: "user", content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: imageData, detail: "high" } },
+        ] }],
+        max_tokens: 500,
+        temperature: 0.1,
+      }), 90000);
+      if (!result.response) {
+        console.error("EMA product vision providers unavailable", { reason: result.error });
+        return reply({ error: { code: "VISION_PROVIDER_UNAVAILABLE", message: "تشخیص تصویر با NetArz و مسیر پشتیبان موقتاً در دسترس نیست." } }, 503);
       }
-      const result = await upstream.json().catch(() => ({}));
-      const content = result?.choices?.[0]?.message?.content;
-      if (typeof content !== "string" || !content.trim()) {
+      if (!result.response.ok) {
+        console.error("EMA product vision provider rejected request", { provider: result.provider?.name, status: result.response.status, detail: result.raw.slice(0, 160) });
+        return reply({ error: { code: "VISION_PROVIDER_ERROR", message: "تشخیص تصویر ناموفق بود (HTTP " + result.response.status + "). مدل بینایی و اعتبار سرویس را بررسی کن." } }, result.response.status);
+      }
+      const data: any = await result.response.json().catch(() => ({}));
+      const identification = data?.choices?.[0]?.message?.content;
+      if (typeof identification !== "string" || !identification.trim()) {
         return reply({ error: { code: "VISION_EMPTY_RESULT", message: "مدل نتوانست محصول را تشخیص دهد." } }, 502);
       }
-      return reply({ identification: content });
+      console.log("EMA product vision completed", { provider: result.provider?.name, model: result.provider?.visionModel });
+      return reply({ identification });
     }
 
-    // Free image generation uses GapGPT only; no EMA wallet debit and no NetArz fallback.
     if (request.method === "POST" && route === "/v1/images/generations") {
       const body = await jsonBody(request);
       const prompt = String(body?.prompt || "").trim();
-      const model = String(body?.model || Deno.env.get("CHAT_SECONDARY_IMAGE_MODEL") || "gpt-image-2").trim();
-      if (!prompt || prompt.length > 4000 || model.length > 120) {
+      const requestedModel = String(body?.model || "").trim();
+      if (!prompt || prompt.length > 4000 || requestedModel.length > 120) {
         return reply({ error: { code: "INVALID_IMAGE_REQUEST", message: "توضیح تصویر خالی یا بیش از حد طولانی است." } }, 400);
       }
-      const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      const gapgptBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
-      if (!gapgptKey || !gapgptBase.startsWith("https://")) {
-        return reply({ error: { code: "FREE_IMAGE_NOT_CONFIGURED", message: "سرویس ساخت تصویر رایگان GapGPT روی سرور تنظیم نشده است." } }, 503);
+      const providers = aiProviderConfigs();
+      const available = providers.filter((provider) => provider.imageModel);
+      if (!available.length) return reply({ error: { code: "FREE_IMAGE_NOT_CONFIGURED", message: "اتصال NetArz و مسیر پشتیبان ساخت تصویر تنظیم نشده است." } }, 503);
+      const result = await requestAiWithFallback("/images/generations", available, (provider) => {
+        let model = requestedModel || provider.imageModel;
+        // The app's former default was gpt-image-2; NetArz documents gpt-image-1 as its GPT Image model.
+        if (provider.name === "NetArz" && model === "gpt-image-2") model = provider.imageModel || "gpt-image-1";
+        if (provider.name === "GapGPT" && !requestedModel) model = provider.imageModel;
+        return { model, prompt, n: 1, size: "1024x1024", output_format: "png" };
+      }, 180000);
+      if (!result.response) {
+        console.error("EMA free image providers unavailable", { reason: result.error });
+        return reply({ error: { code: "FREE_IMAGE_PROVIDER_UNAVAILABLE", message: "ساخت تصویر با NetArz و مسیر پشتیبان موقتاً در دسترس نیست." } }, 503);
       }
-      try {
-        const upstream = await fetch(gapgptBase + "/images/generations", {
-          method: "POST",
-          headers: { Authorization: "Bearer " + gapgptKey, "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024", output_format: "png" }),
-          signal: AbortSignal.timeout(180000),
-        });
-        const raw = await upstream.text();
-        if (!upstream.ok) {
-          console.error("EMA GapGPT free image generation failed", { status: upstream.status, detail: raw.slice(0, 160) });
-          return reply({ error: { code: "FREE_IMAGE_PROVIDER_ERROR", message: "ساخت تصویر با GapGPT ناموفق بود (HTTP " + upstream.status + "). اعتبار و مدل تصویر را بررسی کن." } }, upstream.status);
-        }
-        let result: any;
-        try { result = JSON.parse(raw); } catch {
-          return reply({ error: { code: "FREE_IMAGE_INVALID_RESPONSE", message: "پاسخ GapGPT برای ساخت تصویر معتبر نبود." } }, 502);
-        }
-        console.log("EMA free image generated", { provider: "GapGPT", model });
-        return reply(result);
-      } catch (error) {
-        console.error("EMA GapGPT free image request failed", error instanceof Error ? error.message : "network error");
-        return reply({ error: { code: "FREE_IMAGE_PROVIDER_UNAVAILABLE", message: "سرویس ساخت تصویر GapGPT موقتاً در دسترس نیست؛ هیچ انتقالی به NetArz انجام نمی‌شود." } }, 503);
+      const raw = result.response.ok ? await result.response.text() : result.raw;
+      if (!result.response.ok) {
+        console.error("EMA free image provider rejected request", { provider: result.provider?.name, status: result.response.status, detail: raw.slice(0, 160) });
+        return reply({ error: { code: "FREE_IMAGE_PROVIDER_ERROR", message: "ساخت تصویر ناموفق بود (HTTP " + result.response.status + "). مدل و اعتبار سرویس را بررسی کن." } }, result.response.status);
       }
+      let data: any;
+      try { data = JSON.parse(raw); } catch {
+        return reply({ error: { code: "FREE_IMAGE_INVALID_RESPONSE", message: "پاسخ سرویس ساخت تصویر در قالب معتبر نبود." } }, 502);
+      }
+      console.log("EMA free image generated", { provider: result.provider?.name, model: data?.model || requestedModel });
+      return reply(data);
     }
 
-    // Free text-to-speech uses GapGPT only. Never fall back to NetArz.
     if (request.method === "POST" && route === "/v1/audio/speech") {
       const body = await jsonBody(request);
       const input = String(body?.input || "").trim();
       if (!input || input.length > 4096) {
         return reply({ error: { code: "INVALID_SPEECH_INPUT", message: "متن گفتار خالی یا بیش از حد طولانی است." } }, 400);
       }
-
-      const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      let gapgptBase = Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1";
-      while (gapgptBase.endsWith("/")) gapgptBase = gapgptBase.slice(0, -1);
-      const speechModel = Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || String(body?.model || "gpt-4o-mini-tts");
-      const speechVoice = Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || String(body?.voice || "nova");
-      const instructions = String(body?.instructions || "Speak Persian (Farsi) naturally and clearly.");
-
-      if (!gapgptKey || !gapgptBase.startsWith("https://")) {
-        return reply({ error: { code: "FREE_SPEECH_NOT_CONFIGURED", message: "سرویس صدای رایگان GapGPT روی سرور تنظیم نشده است." } }, 503);
+      const providers = aiProviderConfigs();
+      const available = providers.filter((provider) => provider.speechModel);
+      if (!available.length) return reply({ error: { code: "FREE_SPEECH_NOT_CONFIGURED", message: "اتصال NetArz و مسیر پشتیبان گفتار تنظیم نشده است." } }, 503);
+      const result = await requestAiWithFallback("/audio/speech", available, (provider) => ({
+        model: provider.name === "NetArz"
+          ? (Deno.env.get("NETARZ_TTS_MODEL") || Deno.env.get("CHAT_PRIMARY_TTS_MODEL") || String(body?.model || provider.speechModel))
+          : (Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || String(body?.model || provider.speechModel)),
+        voice: String(body?.voice || Deno.env.get("NETARZ_TTS_VOICE") || Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || "nova"),
+        input,
+        instructions: String(body?.instructions || "Speak Persian (Farsi) naturally and clearly."),
+        response_format: "mp3",
+      }), 120000);
+      if (!result.response) {
+        console.error("EMA free speech providers unavailable", { reason: result.error });
+        return reply({ error: { code: "FREE_SPEECH_PROVIDER_UNAVAILABLE", message: "تبدیل متن به گفتار با NetArz و مسیر پشتیبان موقتاً در دسترس نیست." } }, 503);
       }
-
-      try {
-        const upstream = await fetch(`${gapgptBase}/audio/speech`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${gapgptKey}`,
-            "Content-Type": "application/json",
-            Accept: "audio/mpeg, application/octet-stream, application/json",
-          },
-          body: JSON.stringify({
-            model: speechModel,
-            voice: speechVoice,
-            input,
-            instructions,
-            response_format: "mp3",
-          }),
-          signal: AbortSignal.timeout(120000),
-        });
-        if (!upstream.ok) {
-          const detail = (await upstream.text()).slice(0, 400);
-          console.error("EMA GapGPT free speech failed", { status: upstream.status, detail: detail.slice(0, 160) });
-          return reply({
-            error: {
-              code: "FREE_SPEECH_PROVIDER_ERROR",
-              message: `ساخت صدای رایگان با GapGPT ناموفق بود (HTTP ${upstream.status}). لطفاً بعداً دوباره تلاش کن.`,
-            },
-          }, 503);
-        }
-
-        const audio = await upstream.arrayBuffer();
-        if (!audio.byteLength) {
-          return reply({ error: { code: "FREE_SPEECH_EMPTY_RESPONSE", message: "GapGPT فایل صوتی خالی برگرداند." } }, 502);
-        }
-        console.log("EMA free speech generated", { provider: "GapGPT", status: upstream.status });
-        return new Response(audio, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
-            "Cache-Control": "no-store",
-          },
-        });
-      } catch (error) {
-        console.error("EMA GapGPT free speech request failed", error instanceof Error ? error.message : "network error");
-        return reply({
-          error: {
-            code: "FREE_SPEECH_PROVIDER_UNAVAILABLE",
-            message: "سرویس صدای رایگان GapGPT موقتاً در دسترس نیست؛ هیچ انتقالی به NetArz انجام نمی‌شود.",
-          },
-        }, 503);
+      if (!result.response.ok) {
+        const detail = result.raw.slice(0, 180);
+        console.error("EMA free speech provider rejected request", { provider: result.provider?.name, status: result.response.status, detail });
+        return reply({ error: { code: "FREE_SPEECH_PROVIDER_ERROR", message: "ساخت صدای فارسی ناموفق بود (HTTP " + result.response.status + "). مدل و اعتبار سرویس را بررسی کن." } }, 503);
       }
+      const audio = await result.response.arrayBuffer();
+      if (!audio.byteLength) return reply({ error: { code: "FREE_SPEECH_EMPTY_RESPONSE", message: "سرویس صوتی فایل خالی برگرداند." } }, 502);
+      console.log("EMA free speech generated", { provider: result.provider?.name, model: result.provider?.speechModel });
+      return new Response(audio, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": result.response.headers.get("Content-Type") || "audio/mpeg",
+          "Cache-Control": "no-store",
+        },
+      });
     }
 
     // Paid media tools use NetArz only. Provider secrets never leave this function.
@@ -379,28 +408,31 @@ Deno.serve(async (request: Request) => {
       }
       const [admins, wallets, subscriptions, settings] = await Promise.all([
         serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`),
-        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
         serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`),
-        serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1"),
+        serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps,credits_per_toman&singleton=eq.true&limit=1"),
       ]);
       const isAdmin = Array.isArray(admins) && admins.length > 0;
       const hasSubscription = Array.isArray(subscriptions) && subscriptions.length > 0;
-      const walletBalance = Number(wallets?.[0]?.balance_toman || 0);
+      const walletBalance = Number(wallets?.[0]?.balance_credits || 0);
       const billing = settings?.[0] || {};
       const rate = Number(billing.usd_to_toman || 0);
       const markup = Math.max(0, Number(billing.markup_bps || 0));
-      const billingReady = billing.ai_billing_enabled === true && rate > 0;
+      const creditsPerToman = Number(billing.credits_per_toman || 0);
+      const billingReady = billing.ai_billing_enabled === true && rate > 0 && creditsPerToman > 0;
       if (!isAdmin && !hasSubscription && walletBalance <= 0) throw new Error("PAID_ACCESS_REQUIRED");
       if (!isAdmin && !hasSubscription && !billingReady) throw new Error("AI_BILLING_NOT_ENABLED");
       let reservationId: string | null = null;
       let reserveToman = 0;
+      let reserveCredits = 0;
       if (!isAdmin && billingReady && walletBalance > 0) {
         if (!(estimateUsd > 0) || !Number.isFinite(estimateUsd)) throw new Error("MEDIA_MODEL_PRICE_MISSING");
         reserveToman = Math.max(1, Math.ceil(estimateUsd * rate * (1 + markup / 10000) * 1.5));
-        const reserved = await serviceFetch("rpc/ema_reserve_wallet", {
+        reserveCredits = Math.max(1, Math.ceil(reserveToman * creditsPerToman));
+        const reserved = await serviceFetch("rpc/ema_reserve_credits", {
           method: "POST",
           body: JSON.stringify({
-            p_user_id: userId, p_amount_toman: reserveToman,
+            p_user_id: userId, p_amount_credits: reserveCredits,
             p_reference: crypto.randomUUID(), p_feature: feature, p_model: model,
           }),
         });
@@ -410,30 +442,28 @@ Deno.serve(async (request: Request) => {
           throw new Error("INSUFFICIENT_AI_CREDIT");
         }
       }
-      return { isAdmin, hasSubscription, rate, markup, reservationId, reserveToman };
+      return { isAdmin, hasSubscription, rate, markup, creditsPerToman, reservationId, reserveToman, reserveCredits };
     };
     const settleMediaReservation = async (
       reservationId: string | null, feature: string, model: string, actualUsd: number,
       rate: number, markup: number, isAdmin: boolean, hasSubscription: boolean,
       metadata: Record<string, unknown> = {},
-      reserveToman: number = Number.MAX_SAFE_INTEGER,
+      reserveCredits: number = Number.MAX_SAFE_INTEGER,
     ) => {
       const safeUsd = Math.max(0, Number.isFinite(actualUsd) ? actualUsd : 0);
       if (reservationId) {
-        const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000))));
-        await serviceFetch("rpc/ema_settle_wallet", {
+        const actualToman = Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000)));
+        const creditsRows = await serviceFetch("ema_billing_settings?select=credits_per_toman&singleton=eq.true&limit=1");
+        const creditsPerToman = Number(creditsRows?.[0]?.credits_per_toman || 0);
+        if (!(creditsPerToman > 0)) throw new Error("CREDIT_CONVERSION_NOT_CONFIGURED");
+        const actualCredits = Math.min(reserveCredits, Math.ceil(actualToman * creditsPerToman));
+        await serviceFetch("rpc/ema_settle_credits", {
           method: "POST",
           body: JSON.stringify({
-            p_reservation_id: reservationId, p_actual_toman: actualToman,
+            p_reservation_id: reservationId, p_actual_credits: actualCredits, p_charged_toman: actualToman,
             p_provider: "NetArz", p_input_tokens: 0, p_output_tokens: 0, p_provider_cost_usd: safeUsd,
           }),
         });
-        const events = await serviceFetch(`ema_usage_events?select=id&reservation_id=eq.${reservationId}&limit=1`);
-        const eventId = events?.[0]?.id;
-        if (eventId) await serviceFetch("ema_provider_cost_ledger", {
-          method: "POST", headers: { Prefer: "return=minimal" },
-          body: JSON.stringify({ user_id: userId, usage_event_id: eventId, provider: "NetArz", model, cost_usd: safeUsd }),
-        }).catch((error) => console.error("EMA media cost ledger insert failed", error instanceof Error ? error.message : "unknown"));
       } else {
         const events = await serviceFetch("ema_usage_events?select=id", {
           method: "POST", headers: { Prefer: "return=representation" },
@@ -511,7 +541,7 @@ Deno.serve(async (request: Request) => {
         });
         const raw = await upstream.text();
         if (!upstream.ok) {
-          if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+          if (reservationId) await serviceFetch("rpc/ema_release_credits", {
             method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_music_http_${upstream.status}` }),
           });
           return reply({ error: { code: "NETARZ_MUSIC_ERROR", message: `ساخت موسیقی با NetArz ناموفق بود (HTTP ${upstream.status}).` } }, 502);
@@ -521,11 +551,11 @@ Deno.serve(async (request: Request) => {
         const reportedUsd = Number(result?.usd ?? result?.usage?.cost_usd);
         const returnedUsd = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
         await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.isAdmin, access.hasSubscription,
-          { request_id: result?.id || null, seconds }, access.reserveToman);
+          { request_id: result?.id || null, seconds }, access.reserveCredits);
         console.log("EMA paid music completed", { user_id: userId, model, provider: "NetArz", cost_usd: returnedUsd });
         return reply(result);
       } catch (error) {
-        if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+        if (reservationId) await serviceFetch("rpc/ema_release_credits", {
           method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "netarz_music_request_failed" }),
         }).catch(() => null);
         const code = error instanceof Error ? error.message : "NETARZ_MUSIC_FAILED";
@@ -565,7 +595,7 @@ Deno.serve(async (request: Request) => {
         if (typeof body?.image === "string" && body.image.length <= 8_000_000) payload.image = body.image;
         if (typeof body?.video === "string" && body.video.length <= 18_000_000) payload.video = body.video;
         if (new TextEncoder().encode(JSON.stringify(payload)).length > 19_000_000) {
-          if (reservationId) await serviceFetch("rpc/ema_release_wallet", { method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "media_payload_too_large" }) });
+          if (reservationId) await serviceFetch("rpc/ema_release_credits", { method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "media_payload_too_large" }) });
           return reply({ error: { code: "MEDIA_PAYLOAD_TOO_LARGE", message: "حجم فایل مرجع بیش از حد مجاز است." } }, 413);
         }
         const upstream = await mediaProviderFetch("/videos", {
@@ -574,7 +604,7 @@ Deno.serve(async (request: Request) => {
         });
         const raw = await upstream.text();
         if (!upstream.ok) {
-          if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+          if (reservationId) await serviceFetch("rpc/ema_release_credits", {
             method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_video_http_${upstream.status}` }),
           });
           return reply({ error: { code: "NETARZ_VIDEO_ERROR", message: `شروع تولید ویدیو ناموفق بود (HTTP ${upstream.status}).` } }, 502);
@@ -589,12 +619,12 @@ Deno.serve(async (request: Request) => {
           body: JSON.stringify({
             user_id: userId, provider_job_id: providerJobId, feature: "professional_video",
             model, reservation_id: reservationId, estimated_cost_usd: actualEstimate,
-            size, seconds, reserve_toman: access.reserveToman, status: String(job?.status || "queued"),
+            size, seconds, reserve_toman: access.reserveCredits, status: String(job?.status || "queued"),
           }),
         });
         return reply({ ...job, id: providerJobId, model, usd: actualEstimate, ema_job_id: providerJobId }, 202);
       } catch (error) {
-        if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+        if (reservationId) await serviceFetch("rpc/ema_release_credits", {
           method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "netarz_video_create_failed" }),
         }).catch(() => null);
         const code = error instanceof Error ? error.message : "NETARZ_VIDEO_FAILED";
@@ -634,16 +664,16 @@ Deno.serve(async (request: Request) => {
         if (status === "completed") {
           const reportedUsd = Number(job?.usd);
           const cost = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : Number(savedJob.estimated_cost_usd || 0);
-          const billingRows = await serviceFetch("ema_billing_settings?select=usd_to_toman,markup_bps&singleton=eq.true&limit=1");
+          const billingRows = await serviceFetch("ema_billing_settings?select=usd_to_toman,markup_bps,credits_per_toman&singleton=eq.true&limit=1");
           const billing = billingRows?.[0] || {};
           const admins = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
           const isAdmin = Array.isArray(admins) && admins.length > 0;
           const subs = await serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
           await settleMediaReservation(reservationId, "professional_video", savedJob.model, cost,
             Number(billing.usd_to_toman || 0), Math.max(0, Number(billing.markup_bps || 0)), isAdmin,
-            Array.isArray(subs) && subs.length > 0, { provider_job_id: providerJobId, seconds: savedJob.seconds, size: savedJob.size });
+            Array.isArray(subs) && subs.length > 0, { provider_job_id: providerJobId, seconds: savedJob.seconds, size: savedJob.size }, Number(savedJob.reserve_toman || Number.MAX_SAFE_INTEGER));
         } else if (reservationId) {
-          await serviceFetch("rpc/ema_release_wallet", {
+          await serviceFetch("rpc/ema_release_credits", {
             method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_video_${status}` }),
           });
         }
@@ -676,11 +706,15 @@ Deno.serve(async (request: Request) => {
         return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
       }
 
-      const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-      const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
-      const model = String(Deno.env.get("CHAT_PRIMARY_MODEL") || body?.model || "gpt-4o-mini").trim();
-      if (!netarzKey || !netarzBase.startsWith("https://")) {
-        return reply({ error: { code: "NETARZ_NOT_CONFIGURED", message: "اتصال امن NetArz روی سرور تنظیم نشده است." } }, 503);
+      const providers = aiProviderConfigs();
+      const primary = providers.find((provider) => provider.name === "NetArz");
+      const fallback = providers.find((provider) => provider.name === "GapGPT");
+      const netarzKey = primary?.key || "";
+      const netarzBase = primary?.base || "";
+      const model = String(Deno.env.get("CHAT_PRIMARY_MODEL") || body?.model || primary?.model || "gpt-4o-mini").trim();
+      const fallbackModel = String(fallback?.model || "").trim();
+      if (!primary || !netarzKey || !netarzBase.startsWith("https://")) {
+        return reply({ error: { code: "NETARZ_NOT_CONFIGURED", message: "اتصال امن NetArz به‌عنوان سرویس اصلی روی سرور تنظیم نشده است." } }, 503);
       }
 
       const profiles = await serviceFetch(`ema_profiles?select=status&user_id=eq.${userId}&limit=1`);
@@ -691,162 +725,178 @@ Deno.serve(async (request: Request) => {
       const isAdmin = Array.isArray(admins) && admins.length > 0;
       const now = new Date().toISOString();
       const [walletRows, subscriptionRows] = await Promise.all([
-        serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
         serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(now)}&ends_at=gt.${encodeURIComponent(now)}&limit=1`),
       ]);
-      const walletBalance = Number(walletRows?.[0]?.balance_toman || 0);
+      const walletBalance = Number(walletRows?.[0]?.balance_credits || 0);
       const hasActiveSubscription = Array.isArray(subscriptionRows) && subscriptionRows.length > 0;
 
-      const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1");
+      const billingRows = await serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps,credits_per_toman&singleton=eq.true&limit=1");
       const billing = billingRows?.[0] || {};
-      const pricingRows = await serviceFetch(`ema_pricing_rules?select=input_usd_per_million,output_usd_per_million&model=eq.${encodeURIComponent(model)}&enabled=eq.true&limit=1`);
+      const [pricingRows, fallbackPricingRows] = await Promise.all([
+        serviceFetch(`ema_pricing_rules?select=input_usd_per_million,output_usd_per_million&model=eq.${encodeURIComponent(model)}&enabled=eq.true&limit=1`),
+        fallbackModel
+          ? serviceFetch(`ema_pricing_rules?select=input_usd_per_million,output_usd_per_million&model=eq.${encodeURIComponent(fallbackModel)}&enabled=eq.true&limit=1`)
+          : Promise.resolve([]),
+      ]);
       const pricing = pricingRows?.[0] || null;
+      const fallbackPricing = fallbackPricingRows?.[0] || null;
       const inputRate = Number(pricing?.input_usd_per_million || 0);
       const outputRate = Number(pricing?.output_usd_per_million || 0);
+      const fallbackInputRate = Number(fallbackPricing?.input_usd_per_million || 0);
+      const fallbackOutputRate = Number(fallbackPricing?.output_usd_per_million || 0);
       const usdToToman = Number(billing.usd_to_toman || 0);
+      const creditsPerToman = Number(billing.credits_per_toman || 0);
       const markupBps = Math.max(0, Number(billing.markup_bps || 0));
       const walletBillingReady = billing.ai_billing_enabled === true && !!pricing &&
-        inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0;
+        inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0 && creditsPerToman > 0;
       if (!isAdmin && !hasActiveSubscription && walletBalance > 0 && !walletBillingReady) {
-        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن اعتبار کیف پول، قیمت مدل NetArz و نرخ تبدیل دلار به تومان باید در پنل مدیریت تنظیم شود." } }, 503);
+        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن کردیت، قیمت مدل، نرخ دلار و نرخ تبدیل تومان به کردیت باید در پنل مدیریت تنظیم شود." } }, 503);
       }
 
       const maxTokens = Math.max(1, Math.min(1600, Number(body?.max_tokens) || 1200));
       const serializedMessages = JSON.stringify(body.messages);
       const estimatedInputTokens = Math.max(1, Math.ceil(serializedMessages.length / 3) + 64);
-      const reserveUsd = ((estimatedInputTokens * inputRate) + (maxTokens * outputRate)) / 1_000_000;
-      const reserveToman = Math.max(1, Math.ceil(reserveUsd * usdToToman * (1 + markupBps / 10000) * 1.5));
+      const estimateCredits = (inRate: number, outRate: number) => {
+        const usd = ((estimatedInputTokens * inRate) + (maxTokens * outRate)) / 1_000_000;
+        const toman = Math.max(1, Math.ceil(usd * usdToToman * (1 + markupBps / 10000) * 1.5));
+        return Math.max(1, Math.ceil(toman * creditsPerToman));
+      };
+      const primaryReserveCredits = walletBillingReady ? estimateCredits(inputRate, outputRate) : 0;
+      const fallbackPricingReady = !!fallback && !!fallbackPricing &&
+        (fallbackInputRate + fallbackOutputRate) > 0 && usdToToman > 0 && creditsPerToman > 0;
+      const fallbackReserveCredits = fallbackPricingReady ? estimateCredits(fallbackInputRate, fallbackOutputRate) : 0;
+      // Reserve enough for either provider before the request; fallback is disabled when its price is unknown.
+      const reserveCredits = Math.max(primaryReserveCredits, fallbackReserveCredits, 1);
       const reservationKey = crypto.randomUUID();
       let reservationId: string | null = null;
-      // Prefer per-request wallet billing when configured and sufficiently funded.
-      // An active subscription remains a valid included-access path when wallet billing is not used.
       if (!isAdmin && walletBalance > 0 && !hasActiveSubscription && !walletBillingReady) {
-        return reply({ error: { code: "AI_BILLING_NOT_ENABLED", message: "سامانه محاسبه و کسر اعتبار هوش مصنوعی هنوز توسط مدیر فعال نشده است." } }, 503);
+        return reply({ error: { code: "AI_BILLING_NOT_ENABLED", message: "سامانه محاسبه و کسر کردیت هنوز توسط مدیر فعال نشده است." } }, 503);
       }
       if (!isAdmin && walletBalance <= 0 && !hasActiveSubscription) {
-        return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "برای استفاده از این قابلیت اشتراک فعال یا اعتبار کیف پول لازم است." } }, 402);
+        return reply({ error: { code: "PAID_ACCESS_REQUIRED", message: "کردیت شما تمام شده است؛ برای ادامه، کردیت بخرید." } }, 402);
       }
-      if (!isAdmin && walletBillingReady && walletBalance >= reserveToman) {
-        const reservation = await serviceFetch("rpc/ema_reserve_wallet", {
+      if (!isAdmin && walletBillingReady && walletBalance >= reserveCredits) {
+        const reservation = await serviceFetch("rpc/ema_reserve_credits", {
           method: "POST",
           body: JSON.stringify({
-            p_user_id: userId,
-            p_amount_toman: reserveToman,
-            p_reference: reservationKey,
-            p_feature: feature,
-            p_model: model,
+            p_user_id: userId, p_amount_credits: reserveCredits, p_reference: reservationKey,
+            p_feature: feature, p_model: model,
           }),
         });
         if (reservation?.ok) {
           reservationId = String(reservation.reservation_id || "");
           if (!reservationId) {
-            return reply({ error: { code: "AI_RESERVATION_FAILED", message: "رزرو اعتبار هوش مصنوعی انجام نشد." } }, 503);
+            return reply({ error: { code: "AI_RESERVATION_FAILED", message: "رزرو کردیت هوش مصنوعی انجام نشد." } }, 503);
           }
         } else if (!hasActiveSubscription) {
           return reply({
             error: {
               code: reservation?.code || "INSUFFICIENT_AI_CREDIT",
-              message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن.",
-              balance_toman: reservation?.balance_toman ?? walletBalance,
-              required_toman: reservation?.required_toman ?? reserveToman,
+              message: "کردیت کافی برای اجرای این درخواست وجود ندارد؛ لطفاً کردیت بخری.",
+              balance_credits: reservation?.balance_credits ?? walletBalance,
+              required_credits: reservation?.required_credits ?? reserveCredits,
             },
           }, 402);
         }
-      } else if (!isAdmin && !hasActiveSubscription && walletBalance < reserveToman) {
-        return reply({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن." } }, 402);
+      } else if (!isAdmin && !hasActiveSubscription && walletBalance < reserveCredits) {
+        return reply({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "کردیت کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کردیت بخرید." } }, 402);
       }
 
-      try {
-        const upstream = await fetch(`${netarzBase}/chat/completions`, {
+      const candidates = [
+        { provider: primary, model, inputRate, outputRate },
+        ...(fallbackPricingReady ? [{ provider: fallback!, model: fallbackModel, inputRate: fallbackInputRate, outputRate: fallbackOutputRate }] : []),
+      ];
+      let result: any = null;
+      let usedProvider = "";
+      let usedModel = "";
+      let usedInputRate = 0;
+      let usedOutputRate = 0;
+      let lastFailure = "provider_unavailable";
+      for (const candidate of candidates) {
+        try {
+          const upstream = await fetch(candidate.provider.base + "/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${candidate.provider.key}`, "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+              model: candidate.model,
+              messages: body.messages,
+              stream: false,
+              max_tokens: maxTokens,
+              temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.7,
+            }),
+            signal: AbortSignal.timeout(90000),
+          });
+          const raw = await upstream.text();
+          if (!upstream.ok) {
+            lastFailure = candidate.provider.name + "_http_" + upstream.status;
+            if (upstream.status === 408 || upstream.status === 429 || upstream.status >= 500) {
+              console.warn("EMA paid AI provider transient failure; trying fallback", { provider: candidate.provider.name, status: upstream.status });
+              continue;
+            }
+            if (reservationId) await serviceFetch("rpc/ema_release_credits", {
+              method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `${candidate.provider.name.toLowerCase()}_http_${upstream.status}` }),
+            }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
+            return reply({ error: { code: "PAID_AI_PROVIDER_REJECTED", message: "موتور هوش مصنوعی درخواست را نپذیرفت؛ تنظیمات مدل و دسترسی بررسی شود." } }, 502);
+          }
+          try { result = JSON.parse(raw); } catch {
+            lastFailure = candidate.provider.name + "_invalid_json";
+            continue;
+          }
+          if (!Array.isArray(result?.choices) || !result.choices.length) {
+            result = null;
+            lastFailure = candidate.provider.name + "_empty_choices";
+            continue;
+          }
+          usedProvider = candidate.provider.name;
+          usedModel = candidate.model;
+          usedInputRate = candidate.inputRate;
+          usedOutputRate = candidate.outputRate;
+          break;
+        } catch (error) {
+          lastFailure = candidate.provider.name + "_" + (error instanceof Error ? error.message : "network_error");
+          console.warn("EMA paid AI provider unavailable; trying fallback", { provider: candidate.provider.name });
+        }
+      }
+
+      if (!result) {
+        if (reservationId) await serviceFetch("rpc/ema_release_credits", {
+          method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: lastFailure }),
+        }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
+        return reply({ error: { code: "PAID_AI_PROVIDERS_UNAVAILABLE", message: "NetArz موقتاً در دسترس نیست و سرویس جایگزین نیز پاسخ نداد؛ کردیت رزروشده آزاد شد." } }, 503);
+      }
+
+      const usage = result?.usage || {};
+      const inputTokens = Math.max(0, Number(usage.prompt_tokens ?? estimatedInputTokens));
+      const outputTokens = Math.max(0, Number(usage.completion_tokens ?? maxTokens));
+      const actualUsd = ((inputTokens * usedInputRate) + (outputTokens * usedOutputRate)) / 1_000_000;
+      if (reservationId) {
+        const actualToman = Math.max(0, Math.ceil(actualUsd * usdToToman * (1 + markupBps / 10000)));
+        const actualCredits = Math.min(reserveCredits, Math.ceil(actualToman * creditsPerToman));
+        await serviceFetch("rpc/ema_settle_credits", {
           method: "POST",
-          headers: { Authorization: `Bearer ${netarzKey}`, "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({
-            model,
-            messages: body.messages,
-            stream: false,
-            max_tokens: maxTokens,
-            temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.7,
+            p_reservation_id: reservationId, p_actual_credits: actualCredits, p_charged_toman: actualToman,
+            p_provider: usedProvider, p_input_tokens: inputTokens, p_output_tokens: outputTokens, p_provider_cost_usd: actualUsd,
           }),
-          signal: AbortSignal.timeout(90000),
         });
-        const raw = await upstream.text();
-        if (!upstream.ok) {
-          if (reservationId) {
-            await serviceFetch("rpc/ema_release_wallet", {
-              method: "POST",
-              body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_http_${upstream.status}` }),
-            }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
-          }
-          console.error("EMA NetArz paid AI failed", { status: upstream.status, detail: raw.slice(0, 180) });
-          return reply({ error: { code: "NETARZ_PROVIDER_ERROR", message: `پاسخ NetArz ناموفق بود (HTTP ${upstream.status}). اعتبار و مدل انتخابی را بررسی کن.` } }, 502);
-        }
-
-        let result: any;
-        try { result = JSON.parse(raw); } catch {
-          if (reservationId) {
-            await serviceFetch("rpc/ema_release_wallet", {
-              method: "POST",
-              body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "invalid_provider_json" }),
-            }).catch((error) => console.error("EMA paid AI reservation release failed", error instanceof Error ? error.message : "unknown"));
-          }
-          return reply({ error: { code: "NETARZ_INVALID_RESPONSE", message: "پاسخ NetArz در قالب معتبر دریافت نشد." } }, 502);
-        }
-
-        const usage = result?.usage || {};
-        const inputTokens = Math.max(0, Number(usage.prompt_tokens ?? estimatedInputTokens));
-        const outputTokens = Math.max(0, Number(usage.completion_tokens ?? maxTokens));
-        const actualUsd = ((inputTokens * inputRate) + (outputTokens * outputRate)) / 1_000_000;
-        if (reservationId) {
-          const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(actualUsd * usdToToman * (1 + markupBps / 10000))));
-          await serviceFetch("rpc/ema_settle_wallet", {
-            method: "POST",
-            body: JSON.stringify({
-              p_reservation_id: reservationId,
-              p_actual_toman: actualToman,
-              p_provider: "NetArz",
-              p_input_tokens: inputTokens,
-              p_output_tokens: outputTokens,
-              p_provider_cost_usd: actualUsd,
-            }),
-          });
-        } else {
-          const usageEvents = await serviceFetch("ema_usage_events?select=id", {
-            method: "POST",
-            headers: { Prefer: "return=representation" },
-            body: JSON.stringify({
-              user_id: userId,
-              reservation_id: null,
-              feature,
-              provider: "NetArz",
-              model,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              provider_cost_usd: actualUsd,
-              charged_toman: 0,
-              metadata: { access: isAdmin ? "admin" : "subscription", pricing_configured: !!pricing },
-            }),
-          });
-          const usageEventId = usageEvents?.[0]?.id;
-          if (usageEventId) {
-            await serviceFetch("ema_provider_cost_ledger", {
-              method: "POST",
-              headers: { Prefer: "return=minimal" },
-              body: JSON.stringify({ user_id: userId, usage_event_id: usageEventId, provider: "NetArz", model, cost_usd: actualUsd }),
-            });
-          }
-        }
-        console.log("EMA paid AI request completed", { provider: "NetArz", feature, model, user_id: userId });
-        return reply(result);
-      } catch (error) {
-        if (reservationId) {
-          await serviceFetch("rpc/ema_release_wallet", {
-            method: "POST",
-            body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "provider_request_failed" }),
-          }).catch((releaseError) => console.error("EMA paid AI reservation release failed", releaseError instanceof Error ? releaseError.message : "unknown"));
-        }
-        console.error("EMA NetArz paid AI request failed", error instanceof Error ? error.message : "network error");
-        return reply({ error: { code: "NETARZ_UNAVAILABLE", message: "سرویس NetArz موقتاً در دسترس نیست؛ اعتبار رزروشده آزاد شد." } }, 503);
+      } else {
+        const usageEvents = await serviceFetch("ema_usage_events?select=id", {
+          method: "POST", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            user_id: userId, reservation_id: null, feature, provider: usedProvider, model: usedModel,
+            input_tokens: inputTokens, output_tokens: outputTokens, provider_cost_usd: actualUsd, charged_toman: 0,
+            metadata: { access: isAdmin ? "admin" : "subscription", pricing_configured: usedInputRate + usedOutputRate > 0 },
+          }),
+        });
+        const usageEventId = usageEvents?.[0]?.id;
+        if (usageEventId) await serviceFetch("ema_provider_cost_ledger", {
+          method: "POST", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ user_id: userId, usage_event_id: usageEventId, provider: usedProvider, model: usedModel, cost_usd: actualUsd }),
+        });
       }
+      console.log("EMA paid AI request completed", { provider: usedProvider, feature, model: usedModel, user_id: userId });
+      return reply(result);
     }
 
     // Billing routes are served by this same function so Android can use one secure gateway URL.
@@ -861,8 +911,8 @@ Deno.serve(async (request: Request) => {
         const checkedAt = new Date().toISOString();
 
         // NetArz documents GET /me and GET /usage for live account monitoring.
-        const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-        const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+        const netarzKey = Deno.env.get("NETARZ_API_KEY") || Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+        const netarzBase = (Deno.env.get("NETARZ_BASE_URL") || Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
         if (!netarzKey || !netarzBase.startsWith("https://")) {
           providerAccounts.push({ provider: "NetArz", status: "not_configured", checked_at: checkedAt });
         } else {
@@ -874,7 +924,9 @@ Deno.serve(async (request: Request) => {
             if (!accountResponse.ok) {
               providerAccounts.push({ provider: "NetArz", status: "error", http_status: accountResponse.status, checked_at: checkedAt });
             } else {
-              const account = await accountResponse.json();
+              const accountPayload = await accountResponse.json();
+              const account = accountPayload?.data ?? accountPayload?.account ?? accountPayload;
+              const balance = account?.balance ?? account?.account?.balance ?? {};
               let usage: any = null;
               let usageStatus = "unavailable";
               try {
@@ -891,12 +943,13 @@ Deno.serve(async (request: Request) => {
               } catch { usageStatus = "error"; }
               providerAccounts.push({
                 provider: "NetArz",
-                status: String(account?.status || "active"),
-                balance_usd: account?.balance?.usd ?? null,
-                balance_display: account?.balance?.usd_display ?? null,
-                balance_toman_estimate: account?.balance?.toman_estimate ?? null,
-                spent_usd: account?.key?.spent_usd ?? null,
-                usage_30d_usd: usage?.total_usd ?? null,
+                status: (balance?.usd ?? account?.balance_usd ?? account?.credit?.usd) == null
+                  ? "configured_balance_unavailable" : String(account?.status || "active"),
+                balance_usd: balance?.usd ?? account?.balance_usd ?? account?.credit?.usd ?? null,
+                balance_display: balance?.usd_display ?? account?.balance_display ?? null,
+                balance_toman_estimate: balance?.toman_estimate ?? account?.balance_toman_estimate ?? null,
+                spent_usd: account?.key?.spent_usd ?? account?.totals?.spent_usd ?? null,
+                usage_30d_usd: usage?.totals?.spend_usd ?? usage?.data?.totals?.spend_usd ?? usage?.total_usd ?? null,
                 usage_status: usageStatus,
                 project_name: account?.project?.name ?? null,
                 key_name: account?.key?.name ?? null,
@@ -922,22 +975,25 @@ Deno.serve(async (request: Request) => {
       }
 
       if (request.method === "GET" && route === "/v1/billing/catalog") {
-        const [wallets, plans, subscriptions, settings, admins] = await Promise.all([
-          serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+        const [wallets, plans, subscriptions, settings, billingSettings, admins] = await Promise.all([
+          serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
           serviceFetch("ema_plans?select=id,name,duration_days,price_toman,ai_credit_percent&enabled=eq.true&order=sort_order.asc"),
           serviceFetch(`ema_subscriptions?select=plan_id,ends_at,ema_plans(name)&user_id=eq.${userId}&ends_at=gt.${new Date().toISOString()}&order=ends_at.desc&limit=1`),
           serviceFetch("ema_payment_settings?select=instructions,min_topup_toman,max_topup_toman&singleton=eq.true&limit=1"),
+          serviceFetch("ema_billing_settings?select=credits_per_toman&singleton=eq.true&limit=1"),
           serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`),
         ]);
         const setting = settings?.[0] || {};
         const active = subscriptions?.[0] || null;
+        const creditConversionReady = Number(billingSettings?.[0]?.credits_per_toman || 0) > 0;
         return reply({
-          balanceToman: Number(wallets?.[0]?.balance_toman || 0),
+          balanceCredits: Number(wallets?.[0]?.balance_credits || 0),
           plans: plans || [],
           subscription: active ? { plan_name: active.ema_plans?.name || active.plan_id, ends_at: active.ends_at } : null,
           payment: {
             instructions: setting.instructions || "",
-            minTopupToman: Number(setting.min_topup_toman || 100000),
+            creditPurchaseEnabled: creditConversionReady,
+            minTopupToman: Math.max(500000, Number(setting.min_topup_toman || 500000)),
             maxTopupToman: Number(setting.max_topup_toman || 50000000),
           },
           isAdmin: Array.isArray(admins) && admins.length > 0,
@@ -963,12 +1019,17 @@ Deno.serve(async (request: Request) => {
         const existing = await serviceFetch(`ema_payment_orders?select=id,status,amount_toman&user_id=eq.${userId}&idempotency_key=eq.${encodeURIComponent(key)}&limit=1`);
         if (existing?.length) return reply({ order: existing[0], duplicate: true });
 
+        const conversionRows = await serviceFetch("ema_billing_settings?select=credits_per_toman&singleton=eq.true&limit=1");
+        if (!(Number(conversionRows?.[0]?.credits_per_toman || 0) > 0)) {
+          return reply({ error: { code: "CREDIT_PURCHASE_NOT_CONFIGURED", message: "خرید کردیت هنوز فعال نشده است؛ نرخ تبدیل باید ابتدا توسط مدیر تنظیم شود." } }, 503);
+        }
+
         let amount = 0;
         let planId: string | null = null;
         if (purpose === "wallet_topup") {
           const settings = await serviceFetch("ema_payment_settings?select=min_topup_toman,max_topup_toman&singleton=eq.true&limit=1");
           const value = Number(body.amountToman);
-          const min = Number(settings?.[0]?.min_topup_toman || 100000);
+          const min = Math.max(500000, Number(settings?.[0]?.min_topup_toman || 500000));
           const max = Number(settings?.[0]?.max_topup_toman || 50000000);
           if (!Number.isSafeInteger(value) || value < min || value > max) {
             return reply({ error: { code: "INVALID_TOPUP_AMOUNT", message: "مبلغ شارژ خارج از محدوده مجاز است." } }, 400);
@@ -1034,7 +1095,7 @@ Deno.serve(async (request: Request) => {
       return reply({ error: { code: "NOT_FOUND", message: "مسیر پرداخت پیدا نشد." } }, 404);
     }
 
-    // Model-independent free chat router. Only explicitly configured free/no-charge providers enter this chain.
+    // Free chat: NetArz is primary, GapGPT is used only if NetArz has a transient outage.
     if (request.method !== "POST" || !route.endsWith("/chat/completions")) return reply({ error: { code: "NOT_FOUND", message: "مسیر درخواست معتبر نیست." } }, 404);
     const raw = await request.text();
     if (new TextEncoder().encode(raw).length > 1_500_000) return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
@@ -1042,43 +1103,30 @@ Deno.serve(async (request: Request) => {
     try { body = JSON.parse(raw); } catch { return reply({ error: { code: "INVALID_JSON", message: "ساختار گفتگو معتبر نیست." } }, 400); }
     if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
 
-    const candidates = [
-      {
-        name: "GapGPT",
-        key: Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "",
-        base: (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, ""),
-        model: Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini",
-        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
-      },
-      {
-        name: "EMA Primary",
-        key: Deno.env.get("EMA_CHAT_FREE_PRIMARY_API_KEY") || "",
-        base: (Deno.env.get("EMA_CHAT_FREE_PRIMARY_BASE_URL") || "").replace(/\/+$/, ""),
-        model: Deno.env.get("EMA_CHAT_FREE_PRIMARY_MODEL") || "",
-        visionModel: Deno.env.get("EMA_CHAT_FREE_PRIMARY_VISION_MODEL") || "",
-      },
-      {
-        name: "EMA Fallback",
-        key: Deno.env.get("EMA_CHAT_FREE_FALLBACK_API_KEY") || "",
-        base: (Deno.env.get("EMA_CHAT_FREE_FALLBACK_BASE_URL") || "").replace(/\/+$/, ""),
-        model: Deno.env.get("EMA_CHAT_FREE_FALLBACK_MODEL") || "",
-        visionModel: Deno.env.get("EMA_CHAT_FREE_FALLBACK_VISION_MODEL") || "",
-      },
-    ].filter((provider) => provider.key && provider.base.startsWith("https://") && provider.model);
-
-    if (!candidates.length) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "هیچ موتور گفت‌وگوی رایگانی روی سرور تنظیم نشده است." } }, 503);
+    const candidates = aiProviderConfigs().filter((provider) => provider.model);
+    if (!candidates.length) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "کلید NetArz و مسیر پشتیبان GapGPT روی سرور تنظیم نشده است." } }, 503);
 
     const quotaDate = new Date().toISOString().slice(0, 10);
-    const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
-      method: "POST",
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
-      signal: AbortSignal.timeout(12000),
-    }).catch((error) => { console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error"); return null; });
-    if (!quotaResponse?.ok) return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
-    if (await quotaResponse.json().catch(() => null) !== true) return reply({ error: { code: "DAILY_FREE_LIMIT_REACHED", message: "سهمیه رایگان امروز تمام شده است؛ فردا دوباره امتحان کن." } }, 429);
+    // Administrators must never be blocked by the end-user free-chat quota.
+    const adminRows = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
+    const isAdmin = Array.isArray(adminRows) && adminRows.length > 0;
+    let quotaConsumed = false;
+    if (!isAdmin) {
+      const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
+        method: "POST",
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_user_id: userId, p_daily_limit: 50 }),
+        signal: AbortSignal.timeout(12000),
+      }).catch((error) => { console.error("EMA chat quota check failed", error instanceof Error ? error.message : "network error"); return null; });
+      if (!quotaResponse?.ok) return reply({ error: { code: "QUOTA_SERVICE_UNAVAILABLE", message: "سرویس سهمیه چت آماده نیست؛ migration سهمیه را اجرا کن." } }, 503);
+      if (await quotaResponse.json().catch(() => null) !== true) return reply({ error: { code: "DAILY_FREE_LIMIT_REACHED", message: "سهمیه رایگان امروز تمام شده است؛ فردا دوباره امتحان کن." } }, 429);
+      quotaConsumed = true;
+    } else {
+      console.log("EMA admin chat quota bypass", { user_id: userId });
+    }
 
     const refundFreeQuota = async () => {
+      if (!quotaConsumed) return;
       const response = await fetch(supabaseUrl + "/rest/v1/rpc/ema_refund_chat_quota", {
         method: "POST",
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
@@ -1088,58 +1136,67 @@ Deno.serve(async (request: Request) => {
       if (!response?.ok) console.error("EMA failed to refund free chat quota after provider error");
     };
 
-    const payload = {
-      model: body.model || candidates[0].model,
+    const containsImage = JSON.stringify(body.messages).includes("data:image/");
+    const payloadFor = (provider: typeof candidates[number]) => ({
+      model: containsImage
+        ? provider.visionModel
+        : provider.name === "NetArz"
+          ? ((!String(body.model || "").trim() || ["default", "gpt-4o-mini"].includes(String(body.model).trim()))
+              ? provider.model
+              : String(body.model).trim())
+          : provider.model,
       messages: body.messages,
       stream: false,
       max_tokens: Math.min(4096, Math.max(1, Number(body.max_tokens) || 2400)),
       temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.65,
-    };
+    });
 
     let result: any = null;
-    let lastFailure: string | null = null;
-    for (let index = 0; index < candidates.length; index++) {
-      const provider = candidates[index];
-      const containsImage = JSON.stringify(body.messages).includes("data:image/");
-      const providerPayload = { ...payload, model: (containsImage ? provider.visionModel : provider.model) || provider.model || payload.model };
-      let upstream: Response;
+    let usedProvider = "";
+    let usedModel = "";
+    let lastFailure = "provider_unavailable";
+    for (const provider of candidates) {
+      const providerPayload = payloadFor(provider);
       try {
-        upstream = await fetch(provider.base + "/chat/completions", {
+        const upstream = await fetch(provider.base + "/chat/completions", {
           method: "POST",
           headers: { Authorization: "Bearer " + provider.key, "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify(providerPayload),
           signal: AbortSignal.timeout(45000),
         });
-      } catch (error) {
-        lastFailure = error instanceof Error ? error.message : "network_error";
-        console.warn("EMA chat provider unavailable; trying next configured provider", { provider: provider.name });
-        continue;
-      }
-
-      const providerText = await upstream.text();
-      if (!upstream.ok) {
-        lastFailure = "http_" + upstream.status;
-        // Only transient failures are eligible for automatic fallback. Auth/config errors are surfaced.
-        if (upstream.status === 408 || upstream.status === 429 || upstream.status >= 500) {
-          console.warn("EMA chat provider transient failure; trying next provider", { provider: provider.name, status: upstream.status });
+        const providerText = await upstream.text();
+        if (!upstream.ok) {
+          const providerDetail = providerText.slice(0, 240);
+          lastFailure = provider.name + "_http_" + upstream.status;
+          // Only transient upstream/rate-limit failures may use GapGPT as fallback.
+          // Invalid keys, model errors, permission failures and exhausted provider credit
+          // must be surfaced instead of silently charging a different provider.
+          const retryable = upstream.status === 408 || upstream.status === 425 ||
+            upstream.status === 429 || upstream.status >= 500;
+          console.warn(retryable
+            ? "EMA chat provider transient failure; trying fallback"
+            : "EMA chat provider rejected request; fallback blocked", {
+              provider: provider.name, status: upstream.status, detail: providerDetail,
+            });
+          if (!retryable) break;
           continue;
         }
-        await refundFreeQuota();
-        console.error("EMA chat provider rejected request", { provider: provider.name, status: upstream.status });
-        return reply({ error: { code: "CHAT_PROVIDER_REJECTED", message: "موتور گفت‌وگوی انتخاب‌شده درخواست را نپذیرفت؛ تنظیمات مدل و دسترسی آن باید بررسی شود." } }, 502);
+        try { result = JSON.parse(providerText); } catch {
+          lastFailure = "invalid_json";
+          console.warn("EMA chat provider returned invalid JSON", { provider: provider.name });
+          continue;
+        }
+        if (!Array.isArray(result?.choices) || !result.choices.length) {
+          lastFailure = "empty_choices";
+          continue;
+        }
+        usedProvider = provider.name;
+        usedModel = providerPayload.model;
+        break;
+      } catch (error) {
+        lastFailure = error instanceof Error ? error.message : "network_error";
+        console.warn("EMA chat provider unavailable; trying next provider", { provider: provider.name });
       }
-
-      try { result = JSON.parse(providerText); } catch {
-        lastFailure = "invalid_json";
-        console.warn("EMA chat provider returned invalid JSON", { provider: provider.name });
-        continue;
-      }
-      if (!Array.isArray(result?.choices) || !result.choices.length) {
-        lastFailure = "empty_choices";
-        continue;
-      }
-      console.log("EMA chat completed", { provider: provider.name, model: providerPayload.model, user_id: userId });
-      break;
     }
 
     if (!result) {
@@ -1147,7 +1204,9 @@ Deno.serve(async (request: Request) => {
       console.error("All EMA chat providers failed", { reason: lastFailure });
       return reply({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "موتورهای گفت‌وگوی ایما موقتاً پاسخگو نیستند؛ سهمیه این درخواست آزاد شد." } }, 503);
     }
+    console.log("EMA free chat completed", { provider: usedProvider, model: usedModel, user_id: userId });
     return reply(result);
+
   } catch (error) {
     const code = error instanceof Error ? error.message : "INTERNAL_ERROR";
     const status = code === "ADMIN_REQUIRED" ? 403 : (error as any)?.status || 500;

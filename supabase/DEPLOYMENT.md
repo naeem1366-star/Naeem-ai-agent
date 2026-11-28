@@ -14,8 +14,9 @@ The older `ema-api` function URL is obsolete for the current Android client.
 
 ## Provider routing
 
-- **Free text chat:** GapGPT only. The free-chat route never falls back to NetArz, so free usage cannot unexpectedly spend the paid-provider balance.
-- **Paid/provider-backed operations:** NetArz remains configured server-side for the premium routes as those routes are connected to the secure gateway and credit ledger.
+- **Free text chat:** NetArz primary; GapGPT is used only as a transient-outage fallback.
+- **Paid chat:** NetArz primary; GapGPT fallback is attempted only when the fallback model has an enabled price rule, so the reservation can safely cover either provider.
+- Provider usage and actual provider costs are recorded against the provider that answered.
 - **No provider API key is stored in the Android APK.**
 
 ## Edge Function secrets
@@ -92,3 +93,20 @@ After deployment, send a test message from a signed-in alpha34 app and inspect S
 - The Cloudflare Worker includes a separate billing/wallet implementation, but it is not the live backend.
 - Paid image/video/music operations are not yet fully proxied through this Supabase gateway with server-side credit reservation and settlement. Do not expose provider keys in the client or claim paid media billing is production-ready until those routes are implemented and tested.
 - Guest access is specified in the product plan but is not yet supported by the current authenticated chat path.
+
+## Credit wallet rollout
+
+The Android wallet displays and consumes **credits**, not toman. Toman is shown only as the payment currency when the user creates a manual top-up order.
+
+- Migration `0009_ema_credit_wallet.sql` introduces the credit wallet, ledger, reservation/settlement RPCs, and the one-time 10,000-credit signup gift.
+- Migration `0010_ema_credit_wallet_reconcile.sql` is an idempotent reconciliation migration. Use it when the original credit migration was skipped on the target database; it also reattaches the Auth signup trigger.
+- New accounts receive exactly 10,000 gift credits through a unique ledger reference. Existing accounts are not automatically gifted by the migration.
+- Paid AI requests reserve credits before calling the provider, settle against the actual responding provider's price rule, and release unused reservations or failed requests.
+- The minimum manual top-up payment is 500,000 toman. Credit purchases remain disabled until an administrator configures a positive `credits_per_toman` rate in `ema_billing_settings`. Do not guess or silently set this conversion rate.
+- The Android screen explains when purchases are not yet enabled and prevents users from creating an order that cannot be credited.
+
+### Apply the credit wallet migration
+
+Do not run the migration against production until the owner explicitly approves the production database change. First review and test `supabase/migrations/0010_ema_credit_wallet_reconcile.sql` in a non-production database. The GitHub Actions `Supabase Edge Function checks` workflow applies it to an ephemeral PostgreSQL database and verifies signup grant, reserve, settle, and release behavior.
+
+After approval, apply `0010_ema_credit_wallet_reconcile.sql` to the intended Supabase project using the SQL Editor. Then verify that `ema_credit_wallets`, `ema_credit_ledger`, `ema_credit_reservations` exist and that `ema_billing_settings.credits_per_toman` is present. Configure the conversion rate only after pricing is reviewed. Do not expose paid top-ups until that rate and model prices are approved.

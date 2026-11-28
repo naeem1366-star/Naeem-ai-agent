@@ -55,6 +55,7 @@ class VoiceWakeService : Service() {
     private var smartListening = false
     private var restartAfterSpeech = false
     private var destroyed = false
+    private var commandInFlight = false
     private lateinit var router: AssistantActionRouter
 
     override fun onCreate() {
@@ -68,40 +69,9 @@ class VoiceWakeService : Service() {
             )
         )
         createNotificationChannel()
-        smartListening = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("smart_listening", false)
-        tts = TextToSpeech(applicationContext) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) {
-                val languageResult = tts?.setLanguage(Locale("fa", "IR"))
-                if (languageResult == TextToSpeech.LANG_MISSING_DATA ||
-                    languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsReady = false
-                }
-                tts?.setSpeechRate(0.94f)
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) = Unit
-                    override fun onDone(utteranceId: String?) {
-                        main.post {
-                            if (restartAfterSpeech && !destroyed) {
-                                restartAfterSpeech = false
-                                startListening()
-                            }
-                        }
-                    }
-                    @Deprecated("Deprecated in Java")
-                    override fun onError(utteranceId: String?) {
-                        main.post {
-                            if (restartAfterSpeech && !destroyed) {
-                                restartAfterSpeech = false
-                                main.postDelayed({ startListening() }, 700)
-                            }
-                        }
-                    }
-                    override fun onError(utteranceId: String?, errorCode: Int) = onError(utteranceId)
-                })
-            }
-            // Listening starts only after onStartCommand has entered foreground state.
-        }
+        smartListening = true
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("smart_listening", true).apply()
+        // Silent listening mode: no TTS engine is initialized or played.
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -117,6 +87,7 @@ class VoiceWakeService : Service() {
         // Do not advertise the voice service as active until the recognizer is actually ready.
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(PREF_ENABLED, true)
+            .putBoolean("ready", false)
             .putString("state", "starting")
             .apply()
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification("در حال آماده‌سازی میکروفون و تشخیص گفتار…"))
@@ -200,6 +171,7 @@ class VoiceWakeService : Service() {
             override fun onError(error: Int) {
                 listening = false
                 listeningStartPending = false
+                setVoiceState("retrying")
                 if (destroyed) return
                 consecutiveErrors++
                 // Some Android speech providers leave the recognizer busy after an error.
@@ -213,8 +185,7 @@ class VoiceWakeService : Service() {
                     return
                 }
                 // Keep the user-started foreground service alive and retry with backoff.
-                // The button remains green only while recognition is genuinely ready.
-                setVoiceState("retrying")
+                // The UI uses a separate ready flag and never paints a failed recognizer green.
                 val baseDelay = when (error) {
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 1800L
                     SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
@@ -229,6 +200,10 @@ class VoiceWakeService : Service() {
                 )
                 main.postDelayed({ startListening() }, delayMs)
             }
+            // Do not execute commands from interim hypotheses: Android can emit many
+            // partial updates for one sentence, which caused duplicate actions and restart tones.
+            override fun onPartialResults(partialResults: Bundle?) = Unit
+
             override fun onResults(results: Bundle?) {
                 listening = false
                 listeningStartPending = false
@@ -237,7 +212,6 @@ class VoiceWakeService : Service() {
                     ?.firstOrNull().orEmpty().trim()
                 handleRecognizedText(spoken)
             }
-            override fun onPartialResults(partialResults: Bundle?) = Unit
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
         })
     }
@@ -260,8 +234,9 @@ class VoiceWakeService : Service() {
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1100L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 800L)
+            // Use one finalized result per recognition session; interim hypotheses are disabled.
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
         }
         runCatching {
             engine.startListening(intent)
@@ -271,6 +246,12 @@ class VoiceWakeService : Service() {
             setVoiceState("error")
             main.postDelayed({ startListening() }, 1400)
         }
+    }
+
+    private fun isCommandCandidate(raw: String): Boolean {
+        if (smartListening || commandArmed) return true
+        val normalized = normalize(raw)
+        return listOf("ایما جان", "hey ema", "هی ایما", "ایما", "ima").any { normalized.contains(it) }
     }
 
     private fun handleRecognizedText(raw: String) {
@@ -310,6 +291,7 @@ class VoiceWakeService : Service() {
     }
 
     private fun processCommand(command: String) {
+        commandInFlight = true
         val normalized = normalize(command)
         if (normalized.contains("به گوش باش") || normalized.contains("بگوش باش")) {
             setSmartListening(true)
@@ -374,28 +356,20 @@ class VoiceWakeService : Service() {
     }
 
     private fun setVoiceState(state: String) {
-        val edit = getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("state", state)
+        val edit = getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("state", state)
+            .putBoolean("ready", state == "listening")
         if (state == "listening") edit.putBoolean(PREF_ENABLED, true)
         if (state == "error" || state == "stopped") edit.putBoolean(PREF_ENABLED, false)
         edit.apply()
     }
 
     private fun speak(text: String, listenAgain: Boolean) {
-        restartAfterSpeech = listenAgain
-        val engine = tts
-        if (!ttsReady || engine == null) {
-            getSystemService(NotificationManager::class.java).notify(
-                NOTIFICATION_ID,
-                buildNotification(text.take(180))
-            )
-            main.postDelayed({ if (listenAgain) startListening() }, 900)
-            return
-        }
-        val utteranceId = UUID.randomUUID().toString()
-        val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-        if (result == TextToSpeech.ERROR) {
-            restartAfterSpeech = false
-            main.postDelayed({ if (listenAgain) startListening() }, 900)
+        // Voice feedback is intentionally disabled. Keep the microphone session alive.
+        restartAfterSpeech = false
+        commandInFlight = false
+        if (!destroyed && !listening && !listeningStartPending) {
+            main.postDelayed({ startListening() }, 180)
         }
     }
 
@@ -416,7 +390,9 @@ class VoiceWakeService : Service() {
         listening = false
         listeningStartPending = false
         restartAfterSpeech = false
+        commandInFlight = false
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("ready", false)
             .putBoolean(PREF_ENABLED, false)
             .putBoolean("smart_listening", false)
             .putString("state", "stopped")

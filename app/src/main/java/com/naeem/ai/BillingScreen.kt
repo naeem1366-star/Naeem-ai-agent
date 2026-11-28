@@ -29,7 +29,7 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
     var snapshot by remember { mutableStateOf<BillingSnapshot?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf("") }
-    var topupAmount by remember { mutableStateOf("100000") }
+    var topupAmount by remember { mutableStateOf("500000") }
     var receiptDrafts by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
     var workingOrder by remember { mutableStateOf("") }
     var retryKeys by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
@@ -82,9 +82,18 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
         snapshot?.let { data ->
             Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(22.dp),border=BorderStroke(1.dp,accent.copy(alpha=.45f))) {
                 Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text(if(isEnglish) "Available AI credit" else "اعتبار قابل استفاده هوش مصنوعی",color=Color(0xFFB9C8D9))
-                    Text(money(data.catalog.balanceToman),color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.headlineMedium)
+                    Text(if(isEnglish) "Available credits" else "موجودی کردیت",color=Color(0xFFB9C8D9))
+                    Text(NumberFormat.getNumberInstance(Locale.US).format(data.catalog.balanceCredits)+(if(isEnglish) " credits" else " کردیت"),color=Color.White,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.headlineMedium)
+                    if(data.catalog.balanceCredits == 10000L) Text(if(isEnglish) "10,000 signup gift credits" else "۱۰٬۰۰۰ کردیت هدیه ثبت‌نام",color=Color(0xFF9BE7C4),style=MaterialTheme.typography.bodySmall)
                     Text(data.catalog.subscriptionName?.let { if(isEnglish) "Active plan: "+it else "اشتراک فعال: "+it } ?: if(isEnglish) "No active Professional plan" else "اشتراک حرفه‌ای فعالی نداری",color=accent,style=MaterialTheme.typography.bodySmall)
+                }
+            }
+            if(data.catalog.balanceCredits <= 0L) {
+                Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF3A2028)),shape=RoundedCornerShape(16.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(if(isEnglish) "Your credits are finished" else "کردیت شما تمام شده است",color=Color(0xFFFFC4B8),fontWeight=FontWeight.Bold)
+                        Text(if(isEnglish) "Buy credits to continue using paid AI features." else "برای ادامه استفاده از قابلیت‌های پولی هوش مصنوعی، کیف پول را با خرید کردیت شارژ کن.",color=Color.White,textAlign=TextAlign.End)
+                    }
                 }
             }
             Text(if(isEnglish) "Professional plans" else "اشتراک حرفه‌ای",color=Color.White,fontWeight=FontWeight.Bold)
@@ -103,9 +112,12 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
                 }
             }
             Text(if(isEnglish) "Top up AI credit" else "شارژ اعتبار هوش مصنوعی",color=Color.White,fontWeight=FontWeight.Bold)
-            OutlinedTextField(value=topupAmount,onValueChange={topupAmount=it.filter(Char::isDigit).take(12)},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text(if(isEnglish) "Amount in toman" else "مبلغ به تومان")})
-            Text((if(isEnglish) "Minimum: " else "حداقل: ")+money(data.catalog.minTopupToman)+" · "+(if(isEnglish) "Maximum: " else "حداکثر: ")+money(data.catalog.maxTopupToman),color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
-            Button(onClick={topupAmount.toLongOrNull()?.let { createOrder("wallet_topup",it) }},enabled=workingOrder.isEmpty() && (topupAmount.toLongOrNull() ?: 0L)>0,modifier=Modifier.fillMaxWidth()) { Text(if(isEnglish) "Create top-up order" else "ساخت سفارش شارژ") }
+            if(!data.catalog.creditPurchaseEnabled) {
+                Text(if(isEnglish) "Credit purchases will open after the administrator configures the credit conversion rate." else "خرید کردیت پس از تنظیم نرخ تبدیل توسط مدیر فعال می‌شود.",color=Color(0xFFFFD18A),textAlign=TextAlign.End,modifier=Modifier.fillMaxWidth())
+            }
+            OutlinedTextField(value=topupAmount,onValueChange={topupAmount=it.filter(Char::isDigit).take(12)},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=data.catalog.creditPurchaseEnabled,label={Text(if(isEnglish) "Payment amount in toman" else "مبلغ پرداخت به تومان")})
+            Text((if(isEnglish) "Minimum payment: " else "حداقل مبلغ پرداخت: ")+money(data.catalog.minTopupToman)+" · "+(if(isEnglish) "Maximum: " else "حداکثر: ")+money(data.catalog.maxTopupToman),color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
+            Button(onClick={topupAmount.toLongOrNull()?.let { createOrder("wallet_topup",it) }},enabled=data.catalog.creditPurchaseEnabled && workingOrder.isEmpty() && (topupAmount.toLongOrNull() ?: 0L)>=data.catalog.minTopupToman,modifier=Modifier.fillMaxWidth()) { Text(if(isEnglish) "Create credit purchase order" else "ساخت سفارش خرید کردیت") }
             if(data.catalog.paymentInstructions.isNotBlank()) {
                 Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(18.dp)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp),horizontalAlignment=Alignment.End) {
