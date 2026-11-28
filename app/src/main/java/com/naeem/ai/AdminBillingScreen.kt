@@ -25,6 +25,9 @@ import java.util.Locale
 @Composable
 fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Boolean, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val socialClient = remember { EmaSocialClient() }
+    var socialControl by remember { mutableStateOf<EmaSocialControl?>(null) }
+    var socialMessage by remember { mutableStateOf("این بخش موقتاً توسط مدیریت غیرفعال شده است.") }
     var dashboard by remember { mutableStateOf<BillingAdminDashboard?>(null) }
     var loading by remember { mutableStateOf(true) }
     var working by remember { mutableStateOf("") }
@@ -38,7 +41,11 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
         scope.launch {
             loading = true
             error = ""
-            try { dashboard = client.adminDashboard(accessToken) }
+            try {
+                dashboard = client.adminDashboard(accessToken)
+                socialControl = runCatching { socialClient.adminControl(accessToken) }.getOrNull()
+                socialControl?.maintenanceMessage?.takeIf { it.isNotBlank() }?.let { socialMessage = it }
+            }
             catch (e: Exception) { error = e.message ?: if (isEnglish) "Could not load admin dashboard." else "دریافت اطلاعات پنل مدیریت ناموفق بود." }
             finally { loading = false }
         }
@@ -65,7 +72,8 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
                 "users" to if (isEnglish) "Users" else "کاربران",
                 "subscriptions" to if (isEnglish) "Subscriptions" else "اشتراک‌ها",
                 "costs" to if (isEnglish) "AI costs" else "هزینه هوش مصنوعی",
-                "audit" to if (isEnglish) "Activity log" else "گزارش فعالیت"
+                "audit" to if (isEnglish) "Activity log" else "گزارش فعالیت",
+                "social" to if (isEnglish) "EMA Social" else "شبکه اجتماعی"
             )
             tabs.forEach { (key, label) ->
                 FilterChip(selected = section == key, onClick = { section = key }, label = { Text(label) })
@@ -186,6 +194,47 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
                         }
                     }
                     Text(if (isEnglish) "This is EMA's recorded usage cost, not a live provider account balance or invoice." else "این عدد هزینه مصرف ثبت‌شده در ایماست؛ موجودی زنده یا صورتحساب پنل GapGPT و NetArz نیست.", color = muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
+                }
+                "social" -> {
+                    Text(if (isEnglish) "Global social network control" else "کنترل سراسری شبکه اجتماعی", color = Color.White, fontWeight = FontWeight.Bold)
+                    val control = socialControl
+                    if (control == null) {
+                        Text(if (isEnglish) "Social control API is not deployed or this account is not authorized." else "سرویس کنترل شبکه اجتماعی هنوز مستقر نشده یا این حساب دسترسی مدیریت ندارد.", color = Color(0xFFFFD18A))
+                        OutlinedButton(onClick = { refresh() }, enabled = !loading) { Text(if (isEnglish) "Retry" else "تلاش دوباره") }
+                    } else {
+                        AdminInfoCard(panel) {
+                            Text(if (control.enabled) (if (isEnglish) "SOCIAL NETWORK: ON" else "شبکه اجتماعی: فعال") else (if (isEnglish) "SOCIAL NETWORK: OFF" else "شبکه اجتماعی: خاموش"), color = if (control.enabled) Color(0xFF9BE7C4) else Color(0xFFFFB2A8), fontWeight = FontWeight.Bold)
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(if (isEnglish) "Master switch" else "کلید اصلی قطع و وصل", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    Text(if (isEnglish) "Server-enforced for every user and every social API route." else "در سمت سرور برای تمام کاربران و مسیرهای شبکه اجتماعی اعمال می‌شود.", color = muted, style = MaterialTheme.typography.bodySmall)
+                                }
+                                Switch(
+                                    checked = control.enabled,
+                                    enabled = working != "social_control",
+                                    onCheckedChange = { next ->
+                                        scope.launch {
+                                            working = "social_control"; error = ""
+                                            try {
+                                                socialControl = socialClient.setAdminControl(accessToken, next, socialMessage)
+                                                notice = if (next) (if (isEnglish) "EMA Social enabled for all users." else "شبکه اجتماعی برای همه کاربران فعال شد.") else (if (isEnglish) "EMA Social disabled for all users." else "شبکه اجتماعی برای همه کاربران خاموش شد.")
+                                            } catch (e: Exception) { error = e.message ?: "تغییر وضعیت شبکه اجتماعی ناموفق بود." }
+                                            finally { working = "" }
+                                        }
+                                    }
+                                )
+                            }
+                            OutlinedTextField(
+                                value = socialMessage, onValueChange = { socialMessage = it.take(300) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(if (isEnglish) "Maintenance message shown while OFF" else "پیام نمایش هنگام خاموش بودن") },
+                                minLines = 2,
+                                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                            )
+                            Text(if (isEnglish) "Turning OFF blocks Discover, Match, profile editing, connection requests, messaging and collaboration endpoints. Data is retained and the rest of EMA remains available." else "با خاموش‌کردن این کلید، کشف افراد، تطبیق، ویرایش پروفایل، درخواست ارتباط، پیام‌رسانی و مسیرهای همکاری متوقف می‌شوند. اطلاعات حذف نمی‌شوند و سایر بخش‌های EMA فعال می‌مانند.", color = muted, style = MaterialTheme.typography.bodySmall)
+                            Text(if (isEnglish) "Last changed: " + control.updatedAt.take(19).replace("T", " ") else "آخرین تغییر: " + control.updatedAt.take(19).replace("T", " "), color = muted, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
                 "audit" -> {
                     Text(if (isEnglish) "Recent administrative activity" else "آخرین فعالیت‌های مدیریتی", color = Color.White, fontWeight = FontWeight.Bold)
