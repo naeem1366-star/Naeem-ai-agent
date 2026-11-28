@@ -952,7 +952,7 @@ Deno.serve(async (request: Request) => {
 
       if (request.method === "GET" && route === "/v1/billing/catalog") {
         const [wallets, plans, subscriptions, settings, admins] = await Promise.all([
-          serviceFetch(`ema_wallets?select=balance_toman&user_id=eq.${userId}&limit=1`),
+          serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
           serviceFetch("ema_plans?select=id,name,duration_days,price_toman,ai_credit_percent&enabled=eq.true&order=sort_order.asc"),
           serviceFetch(`ema_subscriptions?select=plan_id,ends_at,ema_plans(name)&user_id=eq.${userId}&ends_at=gt.${new Date().toISOString()}&order=ends_at.desc&limit=1`),
           serviceFetch("ema_payment_settings?select=instructions,min_topup_toman,max_topup_toman&singleton=eq.true&limit=1"),
