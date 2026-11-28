@@ -405,26 +405,29 @@ Deno.serve(async (request: Request) => {
         serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`),
         serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
         serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`),
-        serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps&singleton=eq.true&limit=1"),
+        serviceFetch("ema_billing_settings?select=ai_billing_enabled,usd_to_toman,markup_bps,credits_per_toman&singleton=eq.true&limit=1"),
       ]);
       const isAdmin = Array.isArray(admins) && admins.length > 0;
       const hasSubscription = Array.isArray(subscriptions) && subscriptions.length > 0;
-      const walletBalance = Number(wallets?.[0]?.balance_toman || 0);
+      const walletBalance = Number(wallets?.[0]?.balance_credits || 0);
       const billing = settings?.[0] || {};
       const rate = Number(billing.usd_to_toman || 0);
       const markup = Math.max(0, Number(billing.markup_bps || 0));
-      const billingReady = billing.ai_billing_enabled === true && rate > 0;
+      const creditsPerToman = Number(billing.credits_per_toman || 0);
+      const billingReady = billing.ai_billing_enabled === true && rate > 0 && creditsPerToman > 0;
       if (!isAdmin && !hasSubscription && walletBalance <= 0) throw new Error("PAID_ACCESS_REQUIRED");
       if (!isAdmin && !hasSubscription && !billingReady) throw new Error("AI_BILLING_NOT_ENABLED");
       let reservationId: string | null = null;
       let reserveToman = 0;
+      let reserveCredits = 0;
       if (!isAdmin && billingReady && walletBalance > 0) {
         if (!(estimateUsd > 0) || !Number.isFinite(estimateUsd)) throw new Error("MEDIA_MODEL_PRICE_MISSING");
         reserveToman = Math.max(1, Math.ceil(estimateUsd * rate * (1 + markup / 10000) * 1.5));
-        const reserved = await serviceFetch("rpc/ema_reserve_wallet", {
+        reserveCredits = Math.max(1, Math.ceil(reserveToman * creditsPerToman));
+        const reserved = await serviceFetch("rpc/ema_reserve_credits", {
           method: "POST",
           body: JSON.stringify({
-            p_user_id: userId, p_amount_toman: reserveToman,
+            p_user_id: userId, p_amount_credits: reserveCredits,
             p_reference: crypto.randomUUID(), p_feature: feature, p_model: model,
           }),
         });
@@ -434,30 +437,28 @@ Deno.serve(async (request: Request) => {
           throw new Error("INSUFFICIENT_AI_CREDIT");
         }
       }
-      return { isAdmin, hasSubscription, rate, markup, reservationId, reserveToman };
+      return { isAdmin, hasSubscription, rate, markup, creditsPerToman, reservationId, reserveToman, reserveCredits };
     };
     const settleMediaReservation = async (
       reservationId: string | null, feature: string, model: string, actualUsd: number,
       rate: number, markup: number, isAdmin: boolean, hasSubscription: boolean,
       metadata: Record<string, unknown> = {},
-      reserveToman: number = Number.MAX_SAFE_INTEGER,
+      reserveCredits: number = Number.MAX_SAFE_INTEGER,
     ) => {
       const safeUsd = Math.max(0, Number.isFinite(actualUsd) ? actualUsd : 0);
       if (reservationId) {
-        const actualToman = Math.min(reserveToman, Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000))));
-        await serviceFetch("rpc/ema_settle_wallet", {
+        const actualToman = Math.max(0, Math.ceil(safeUsd * rate * (1 + markup / 10000)));
+        const creditsRows = await serviceFetch("ema_billing_settings?select=credits_per_toman&singleton=eq.true&limit=1");
+        const creditsPerToman = Number(creditsRows?.[0]?.credits_per_toman || 0);
+        if (!(creditsPerToman > 0)) throw new Error("CREDIT_CONVERSION_NOT_CONFIGURED");
+        const actualCredits = Math.min(reserveCredits, Math.ceil(actualToman * creditsPerToman));
+        await serviceFetch("rpc/ema_settle_credits", {
           method: "POST",
           body: JSON.stringify({
-            p_reservation_id: reservationId, p_actual_toman: actualToman,
+            p_reservation_id: reservationId, p_actual_credits: actualCredits, p_charged_toman: actualToman,
             p_provider: "NetArz", p_input_tokens: 0, p_output_tokens: 0, p_provider_cost_usd: safeUsd,
           }),
         });
-        const events = await serviceFetch(`ema_usage_events?select=id&reservation_id=eq.${reservationId}&limit=1`);
-        const eventId = events?.[0]?.id;
-        if (eventId) await serviceFetch("ema_provider_cost_ledger", {
-          method: "POST", headers: { Prefer: "return=minimal" },
-          body: JSON.stringify({ user_id: userId, usage_event_id: eventId, provider: "NetArz", model, cost_usd: safeUsd }),
-        }).catch((error) => console.error("EMA media cost ledger insert failed", error instanceof Error ? error.message : "unknown"));
       } else {
         const events = await serviceFetch("ema_usage_events?select=id", {
           method: "POST", headers: { Prefer: "return=representation" },
@@ -535,7 +536,7 @@ Deno.serve(async (request: Request) => {
         });
         const raw = await upstream.text();
         if (!upstream.ok) {
-          if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+          if (reservationId) await serviceFetch("rpc/ema_release_credits", {
             method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_music_http_${upstream.status}` }),
           });
           return reply({ error: { code: "NETARZ_MUSIC_ERROR", message: `ساخت موسیقی با NetArz ناموفق بود (HTTP ${upstream.status}).` } }, 502);
@@ -544,12 +545,12 @@ Deno.serve(async (request: Request) => {
         try { result = JSON.parse(raw); } catch { throw new Error("NETARZ_INVALID_MUSIC_RESPONSE"); }
         const reportedUsd = Number(result?.usd ?? result?.usage?.cost_usd);
         const returnedUsd = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
-        await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.isAdmin, access.hasSubscription,
-          { request_id: result?.id || null, seconds }, access.reserveToman);
+        await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.creditsPerToman, access.isAdmin, access.hasSubscription,
+          { request_id: result?.id || null, seconds }, access.reserveCredits);
         console.log("EMA paid music completed", { user_id: userId, model, provider: "NetArz", cost_usd: returnedUsd });
         return reply(result);
       } catch (error) {
-        if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+        if (reservationId) await serviceFetch("rpc/ema_release_credits", {
           method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "netarz_music_request_failed" }),
         }).catch(() => null);
         const code = error instanceof Error ? error.message : "NETARZ_MUSIC_FAILED";
@@ -589,7 +590,7 @@ Deno.serve(async (request: Request) => {
         if (typeof body?.image === "string" && body.image.length <= 8_000_000) payload.image = body.image;
         if (typeof body?.video === "string" && body.video.length <= 18_000_000) payload.video = body.video;
         if (new TextEncoder().encode(JSON.stringify(payload)).length > 19_000_000) {
-          if (reservationId) await serviceFetch("rpc/ema_release_wallet", { method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "media_payload_too_large" }) });
+          if (reservationId) await serviceFetch("rpc/ema_release_credits", { method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "media_payload_too_large" }) });
           return reply({ error: { code: "MEDIA_PAYLOAD_TOO_LARGE", message: "حجم فایل مرجع بیش از حد مجاز است." } }, 413);
         }
         const upstream = await mediaProviderFetch("/videos", {
@@ -598,7 +599,7 @@ Deno.serve(async (request: Request) => {
         });
         const raw = await upstream.text();
         if (!upstream.ok) {
-          if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+          if (reservationId) await serviceFetch("rpc/ema_release_credits", {
             method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_video_http_${upstream.status}` }),
           });
           return reply({ error: { code: "NETARZ_VIDEO_ERROR", message: `شروع تولید ویدیو ناموفق بود (HTTP ${upstream.status}).` } }, 502);
@@ -613,12 +614,12 @@ Deno.serve(async (request: Request) => {
           body: JSON.stringify({
             user_id: userId, provider_job_id: providerJobId, feature: "professional_video",
             model, reservation_id: reservationId, estimated_cost_usd: actualEstimate,
-            size, seconds, reserve_toman: access.reserveToman, status: String(job?.status || "queued"),
+            size, seconds, reserve_toman: access.reserveCredits, status: String(job?.status || "queued"),
           }),
         });
         return reply({ ...job, id: providerJobId, model, usd: actualEstimate, ema_job_id: providerJobId }, 202);
       } catch (error) {
-        if (reservationId) await serviceFetch("rpc/ema_release_wallet", {
+        if (reservationId) await serviceFetch("rpc/ema_release_credits", {
           method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: "netarz_video_create_failed" }),
         }).catch(() => null);
         const code = error instanceof Error ? error.message : "NETARZ_VIDEO_FAILED";
@@ -658,16 +659,16 @@ Deno.serve(async (request: Request) => {
         if (status === "completed") {
           const reportedUsd = Number(job?.usd);
           const cost = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : Number(savedJob.estimated_cost_usd || 0);
-          const billingRows = await serviceFetch("ema_billing_settings?select=usd_to_toman,markup_bps&singleton=eq.true&limit=1");
+          const billingRows = await serviceFetch("ema_billing_settings?select=usd_to_toman,markup_bps,credits_per_toman&singleton=eq.true&limit=1");
           const billing = billingRows?.[0] || {};
           const admins = await serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`);
           const isAdmin = Array.isArray(admins) && admins.length > 0;
           const subs = await serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
           await settleMediaReservation(reservationId, "professional_video", savedJob.model, cost,
-            Number(billing.usd_to_toman || 0), Math.max(0, Number(billing.markup_bps || 0)), isAdmin,
-            Array.isArray(subs) && subs.length > 0, { provider_job_id: providerJobId, seconds: savedJob.seconds, size: savedJob.size });
+            Number(billing.usd_to_toman || 0), Math.max(0, Number(billing.markup_bps || 0)), Number(billing.credits_per_toman || 0), isAdmin,
+            Array.isArray(subs) && subs.length > 0, { provider_job_id: providerJobId, seconds: savedJob.seconds, size: savedJob.size }, Number(savedJob.reserve_toman || Number.MAX_SAFE_INTEGER));
         } else if (reservationId) {
-          await serviceFetch("rpc/ema_release_wallet", {
+          await serviceFetch("rpc/ema_release_credits", {
             method: "POST", body: JSON.stringify({ p_reservation_id: reservationId, p_reason: `netarz_video_${status}` }),
           });
         }
