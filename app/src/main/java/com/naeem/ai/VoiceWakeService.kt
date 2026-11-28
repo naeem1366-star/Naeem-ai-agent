@@ -55,7 +55,6 @@ class VoiceWakeService : Service() {
     private var smartListening = false
     private var restartAfterSpeech = false
     private var destroyed = false
-    private var segmentCommandHandled = false
     private var commandInFlight = false
     private lateinit var router: AssistantActionRouter
 
@@ -169,13 +168,6 @@ class VoiceWakeService : Service() {
                 listeningStartPending = false
                 setVoiceState("processing")
             }
-            override fun onEndOfSegmentedSession() {
-                listening = false
-                listeningStartPending = false
-                setVoiceState("processing")
-                if (destroyed || commandInFlight || restartAfterSpeech || (tts?.isSpeaking == true)) return
-                main.postDelayed({ startListening() }, 250)
-            }
             override fun onError(error: Int) {
                 listening = false
                 listeningStartPending = false
@@ -212,25 +204,10 @@ class VoiceWakeService : Service() {
             // partial updates for one sentence, which caused duplicate actions and restart tones.
             override fun onPartialResults(partialResults: Bundle?) = Unit
 
-            // Android 13+ delivers finalized speech segments while the segmented session
-            // remains open. Process each segment once without restarting the microphone.
-            override fun onSegmentResults(segmentResults: Bundle?) {
-                if (Build.VERSION.SDK_INT < 33 || destroyed || commandInFlight) return
-                val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull().orEmpty().trim()
-                if (spoken.isNotBlank()) {
-                    segmentCommandHandled = true
-                    listening = true
-                    listeningStartPending = false
-                    setVoiceState("listening")
-                    handleRecognizedText(spoken)
-                }
-            }
             override fun onResults(results: Bundle?) {
                 listening = false
                 listeningStartPending = false
                 setVoiceState("processing")
-                if (segmentCommandHandled) { segmentCommandHandled = false; return }
                 val spoken = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull().orEmpty().trim()
                 handleRecognizedText(spoken)
@@ -249,25 +226,17 @@ class VoiceWakeService : Service() {
         ensureRecognizer()
         val engine = recognizer ?: return
         listeningStartPending = true
-        segmentCommandHandled = false
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "fa-IR")
             // Do not force offline recognition: Persian offline packs are absent on many devices.
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, Build.VERSION.SDK_INT >= 33)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            if (Build.VERSION.SDK_INT >= 33) {
-                // A segmented session keeps one recognizer session open across pauses instead of
-                // restarting every second (which causes the repeated system "ding" on Samsung).
-                putExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION, RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1400L)
-            } else {
-                // Older recognition services are one-shot; use a longer idle window to avoid a beep loop.
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
-            }
+            // Use one finalized result per recognition session; interim hypotheses are disabled.
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
         }
         runCatching {
             engine.startListening(intent)
