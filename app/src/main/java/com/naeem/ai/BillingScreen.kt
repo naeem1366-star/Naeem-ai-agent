@@ -112,9 +112,12 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
                 }
             }
             Text(if(isEnglish) "Top up AI credit" else "شارژ اعتبار هوش مصنوعی",color=Color.White,fontWeight=FontWeight.Bold)
-            OutlinedTextField(value=topupAmount,onValueChange={topupAmount=it.filter(Char::isDigit).take(12)},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text(if(isEnglish) "Amount in toman" else "مبلغ پرداخت به تومان")})
-            Text((if(isEnglish) "Minimum: " else "حداقل شارژ: ")+money(data.catalog.minTopupToman)+" · "+(if(isEnglish) "Maximum: " else "حداکثر: ")+money(data.catalog.maxTopupToman),color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
-            Button(onClick={topupAmount.toLongOrNull()?.let { createOrder("wallet_topup",it) }},enabled=workingOrder.isEmpty() && (topupAmount.toLongOrNull() ?: 0L)>0,modifier=Modifier.fillMaxWidth()) { Text(if(isEnglish) "Create top-up order" else "ساخت سفارش شارژ") }
+            if(!data.catalog.creditPurchaseEnabled) {
+                Text(if(isEnglish) "Credit purchases will open after the administrator configures the credit conversion rate." else "خرید کردیت پس از تنظیم نرخ تبدیل توسط مدیر فعال می‌شود.",color=Color(0xFFFFD18A),textAlign=TextAlign.End,modifier=Modifier.fillMaxWidth())
+            }
+            OutlinedTextField(value=topupAmount,onValueChange={topupAmount=it.filter(Char::isDigit).take(12)},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=data.catalog.creditPurchaseEnabled,label={Text(if(isEnglish) "Payment amount in toman" else "مبلغ پرداخت به تومان")})
+            Text((if(isEnglish) "Minimum payment: " else "حداقل مبلغ پرداخت: ")+money(data.catalog.minTopupToman)+" · "+(if(isEnglish) "Maximum: " else "حداکثر: ")+money(data.catalog.maxTopupToman),color=Color.LightGray,style=MaterialTheme.typography.bodySmall)
+            Button(onClick={topupAmount.toLongOrNull()?.let { createOrder("wallet_topup",it) }},enabled=data.catalog.creditPurchaseEnabled && workingOrder.isEmpty() && (topupAmount.toLongOrNull() ?: 0L)>=data.catalog.minTopupToman,modifier=Modifier.fillMaxWidth()) { Text(if(isEnglish) "Create credit purchase order" else "ساخت سفارش خرید کردیت") }
             if(data.catalog.paymentInstructions.isNotBlank()) {
                 Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(18.dp)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp),horizontalAlignment=Alignment.End) {
