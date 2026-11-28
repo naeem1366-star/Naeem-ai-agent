@@ -1557,9 +1557,23 @@ fun NaeemApp(
                                         } else wakePermissionLauncher.launch(needed.toTypedArray())
                                     }
                                 },
-                                modifier = Modifier.size(38.dp).background(if (smartListeningEnabled) Color(0xFF3D8065) else Panel, CircleShape)
+                                modifier = Modifier.size(38.dp).background(
+                                    when {
+                                        smartListeningEnabled -> Color(0xFF238653)
+                                        wakeAssistantEnabled -> Color(0xFF286B50)
+                                        else -> Panel
+                                    }, CircleShape
+                                )
                             ) {
-                                Icon(Icons.Default.GraphicEq, contentDescription = if (smartListeningEnabled) "شنود هوشمند ایما فعال است" else if (wakeAssistantEnabled) "آماده‌باش صوتی ایما فعال است" else "فعال‌کردن دستیار صوتی ایما", tint = if (smartListeningEnabled) Color.White else Gold)
+                                Icon(
+                                    Icons.Default.GraphicEq,
+                                    contentDescription = when {
+                                        smartListeningEnabled -> "شنود هوشمند فعال است"
+                                        wakeAssistantEnabled -> "شنود صوتی فعال است؛ برای توقف لمس کن"
+                                        else -> "فعال‌کردن شنود صوتی"
+                                    },
+                                    tint = if (wakeAssistantEnabled) Color.White else Gold
+                                )
                             }
                             if (showVoiceHelp) {
                                 AlertDialog(
