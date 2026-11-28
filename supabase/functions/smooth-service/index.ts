@@ -1168,11 +1168,17 @@ Deno.serve(async (request: Request) => {
         if (!upstream.ok) {
           const providerDetail = providerText.slice(0, 240);
           lastFailure = provider.name + "_http_" + upstream.status;
-          // Provider account/billing, key, permission, model and transient errors
-          // must all fall through to the configured secondary provider.
-          console.warn("EMA chat provider rejected request; trying next provider", {
-            provider: provider.name, status: upstream.status, detail: providerDetail,
-          });
+          // Only transient upstream/rate-limit failures may use GapGPT as fallback.
+          // Invalid keys, model errors, permission failures and exhausted provider credit
+          // must be surfaced instead of silently charging a different provider.
+          const retryable = upstream.status === 408 || upstream.status === 425 ||
+            upstream.status === 429 || upstream.status >= 500;
+          console.warn(retryable
+            ? "EMA chat provider transient failure; trying fallback"
+            : "EMA chat provider rejected request; fallback blocked", {
+              provider: provider.name, status: upstream.status, detail: providerDetail,
+            });
+          if (!retryable) break;
           continue;
         }
         try { result = JSON.parse(providerText); } catch {
