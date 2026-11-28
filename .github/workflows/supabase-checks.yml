@@ -66,4 +66,4 @@ jobs:
       - name: Verify default-off kill switch and RLS
         run: |
           psql "postgresql://postgres:postgres@localhost:5432/ema_test" -v ON_ERROR_STOP=1 -Atc "SELECT enabled FROM public.ema_feature_controls WHERE feature_key='social_network';" | grep -qx f
-          psql "postgresql://postgres:postgres@localhost:5432/ema_test" -v ON_ERROR_STOP=1 -Atc "SELECT bool_and(relrowsecurity) FROM pg_class WHERE relname LIKE 'ema_social_%' OR relname='ema_feature_controls';" | grep -qx t
+          psql "postgresql://postgres:postgres@localhost:5432/ema_test" -v ON_ERROR_STOP=1 -Atc "SELECT bool_and(relrowsecurity) FROM pg_class WHERE (relname LIKE 'ema_social_%' OR relname='ema_feature_controls') AND relkind IN ('r','p');" | grep -qx t
