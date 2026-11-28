@@ -188,7 +188,7 @@ Deno.serve(async (request: Request) => {
 
     if (route === "/v1/social/connections/requests" && request.method === "GET") {
       const rows = await serviceFetch(`ema_social_connection_requests?select=id,sender_user_id,recipient_user_id,message,status,created_at&or=(sender_user_id.eq.${userId},recipient_user_id.eq.${userId})&order=created_at.desc&limit=100`);
-      return reply({ requests: rows || [] });
+      return reply({ requests: (rows || []).map((r: any) => ({ ...r, direction: r.recipient_user_id === userId ? "incoming" : "outgoing" })) });
     }
     if (route === "/v1/social/connections/requests" && request.method === "POST") {
       const body = await jsonBody(request);
