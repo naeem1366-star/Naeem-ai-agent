@@ -2698,52 +2698,6 @@ private fun ThinkingOrb(
     }
 }
 
-private fun playThinkingOrbSound(context: Context) {
-    runCatching {
-        val sampleRate = 44100
-        val durationSeconds = 0.52
-        val count = (sampleRate * durationSeconds).toInt()
-        val pcm = ShortArray(count) { index ->
-            val t = index.toDouble() / count
-            val envelope = kotlin.math.sin(Math.PI * t).let { it * it }
-            val glide = 310.0 + 360.0 * t
-            val fundamental = kotlin.math.sin(2.0 * Math.PI * glide * t * durationSeconds)
-            val overtone = kotlin.math.sin(2.0 * Math.PI * (glide * 1.51) * t * durationSeconds) * 0.28
-            val shimmer = kotlin.math.sin(2.0 * Math.PI * 940.0 * t * durationSeconds) * 0.08
-            ((fundamental + overtone + shimmer) * envelope * 4200.0).toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(pcm.size * 2)
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .build()
-        track.setVolume(0.42f)
-        val written = track.write(pcm, 0, pcm.size)
-        if (written > 0) {
-            track.play()
-            Handler(Looper.getMainLooper()).postDelayed({
-                runCatching {
-                    if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
-                    track.release()
-                }
-            }, 750L)
-        } else track.release()
-    }
-}
-
 private fun assistantActionPreview(action: AssistantAction): String {
     val p = action.parameters
     val amount = p["amount"]?.toLongOrNull()?.let { java.text.NumberFormat.getNumberInstance(java.util.Locale("fa", "IR")).format(it) + " تومان" }
