@@ -361,8 +361,9 @@ Deno.serve(async (request: Request) => {
     }
 
     // Paid media tools use NetArz only. Provider secrets never leave this function.
-    const mediaNetarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-    const mediaNetarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+    // Keep NetArz media credentials isolated from generic chat-provider settings.
+    const mediaNetarzKey = Deno.env.get("NETARZ_API_KEY") || Deno.env.get("Netarz") || Deno.env.get("CHAT_PRIMARY_API_KEY") || "";
+    const mediaNetarzBase = (Deno.env.get("NETARZ_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
     const mediaProviderFetch = async (path: string, init: RequestInit = {}) => {
       if (!mediaNetarzKey || !mediaNetarzBase.startsWith("https://")) throw new Error("NETARZ_NOT_CONFIGURED");
       return await fetch(mediaNetarzBase + path, {
@@ -452,7 +453,11 @@ Deno.serve(async (request: Request) => {
     const getMediaCatalog = async (type: "video" | "music") => {
       const response = await mediaProviderFetch(`/models?type=${type}`, { method: "GET" });
       const raw = await response.text();
-      if (!response.ok) throw new Error("NETARZ_MODEL_CATALOG_FAILED");
+      if (!response.ok) {
+        // Keep the provider HTTP status in the gateway error so 401/403/404/429 can be
+        // distinguished from a missing EMA route while never logging or returning credentials.
+        throw new Error("NETARZ_MODEL_CATALOG_HTTP_" + response.status + ":" + raw.slice(0, 240));
+      }
       return JSON.parse(raw);
     };
 
@@ -461,8 +466,18 @@ Deno.serve(async (request: Request) => {
       if (type !== "video" && type !== "music") return reply({ error: { code: "INVALID_MEDIA_TYPE", message: "نوع فهرست رسانه معتبر نیست." } }, 400);
       try { return reply(await getMediaCatalog(type)); }
       catch (error) {
-        console.error("EMA NetArz media catalog failed", error instanceof Error ? error.message : "unknown");
-        return reply({ error: { code: "NETARZ_MODEL_CATALOG_FAILED", message: "دریافت فهرست مدل‌های NetArz ناموفق بود." } }, 502);
+        const detail = error instanceof Error ? error.message : "unknown";
+        const upstreamStatus = detail.match(/NETARZ_MODEL_CATALOG_HTTP_(\\d{3})/)?.[1] || "";
+        console.error("EMA NetArz media catalog failed", detail.slice(0, 320));
+        return reply({
+          error: {
+            code: "NETARZ_MODEL_CATALOG_FAILED",
+            upstream_status: upstreamStatus ? Number(upstreamStatus) : null,
+            message: upstreamStatus
+              ? "فهرست مدل‌های NetArz پاسخ HTTP " + upstreamStatus + " داد؛ کلید و نشانی اختصاصی NetArz را بررسی کن."
+              : "دریافت فهرست مدل‌های NetArz ناموفق بود؛ اتصال سرور یا پاسخ JSON را بررسی کن.",
+          },
+        }, 502);
       }
     }
 
