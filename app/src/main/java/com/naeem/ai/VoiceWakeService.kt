@@ -159,6 +159,9 @@ class VoiceWakeService : Service() {
                 listening = true
                 consecutiveErrors = 0
                 setVoiceState("listening")
+                getSystemService(NotificationManager::class.java).notify(
+                    NOTIFICATION_ID, buildNotification("میکروفون آماده است؛ منتظر فرمان فارسی تو…")
+                )
             }
             override fun onBeginningOfSpeech() = Unit
             override fun onRmsChanged(rmsdB: Float) = Unit
@@ -195,8 +198,19 @@ class VoiceWakeService : Service() {
                     else -> 1200L
                 }
                 val delayMs = (baseDelay * (1L shl (consecutiveErrors.coerceAtMost(4) - 1).coerceAtLeast(0))).coerceAtMost(20000L)
+                val reason = when (error) {
+                    SpeechRecognizer.ERROR_AUDIO -> "دریافت صدا از میکروفون ناموفق بود"
+                    SpeechRecognizer.ERROR_CLIENT -> "سرویس تشخیص گفتار توسط اندروید متوقف شد"
+                    SpeechRecognizer.ERROR_NO_MATCH -> "گفتار واضحی تشخیص داده نشد"
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "در زمان انتظار، گفتاری دریافت نشد"
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "موتور تشخیص گفتار مشغول است"
+                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "اتصال اینترنت یا سرویس گفتار مشکل دارد"
+                    SpeechRecognizer.ERROR_SERVER -> "سرور تشخیص گفتار پاسخ معتبر نداد"
+                    SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "موتور گوشی از زبان فارسی پشتیبانی نمی‌کند یا بسته فارسی فعال نیست"
+                    else -> "خطای نامشخص در تشخیص گفتار"
+                }
                 getSystemService(NotificationManager::class.java).notify(
-                    NOTIFICATION_ID, buildNotification("اتصال شنود ناپایدار شد؛ در حال تلاش مجدد…")
+                    NOTIFICATION_ID, buildNotification("خطای شنود ($error): $reason؛ در حال تلاش مجدد…")
                 )
                 main.postDelayed({ startListening() }, delayMs)
             }
