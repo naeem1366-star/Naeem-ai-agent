@@ -369,7 +369,16 @@ fun FeatureHub(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = {
                             val originalTitle = entries.firstOrNull { it.title == entry.title || englishNames[it.title] == entry.title }?.title ?: entry.title
-                            pinEmaModuleShortcut(context, originalTitle, entry.title)
+                            val shortcutName = when (originalTitle) {
+                                "موسیقی" -> "EMA Music"
+                                "ساخت موسیقی با هوش مصنوعی" -> "EMA Music AI"
+                                "ساخت ویدیوی پیشرفته" -> "EMA Video"
+                                "ساخت ویدیو رایگان مبتدی" -> "EMA Video Free"
+                                "استودیو ایما" -> "EMA Studio"
+                                "تحلیل عکس" -> "EMA Lens"
+                                else -> "EMA " + entry.title.take(18)
+                            }
+                            pinEmaModuleShortcut(context, originalTitle, shortcutName)
                         }) {
                             Icon(Icons.Default.Add, null, tint = Color(0xFFB9D8FF), modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(5.dp))
