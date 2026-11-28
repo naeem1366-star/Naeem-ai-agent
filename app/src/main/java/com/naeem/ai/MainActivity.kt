@@ -898,21 +898,23 @@ fun NaeemApp(
     }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            try {
-                val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-                    ?: throw IllegalStateException("خواندن تصویر انتخاب‌شده ممکن نشد.")
-                val scale = minOf(1f, 1280f / maxOf(source.width, source.height).toFloat())
-                val resized = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true) else source
-                val output = ByteArrayOutputStream()
-                resized.compress(Bitmap.CompressFormat.JPEG, 82, output)
-                selectedImageBase64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
-                selectedImage = resized.asImageBitmap()
-                imageMode = false
-                error = ""
-            } catch (e: Exception) {
-                selectedImageBase64 = null
-                selectedImage = null
-                error = e.message ?: "خطا در آماده‌سازی تصویر"
+            scope.launch {
+                try {
+                    val source = withContext(Dispatchers.IO) { decodeSampledImage(context, uri, 1600) }
+                        ?: throw IllegalStateException("خواندن تصویر انتخاب‌شده ممکن نشد.")
+                    val scale = minOf(1f, 1280f / maxOf(source.width, source.height).toFloat())
+                    val resized = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true) else source
+                    val output = ByteArrayOutputStream()
+                    resized.compress(Bitmap.CompressFormat.JPEG, 82, output)
+                    selectedImageBase64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+                    selectedImage = resized.asImageBitmap()
+                    imageMode = false
+                    error = ""
+                } catch (e: Exception) {
+                    selectedImageBase64 = null
+                    selectedImage = null
+                    error = e.message ?: "خطا در آماده‌سازی تصویر"
+                }
             }
         }
     }
@@ -1310,7 +1312,7 @@ fun NaeemApp(
                         val findings = deepSearchClient.search(finalQuestion, 8, BuildConfig.CHAT_GATEWAY_URL, accessTokenForMemory)
                         val sourceText = findings.mapIndexed { index, item -> "[$index] ${item.title}\n${item.snippet}\nURL: ${item.url}" }.joinToString("\n\n")
                         val researchPrompt = "برای پرسش زیر یک گزارش پژوهشی دقیق و فارسی بنویس. از منابع زیر استفاده کن، ادعاها را به شماره منبع ارجاع بده، اختلاف اطلاعات را مشخص کن و در پایان فهرست منابع را با URL کامل بیاور. اگر منابع کافی نیستند صادقانه بگو.\n\nپرسش: $finalQuestion\n\nمنابع وب:\n$sourceText$userContext"
-                        val report = sendChat(researchPrompt, paidFeature = featureForThisMessage)
+                        val report = sendChat(researchPrompt, image = imageToSend, paidFeature = featureForThisMessage)
                         report + "\n\nمنابع بررسی‌شده:\n" + findings.mapIndexed { index, item -> "[${index + 1}] ${item.title} — ${item.url}" }.joinToString("\n")
                     } else {
                         val memoryAwarePrompt = "زمینه کاربر:\n$userContext\n\nدرخواست کاربر:\n$finalQuestion"
