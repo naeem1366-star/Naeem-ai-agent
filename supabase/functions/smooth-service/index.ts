@@ -170,9 +170,9 @@ Deno.serve(async (request: Request) => {
       const configured = (key: string) => !!Deno.env.get(key)?.trim();
       return reply({
         chat: [
-          { id: "ema_primary", configured: configured("EMA_CHAT_FREE_PRIMARY_API_KEY"), role: "primary" },
-          { id: "ema_fallback", configured: configured("EMA_CHAT_FREE_FALLBACK_API_KEY"), role: "fallback" },
-          { id: "gapgpt", configured: configured("CHAT_SECONDARY_API_KEY") || configured("CHAT_SECONDARY_APLIKEY"), role: "compatibility_fallback" },
+          { id: "gapgpt", configured: configured("CHAT_SECONDARY_API_KEY") || configured("CHAT_SECONDARY_APLIKEY"), role: "primary" },
+          { id: "ema_primary", configured: configured("EMA_CHAT_FREE_PRIMARY_API_KEY"), role: "fallback" },
+          { id: "ema_fallback", configured: configured("EMA_CHAT_FREE_FALLBACK_API_KEY"), role: "secondary_fallback" },
         ],
         webSearch: { configured: configured("EMA_SEARCH_API_KEY"), provider: Deno.env.get("EMA_SEARCH_PROVIDER") || "brave" },
         memory: { available: true, storage: "account_scoped" },
