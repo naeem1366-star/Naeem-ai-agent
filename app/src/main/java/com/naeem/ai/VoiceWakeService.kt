@@ -55,7 +55,6 @@ class VoiceWakeService : Service() {
     private var smartListening = false
     private var restartAfterSpeech = false
     private var destroyed = false
-    private var segmentCommandHandled = false
     private var commandInFlight = false
     private lateinit var router: AssistantActionRouter
 
@@ -202,21 +201,6 @@ class VoiceWakeService : Service() {
                 listeningStartPending = false
                 setVoiceState("processing")
             }
-            override fun onSegmentResults(segmentResults: Bundle?) {
-                val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
-                if (spoken.isBlank() || !isCommandCandidate(spoken) || segmentCommandHandled) return
-                segmentCommandHandled = true
-                commandInFlight = true
-                runCatching { recognizer?.stopListening() }
-                handleRecognizedText(spoken)
-            }
-            override fun onEndOfSegmentedSession() {
-                listening = false
-                listeningStartPending = false
-                setVoiceState("processing")
-                if (destroyed || commandInFlight || restartAfterSpeech || (tts?.isSpeaking == true)) return
-                main.postDelayed({ startListening() }, 250)
-            }
             override fun onError(error: Int) {
                 listening = false
                 listeningStartPending = false
@@ -253,7 +237,6 @@ class VoiceWakeService : Service() {
                 listening = false
                 listeningStartPending = false
                 setVoiceState("processing")
-                if (segmentCommandHandled) { segmentCommandHandled = false; return }
                 val spoken = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull().orEmpty().trim()
                 handleRecognizedText(spoken)
