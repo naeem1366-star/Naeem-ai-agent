@@ -1,13 +1,13 @@
 name: Supabase Edge Function checks
 on:
   push:
-    branches: ["fix/ema-free-chat-gapgpt", "feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory"]
+    branches: ["fix/ema-free-chat-gapgpt", "feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory", "feature/ema-social-platform"]
     paths:
       - "supabase/functions/**"
       - "supabase/migrations/**"
       - ".github/workflows/supabase-checks.yml"
   pull_request:
-    branches: ["feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-media-secure-routing"]
+    branches: ["feature/ema-asi-platform", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory", "feature/ema-social-platform"]
     paths:
       - "supabase/functions/**"
       - "supabase/migrations/**"
@@ -26,3 +26,5 @@ jobs:
           deno-version: v2.x
       - name: Type-check EMA secure gateway
         run: deno check --no-lock supabase/functions/smooth-service/index.ts
+      - name: Type-check EMA Social API
+        run: deno check --no-lock supabase/functions/ema-social/index.ts
