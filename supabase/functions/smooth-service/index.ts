@@ -82,9 +82,9 @@ Deno.serve(async (request: Request) => {
   // NetArz pays for all free AI traffic; GapGPT is a failover only for transient outages.
   const aiProviderConfigs = () => {
     const netarzKey = Deno.env.get("NETARZ_API_KEY") || Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-    const netarzBase = (Deno.env.get("NETARZ_BASE_URL") || Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+    const netarzBase = (Deno.env.get("NETARZ_BASE_URL") || Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
     const gapKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-    const gapBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\\/+$/, "");
+    const gapBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
     return [
       {
         name: "NetArz", key: netarzKey, base: netarzBase,
