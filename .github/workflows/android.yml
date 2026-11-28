@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main", "feature/v2-foundation", "feature/pc-bridge-mvp", "feature/ima-chat-gateway", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-tools-free-paid-access", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory", "feature/ema-social-platform"]
   pull_request:
-    branches: ["feature/v2-foundation", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing", "feature/ema-social-platform"]
+    branches: ["feature/v2-foundation", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory", "feature/ema-social-platform"]
 
 concurrency:
   group: android-apk-${{ github.ref }}
