@@ -7,7 +7,7 @@ on:
     branches: ["feature/v2-foundation", "feature/ema-asi-platform", "feature/ema-owner-admin-dashboard", "feature/ema-provider-account-monitoring", "feature/ema-free-image-tools-gapgpt", "feature/ema-netarz-paid-ai-routing", "feature/ema-netarz-paid-ai-routing-fix", "feature/ema-netarz-media-secure-routing", "feature/ema-autonomous-core-memory", "feature/ema-social-platform"]
 
 concurrency:
-  group: android-apk-${{ github.ref }}
+  group: android-apk-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
