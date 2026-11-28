@@ -59,4 +59,4 @@ Before enabling the switch:
 
 ## API
 
-See [api-contract.md](./api-contract.md).
+See [api-contract.md](./api-contract.md) and [vendor-evaluation.md](./vendor-evaluation.md).
