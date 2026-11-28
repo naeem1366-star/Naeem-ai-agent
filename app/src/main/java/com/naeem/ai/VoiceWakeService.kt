@@ -208,7 +208,7 @@ class VoiceWakeService : Service() {
                 )
                 main.postDelayed({ startListening() }, delayMs)
             }
-            override fun onSegmentResults(segmentResults: Bundle?) {
+            override fun onPartialResults(segmentResults: Bundle?) {
                 if (destroyed || commandInFlight) return
                 val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull().orEmpty().trim()
