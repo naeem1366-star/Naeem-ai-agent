@@ -37,7 +37,7 @@ import java.util.UUID
 class VoiceWakeService : Service() {
     companion object {
         const val ACTION_STOP = "com.naeem.ai.action.STOP_VOICE_WAKE"
-        private const val CHANNEL_ID = "ema_voice_wake"
+        private const val CHANNEL_ID = "ema_voice_wake_silent_v2"
         private const val NOTIFICATION_ID = 7312
         private const val PREFS = "ima_voice_wake"
         private const val PREF_ENABLED = "enabled"
@@ -133,6 +133,9 @@ class VoiceWakeService : Service() {
             ).apply {
                 description = "وقتی دستیار صوتی فعال است، ایما منتظر شنیدن کلمه بیدارباش می‌ماند."
                 setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
+                enableLights(false)
             }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
