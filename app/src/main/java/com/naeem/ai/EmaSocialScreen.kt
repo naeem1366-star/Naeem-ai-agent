@@ -113,13 +113,13 @@ fun EmaSocialScreen(
                         OutlinedTextField(value, update, modifier = Modifier.fillMaxWidth(), label = { Text(label) }, minLines = lines,
                             colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White))
                     }
-                    field(if (isEnglish) "Display name" else "نام نمایشی", profile.displayName) { profile = profile.copy(displayName = it) }
-                    field(if (isEnglish) "Professional headline" else "عنوان تخصصی", profile.headline) { profile = profile.copy(headline = it) }
+                    field(if (isEnglish) "Display name" else "نام نمایشی", profile.displayName, { profile = profile.copy(displayName = it) })
+                    field(if (isEnglish) "Professional headline" else "عنوان تخصصی", profile.headline, { profile = profile.copy(headline = it) })
                     field(if (isEnglish) "About you" else "معرفی کوتاه", profile.bio, { profile = profile.copy(bio = it) }, 3)
-                    field(if (isEnglish) "City" else "شهر", profile.city) { profile = profile.copy(city = it) }
-                    field(if (isEnglish) "Interests · comma separated" else "علایق · با ویرگول جدا کن", profile.interests.joinToString("، ")) { profile = profile.copy(interests = it.split(',', '،').map(String::trim).filter(String::isNotBlank)) }
-                    field(if (isEnglish) "Skills · comma separated" else "مهارت‌ها · با ویرگول جدا کن", profile.skills.joinToString("، ")) { profile = profile.copy(skills = it.split(',', '،').map(String::trim).filter(String::isNotBlank)) }
-                    field(if (isEnglish) "Goals · comma separated" else "اهداف · با ویرگول جدا کن", profile.goals.joinToString("، ")) { profile = profile.copy(goals = it.split(',', '،').map(String::trim).filter(String::isNotBlank)) }
+                    field(if (isEnglish) "City" else "شهر", profile.city, { profile = profile.copy(city = it) })
+                    field(if (isEnglish) "Interests · comma separated" else "علایق · با ویرگول جدا کن", profile.interests.joinToString("، "), { profile = profile.copy(interests = it.split(',', '،').map(String::trim).filter(String::isNotBlank)) })
+                    field(if (isEnglish) "Skills · comma separated" else "مهارت‌ها · با ویرگول جدا کن", profile.skills.joinToString("، "), { profile = profile.copy(skills = it.split(',', '،').map(String::trim).filter(String::isNotBlank)) })
+                    field(if (isEnglish) "Goals · comma separated" else "اهداف · با ویرگول جدا کن", profile.goals.joinToString("، "), { profile = profile.copy(goals = it.split(',', '،').map(String::trim).filter(String::isNotBlank)) })
                     field(if (isEnglish) "Experience" else "تجربه کاری", profile.experienceSummary, { profile = profile.copy(experienceSummary = it) }, 3)
                     Text(if (isEnglish) "Profile visibility" else "نمایش پروفایل", color = accent, fontWeight = FontWeight.SemiBold)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
