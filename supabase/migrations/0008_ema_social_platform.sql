@@ -190,3 +190,63 @@ grant execute on function public.ema_social_is_admin(uuid) to service_role;
 
 comment on table public.ema_feature_controls is 'Server-enforced feature flags. social_network is the owner-controlled global kill switch.';
 comment on table public.ema_social_profiles is 'Explicitly user-managed social profile; never populated from private chats by default.';
+
+
+-- Atomic request decision + connection creation. The Edge Function calls this with service_role.
+create or replace function public.ema_social_respond_request(
+  p_request_id uuid,
+  p_actor_id uuid,
+  p_decision text
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_request public.ema_social_connection_requests%rowtype;
+  v_low uuid;
+  v_high uuid;
+begin
+  if p_decision not in ('accepted','declined','cancelled') then
+    return jsonb_build_object('ok', false, 'code', 'INVALID_DECISION');
+  end if;
+
+  select * into v_request
+  from public.ema_social_connection_requests
+  where id = p_request_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'code', 'REQUEST_NOT_FOUND');
+  end if;
+  if v_request.status <> 'pending' then
+    return jsonb_build_object('ok', false, 'code', 'REQUEST_ALREADY_PROCESSED');
+  end if;
+  if p_decision in ('accepted','declined') and v_request.recipient_user_id <> p_actor_id then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+  if p_decision = 'cancelled' and v_request.sender_user_id <> p_actor_id then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  update public.ema_social_connection_requests
+  set status = p_decision, updated_at = now()
+  where id = p_request_id
+  returning * into v_request;
+
+  if p_decision = 'accepted' then
+    if v_request.sender_user_id < v_request.recipient_user_id then
+      v_low := v_request.sender_user_id; v_high := v_request.recipient_user_id;
+    else
+      v_low := v_request.recipient_user_id; v_high := v_request.sender_user_id;
+    end if;
+    insert into public.ema_social_connections(user_low,user_high)
+    values(v_low,v_high)
+    on conflict(user_low,user_high) do nothing;
+  end if;
+
+  return jsonb_build_object('ok', true, 'request', to_jsonb(v_request));
+end;
+$$;
+revoke all on function public.ema_social_respond_request(uuid,uuid,text) from public, anon, authenticated;
+grant execute on function public.ema_social_respond_request(uuid,uuid,text) to service_role;
