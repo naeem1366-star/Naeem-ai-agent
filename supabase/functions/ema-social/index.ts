@@ -198,28 +198,21 @@ Deno.serve(async (request: Request) => {
       return reply({ request: rows?.[0] || null }, 201);
     }
 
-    const requestMatch = route.match(/^\/v1\/social\/connections\/requests\/([0-9a-f-]{36})$/i);
+    const requestMatch = route.match(/^\\/v1\\/social\\/connections\\/requests\\/([0-9a-f-]{36})$/i);
     if (requestMatch && request.method === "PATCH") {
       const body = await jsonBody(request);
       const decision = body?.decision;
       if (!["accepted","declined","cancelled"].includes(decision)) return reply({ error: { code: "INVALID_DECISION", message: "پاسخ درخواست معتبر نیست." } }, 400);
-      const existing = await serviceFetch(`ema_social_connection_requests?select=id,sender_user_id,recipient_user_id,status&id=eq.${requestMatch[1]}&limit=1`);
-      const item = existing?.[0];
-      if (!item || (item.sender_user_id !== userId && item.recipient_user_id !== userId)) return reply({ error: { code: "REQUEST_NOT_FOUND", message: "درخواست پیدا نشد." } }, 404);
-      if ((decision === "accepted" || decision === "declined") && item.recipient_user_id !== userId) return reply({ error: { code: "FORBIDDEN", message: "فقط گیرنده می‌تواند پاسخ دهد." } }, 403);
-      if (decision === "cancelled" && item.sender_user_id !== userId) return reply({ error: { code: "FORBIDDEN", message: "فقط فرستنده می‌تواند درخواست را لغو کند." } }, 403);
-      const updated = await serviceFetch(`ema_social_connection_requests?id=eq.${requestMatch[1]}`, {
-        method: "PATCH", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ status: decision, updated_at: new Date().toISOString() }),
+      const result = await serviceFetch("rpc/ema_social_respond_request", {
+        method: "POST",
+        body: JSON.stringify({ p_request_id: requestMatch[1], p_actor_id: userId, p_decision: decision }),
       });
-      if (decision === "accepted") {
-        const [low, high] = [item.sender_user_id, item.recipient_user_id].sort();
-        await serviceFetch("ema_social_connections?on_conflict=user_low,user_high", {
-          method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-          body: JSON.stringify({ user_low: low, user_high: high }),
-        });
+      if (result?.ok !== true) {
+        const code = String(result?.code || "REQUEST_UPDATE_FAILED");
+        const status = code === "FORBIDDEN" ? 403 : code === "REQUEST_NOT_FOUND" ? 404 : code === "REQUEST_ALREADY_PROCESSED" ? 409 : 400;
+        return reply({ error: { code, message: code === "FORBIDDEN" ? "اجازه انجام این تغییر را نداری." : code === "REQUEST_NOT_FOUND" ? "درخواست پیدا نشد." : code === "REQUEST_ALREADY_PROCESSED" ? "این درخواست قبلاً تعیین تکلیف شده است." : "پاسخ درخواست معتبر نیست." } }, status);
       }
-      return reply({ request: updated?.[0] || null });
+      return reply({ request: result.request || null });
     }
 
     return reply({ error: { code: "NOT_FOUND", message: "مسیر شبکه اجتماعی پیدا نشد." } }, 404);
