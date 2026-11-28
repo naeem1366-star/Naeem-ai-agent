@@ -733,7 +733,7 @@ Deno.serve(async (request: Request) => {
       const walletBillingReady = billing.ai_billing_enabled === true && !!pricing &&
         inputRate >= 0 && outputRate >= 0 && (inputRate + outputRate) > 0 && usdToToman > 0 && creditsPerToman > 0;
       if (!isAdmin && !hasActiveSubscription && walletBalance > 0 && !walletBillingReady) {
-        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن اعتبار کیف پول، قیمت مدل NetArz و نرخ تبدیل دلار به تومان باید در پنل مدیریت تنظیم شود." } }, 503);
+        return reply({ error: { code: "AI_MODEL_PRICING_MISSING", message: "برای کسر امن اعتبار کیف پول، قیمت مدل، نرخ دلار و نرخ تبدیل تومان به کردیت باید در پنل مدیریت تنظیم شود." } }, 503);
       }
 
       const maxTokens = Math.max(1, Math.min(1600, Number(body?.max_tokens) || 1200));
@@ -772,13 +772,13 @@ Deno.serve(async (request: Request) => {
           return reply({
             error: {
               code: reservation?.code || "INSUFFICIENT_AI_CREDIT",
-              message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن.",
+              message: "کردیت کافی برای اجرای این درخواست وجود ندارد؛ لطفاً کردیت بخری.",
               balance_credits: reservation?.balance_credits ?? walletBalance,
-              required_credits: reservation?.required_credits ?? reserveToman,
+              required_credits: reservation?.required_credits ?? reserveCredits,
             },
           }, 402);
         }
-      } else if (!isAdmin && !hasActiveSubscription && walletBalance < reserveToman) {
+      } else if (!isAdmin && !hasActiveSubscription && walletBalance < reserveCredits) {
         return reply({ error: { code: "INSUFFICIENT_AI_CREDIT", message: "اعتبار کیف پول برای اجرای این درخواست کافی نیست؛ لطفاً کیف پول را شارژ کن." } }, 402);
       }
 
