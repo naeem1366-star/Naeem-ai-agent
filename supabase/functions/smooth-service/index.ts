@@ -967,21 +967,24 @@ Deno.serve(async (request: Request) => {
       }
 
       if (request.method === "GET" && route === "/v1/billing/catalog") {
-        const [wallets, plans, subscriptions, settings, admins] = await Promise.all([
+        const [wallets, plans, subscriptions, settings, billingSettings, admins] = await Promise.all([
           serviceFetch(`ema_credit_wallets?select=balance_credits&user_id=eq.${userId}&limit=1`),
           serviceFetch("ema_plans?select=id,name,duration_days,price_toman,ai_credit_percent&enabled=eq.true&order=sort_order.asc"),
           serviceFetch(`ema_subscriptions?select=plan_id,ends_at,ema_plans(name)&user_id=eq.${userId}&ends_at=gt.${new Date().toISOString()}&order=ends_at.desc&limit=1`),
           serviceFetch("ema_payment_settings?select=instructions,min_topup_toman,max_topup_toman&singleton=eq.true&limit=1"),
+          serviceFetch("ema_billing_settings?select=credits_per_toman&singleton=eq.true&limit=1"),
           serviceFetch(`ema_admin_users?select=user_id&user_id=eq.${userId}&limit=1`),
         ]);
         const setting = settings?.[0] || {};
         const active = subscriptions?.[0] || null;
+        const creditConversionReady = Number(billingSettings?.[0]?.credits_per_toman || 0) > 0;
         return reply({
           balanceCredits: Number(wallets?.[0]?.balance_credits || 0),
           plans: plans || [],
           subscription: active ? { plan_name: active.ema_plans?.name || active.plan_id, ends_at: active.ends_at } : null,
           payment: {
             instructions: setting.instructions || "",
+            creditPurchaseEnabled: creditConversionReady,
             minTopupToman: Math.max(500000, Number(setting.min_topup_toman || 500000)),
             maxTopupToman: Number(setting.max_topup_toman || 50000000),
           },
@@ -1007,6 +1010,11 @@ Deno.serve(async (request: Request) => {
         }
         const existing = await serviceFetch(`ema_payment_orders?select=id,status,amount_toman&user_id=eq.${userId}&idempotency_key=eq.${encodeURIComponent(key)}&limit=1`);
         if (existing?.length) return reply({ order: existing[0], duplicate: true });
+
+        const conversionRows = await serviceFetch("ema_billing_settings?select=credits_per_toman&singleton=eq.true&limit=1");
+        if (!(Number(conversionRows?.[0]?.credits_per_toman || 0) > 0)) {
+          return reply({ error: { code: "CREDIT_PURCHASE_NOT_CONFIGURED", message: "خرید کردیت هنوز فعال نشده است؛ نرخ تبدیل باید ابتدا توسط مدیر تنظیم شود." } }, 503);
+        }
 
         let amount = 0;
         let planId: string | null = null;
