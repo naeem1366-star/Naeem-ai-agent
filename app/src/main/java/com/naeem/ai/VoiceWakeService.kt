@@ -71,7 +71,48 @@ class VoiceWakeService : Service() {
         createNotificationChannel()
         smartListening = true
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("smart_listening", true).apply()
-        // Silent listening mode: no TTS engine is initialized or played.
+        // Voice standby must answer audibly; use the phone's installed Persian TTS voice.
+        tts = TextToSpeech(applicationContext) { status ->
+            val engine = tts
+            if (status == TextToSpeech.SUCCESS && engine != null) {
+                val languageStatus = runCatching { engine.setLanguage(Locale("fa", "IR")) }
+                    .getOrDefault(TextToSpeech.LANG_NOT_SUPPORTED)
+                ttsReady = languageStatus != TextToSpeech.LANG_MISSING_DATA &&
+                    languageStatus != TextToSpeech.LANG_NOT_SUPPORTED
+                engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
+                    override fun onDone(utteranceId: String?) {
+                        main.post {
+                            if (!destroyed && restartAfterSpeech) {
+                                restartAfterSpeech = false
+                                startListening()
+                            }
+                        }
+                    }
+                    override fun onError(utteranceId: String?) {
+                        main.post {
+                            restartAfterSpeech = false
+                            if (!destroyed) {
+                                getSystemService(NotificationManager::class.java).notify(
+                                    NOTIFICATION_ID, buildNotification("پخش پاسخ صوتی ناموفق بود؛ شنود دوباره فعال می‌شود.")
+                                )
+                                startListening()
+                            }
+                        }
+                    }
+                })
+                if (!ttsReady) {
+                    getSystemService(NotificationManager::class.java).notify(
+                        NOTIFICATION_ID, buildNotification("موتور گفتار فارسی روی گوشی نصب یا فعال نیست.")
+                    )
+                }
+            } else {
+                ttsReady = false
+                getSystemService(NotificationManager::class.java).notify(
+                    NOTIFICATION_ID, buildNotification("راه‌اندازی صدای فارسی ناموفق بود؛ وضعیت شنود را بررسی کن.")
+                )
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -379,11 +420,30 @@ class VoiceWakeService : Service() {
     }
 
     private fun speak(text: String, listenAgain: Boolean) {
-        // Voice feedback is intentionally disabled. Keep the microphone session alive.
-        restartAfterSpeech = false
         commandInFlight = false
-        if (!destroyed && !listening && !listeningStartPending) {
-            main.postDelayed({ startListening() }, 180)
+        listening = false
+        listeningStartPending = false
+        restartAfterSpeech = listenAgain
+        val engine = tts
+        if (destroyed) return
+        if (engine == null || !ttsReady) {
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID,
+                buildNotification("پاسخ ایما: ${text.take(150)} — صدای فارسی گوشی در دسترس نیست.")
+            )
+            restartAfterSpeech = false
+            if (listenAgain) main.postDelayed({ startListening() }, 700)
+            return
+        }
+        val result = runCatching {
+            engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ema-${UUID.randomUUID()}")
+        }.getOrDefault(TextToSpeech.ERROR)
+        if (result == TextToSpeech.ERROR) {
+            restartAfterSpeech = false
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID, buildNotification("پخش پاسخ صوتی ممکن نشد؛ شنود دوباره فعال می‌شود.")
+            )
+            if (listenAgain) main.postDelayed({ startListening() }, 700)
         }
     }
 
