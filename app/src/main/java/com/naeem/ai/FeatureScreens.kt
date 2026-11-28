@@ -145,6 +145,7 @@ fun FeatureHub(
     onSettings:()->Unit,onTravel:()->Unit,onSport:()->Unit,onMarkets:()->Unit,onWrapped:()->Unit,onJournal:()->Unit,onTrail:()->Unit,onSocial:()->Unit,
     onNews:()->Unit,onMedication:()->Unit,onPlanner:()->Unit,onThinkRoom:()->Unit,onFuture:()->Unit,onProfessionalVideo:()->Unit,onPcControl:()->Unit = {},onWallet:()->Unit = {},onProductLens:()->Unit = {},onMusicCreation:()->Unit = onMusic,onFreeVideo:()->Unit = onVideo
 ){
+    val context = androidx.compose.ui.platform.LocalContext.current
     var query by remember { mutableStateOf("") }
     var hasPaidAccess by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("free") }
@@ -365,7 +366,17 @@ fun FeatureHub(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { selectedEntry = null }) { Text(hubText("بستن", "Close"), color = Color(0xFF9BA7B5)) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = {
+                            val originalTitle = entries.firstOrNull { it.title == entry.title || englishNames[it.title] == entry.title }?.title ?: entry.title
+                            pinEmaModuleShortcut(context, originalTitle, entry.title)
+                        }) {
+                            Icon(Icons.Default.AddToHomeScreen, null, tint = Color(0xFFB9D8FF), modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(hubText("افزودن میانبر", "Add shortcut"), color = Color(0xFFB9D8FF))
+                        }
+                        TextButton(onClick = { selectedEntry = null }) { Text(hubText("بستن", "Close"), color = Color(0xFF9BA7B5)) }
+                    }
                 }
             )
         }
