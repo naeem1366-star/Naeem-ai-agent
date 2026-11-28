@@ -1093,6 +1093,20 @@ fun NaeemApp(
         }
     }
 
+    val chatMicPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            // The callback runs after Android grants microphone access; reuse the same
+            // capture entry point so the permission and recognition paths stay aligned.
+            startVoiceCapture?.invoke()
+        } else {
+            listening = false
+            conversationMode = false
+            error = "برای مکالمه صوتی، اجازه دسترسی به میکروفون لازم است. از تنظیمات برنامه این مجوز را فعال کن."
+        }
+    }
+
     fun stopSpeech() {
         speechJob?.cancel()
         speechJob = null
@@ -1163,7 +1177,6 @@ fun NaeemApp(
                         player.prepareAsync()
                     }
                 }
-                if (continueListening && currentConversationMode && !busy) startVoiceCapture?.invoke()
             } catch (e: Exception) {
                 if (isActive) error = e.message ?: "ساخت یا پخش صدای فارسی ناموفق بود."
             } finally {
@@ -1172,6 +1185,15 @@ fun NaeemApp(
                 speechPlaying = false
                 speechPaused = false
                 speechJob = null
+                // Re-arm the microphone after playback OR a TTS failure. The previous
+                // implementation only restarted on successful playback, so one gateway
+                // error silently ended the voice conversation.
+                if (continueListening && currentConversationMode && isActive) {
+                    delay(350)
+                    if (currentConversationMode && !busy && !listening && !speechPlaying) {
+                        startVoiceCapture?.invoke()
+                    }
+                }
             }
         }
     }
@@ -1278,42 +1300,63 @@ fun NaeemApp(
     ) { result ->
         listening = false
         val spoken = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
-            ?.firstOrNull().orEmpty()
-        if (spoken.isNotBlank()) {
-            prompt = spoken
-            val question = spoken.trim()
-            prompt = ""
-            messages.add(ChatMessage(question, true))
-            busy = true
-            error = ""
-            scope.launch {
-                try {
-                    val actionReply = routeAssistantIntent(question)
-                    if (actionReply != null) {
-                        messages.add(ChatMessage(actionReply, false))
-                        playAnswer(actionReply, continueListening = true)
-                        return@launch
-                    }
-                    val answer = sendChat(question)
-                    messages.add(ChatMessage(answer, false))
-                    playAnswer(answer, continueListening = true)
-                } catch (e: Exception) {
-                    error = e.message ?: "خطای نامشخص"
-                } finally { busy = false }
+            ?.firstOrNull().orEmpty().trim()
+        if (spoken.isBlank()) {
+            if (conversationMode) {
+                conversationMode = false
+                error = if (result.resultCode == android.app.Activity.RESULT_OK) {
+                    "صدای واضحی تشخیص داده نشد. زبان تشخیص گفتار گوشی را روی فارسی قرار بده و دوباره امتحان کن."
+                } else {
+                    "تشخیص گفتار لغو شد یا سرویس صوتی گوشی پاسخی نداد. دوباره دکمه میکروفون را بزن."
+                }
             }
+            return@rememberLauncherForActivityResult
+        }
+        prompt = spoken
+        val question = spoken
+        prompt = ""
+        messages.add(ChatMessage(question, true))
+        busy = true
+        error = ""
+        scope.launch {
+            try {
+                val actionReply = routeAssistantIntent(question)
+                if (actionReply != null) {
+                    messages.add(ChatMessage(actionReply, false))
+                    playAnswer(actionReply, continueListening = true)
+                    return@launch
+                }
+                val answer = sendChat(question)
+                messages.add(ChatMessage(answer, false))
+                playAnswer(answer, continueListening = true)
+            } catch (e: Exception) {
+                error = e.message ?: "خطای نامشخص"
+            } finally { busy = false }
         }
     }
 
-    val beginListening = remember(speechLauncher) {
+    val beginListening = remember(speechLauncher, chatMicPermissionLauncher) {
         {
-            listening = true
-            val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
-                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "صحبت کن…")
+            if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                listening = false
+                chatMicPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            } else {
+                listening = true
+                error = ""
+                val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "fa-IR")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "صحبت کن…")
+                }
+                try {
+                    speechLauncher.launch(intent)
+                } catch (e: Exception) {
+                    listening = false
+                    conversationMode = false
+                    error = "سرویس تشخیص گفتار روی گوشی در دسترس نیست: ${e.message ?: "خطای نامشخص"}"
+                }
             }
-            try { speechLauncher.launch(intent) }
-            catch (_: Exception) { listening = false; error = "سرویس تشخیص گفتار روی گوشی در دسترس نیست." }
         }
     }
     SideEffect { startVoiceCapture = beginListening }
