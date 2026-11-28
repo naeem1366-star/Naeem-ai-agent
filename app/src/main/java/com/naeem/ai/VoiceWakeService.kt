@@ -116,7 +116,7 @@ class VoiceWakeService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         // Do not advertise the voice service as active until the recognizer is actually ready.
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(PREF_ENABLED, false)
+            .putBoolean(PREF_ENABLED, true)
             .putString("state", "starting")
             .apply()
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification("در حال آماده‌سازی میکروفون و تشخیص گفتار…"))
