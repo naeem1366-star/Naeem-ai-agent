@@ -2616,8 +2616,8 @@ fun NaeemApp(
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(if (isEnglish) "Secure AI connection" else "اتصال امن هوش مصنوعی", color = Gold, fontWeight = FontWeight.SemiBold)
                         Text(
-                            if (isEnglish) "EMA routes free chat, image generation, product vision, and speech through NetArz first, with GapGPT as an automatic fallback during temporary outages. Paid AI and media features remain behind subscription or wallet-credit access. Provider API keys stay on the secure server and must not be entered on this phone."
-                            else "چت رایگان، ساخت تصویر، تشخیص تصویر و تبدیل متن به گفتار ابتدا از NetArz انجام می‌شوند و هنگام اختلال موقت، ایما خودکار به GapGPT برمی‌گردد. قابلیت‌های هوش مصنوعی و رسانه‌ای پولی همچنان فقط با اشتراک یا اعتبار کیف پول فعال می‌شوند. کلیدهای API فقط روی سرور امن نگهداری می‌شوند و نباید در گوشی وارد شوند.",
+                            if (isEnglish) "EMA routes free chat, image generation, product vision, and generated speech through NetArz first, with GapGPT as an automatic fallback during temporary outages. Microphone transcription and wake-word detection still use Android's speech-recognition service. Paid AI and media features remain behind subscription or wallet-credit access. Provider API keys stay on the secure server and must not be entered on this phone."
+                            else "چت رایگان، ساخت تصویر، تشخیص تصویر و تبدیل متن به گفتار ابتدا از NetArz انجام می‌شوند و هنگام اختلال موقت، ایما خودکار به GapGPT برمی‌گردد. تبدیل صدای میکروفون به متن و تشخیص کلمه بیدارباش فعلاً از سرویس تشخیص گفتار اندروید استفاده می‌کند. قابلیت‌های هوش مصنوعی و رسانه‌ای پولی همچنان فقط با اشتراک یا اعتبار کیف پول فعال می‌شوند. کلیدهای API فقط روی سرور امن نگهداری می‌شوند و نباید در گوشی وارد شوند.",
                             color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall
                         )
                         Text(appText("شناسه مدل ساخت تصویر", isEnglish))
