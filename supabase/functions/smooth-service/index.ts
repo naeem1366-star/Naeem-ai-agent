@@ -124,12 +124,13 @@ Deno.serve(async (request: Request) => {
         });
         if (response.ok) return { provider, response, raw: "" };
         const raw = await response.text();
-        if (response.status === 408 || response.status === 429 || response.status >= 500) {
-          lastFailure = provider.name + "_http_" + response.status;
-          console.warn("EMA primary AI provider transient failure; trying fallback", { provider: provider.name, status: response.status });
-          continue;
-        }
-        return { provider, response, raw };
+        lastFailure = provider.name + "_http_" + response.status;
+        // A provider-specific billing, key, permission or model rejection must not
+        // prevent the configured secondary provider from serving the request.
+        console.warn("EMA AI provider rejected request; trying fallback", {
+          provider: provider.name, status: response.status, detail: raw.slice(0, 240),
+        });
+        continue;
       } catch (error) {
         lastFailure = provider.name + "_" + (error instanceof Error ? error.message : "network_error");
         console.warn("EMA AI provider connection failed; trying fallback", { provider: provider.name });
@@ -906,8 +907,8 @@ Deno.serve(async (request: Request) => {
         const checkedAt = new Date().toISOString();
 
         // NetArz documents GET /me and GET /usage for live account monitoring.
-        const netarzKey = Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
-        const netarzBase = (Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
+        const netarzKey = Deno.env.get("NETARZ_API_KEY") || Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+        const netarzBase = (Deno.env.get("NETARZ_BASE_URL") || Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\/+$/, "");
         if (!netarzKey || !netarzBase.startsWith("https://")) {
           providerAccounts.push({ provider: "NetArz", status: "not_configured", checked_at: checkedAt });
         } else {
