@@ -9,7 +9,7 @@ All routes require `Authorization: Bearer <Supabase access token>` and the proje
 | Method | Path | Access | Purpose |
 |---|---|---|---|
 | GET | `/v1/social/status` | Authenticated | Read global enabled state and maintenance message |
-| GET | `/v1/social/admin/control` | EMA admin | Read owner control state |
+| GET | `/v1/social/admin/control` | superadmin owner | Read owner control state |
 | PATCH | `/v1/social/admin/control` | EMA admin | Set `enabled` and maintenance message |
 
 PATCH body:
