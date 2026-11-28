@@ -88,6 +88,14 @@ fun BillingScreen(accessToken:String,gatewayUrl:String,isEnglish:Boolean,onClose
                     Text(data.catalog.subscriptionName?.let { if(isEnglish) "Active plan: "+it else "اشتراک فعال: "+it } ?: if(isEnglish) "No active Professional plan" else "اشتراک حرفه‌ای فعالی نداری",color=accent,style=MaterialTheme.typography.bodySmall)
                 }
             }
+            if(data.catalog.balanceCredits <= 0L) {
+                Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF3A2028)),shape=RoundedCornerShape(16.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(if(isEnglish) "Your credits are finished" else "کردیت شما تمام شده است",color=Color(0xFFFFC4B8),fontWeight=FontWeight.Bold)
+                        Text(if(isEnglish) "Buy credits to continue using paid AI features." else "برای ادامه استفاده از قابلیت‌های پولی هوش مصنوعی، کیف پول را با خرید کردیت شارژ کن.",color=Color.White,textAlign=TextAlign.End)
+                    }
+                }
+            }
             Text(if(isEnglish) "Professional plans" else "اشتراک حرفه‌ای",color=Color.White,fontWeight=FontWeight.Bold)
             if(data.catalog.plans.isEmpty()) Text(if(isEnglish) "Plans are not available yet." else "فعلاً پلن فعالی برای خرید تنظیم نشده است.",color=Color.LightGray)
             data.catalog.plans.forEach { plan ->
