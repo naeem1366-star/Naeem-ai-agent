@@ -876,6 +876,7 @@ fun NaeemApp(
     var pendingJournalDetail by remember { mutableStateOf<String?>(null) }
     var showFinance by remember { mutableStateOf(false) }
     var showHub by remember { mutableStateOf(false) }
+    var showEmaSocial by remember { mutableStateOf(false) }
     var showWallet by remember { mutableStateOf(false) }
     var showProductLens by remember { mutableStateOf(false) }
     var showHealth by remember { mutableStateOf(false) }
@@ -932,6 +933,7 @@ fun NaeemApp(
             "تنظیمات" -> showSettings = true
             "اتصال به کامپیوتر" -> showPcControl = true
             "کیف پول و اشتراک" -> showWallet = true
+            "شبکه اجتماعی ایما" -> showEmaSocial = true
         }
     }
     var memoryDraft by remember { mutableStateOf("") }
@@ -1504,6 +1506,9 @@ fun NaeemApp(
                         NavigationDrawerItem(label = { Text(appText("فضاهای من و ابزارها", isEnglish)) }, selected = false,
                             icon = { Icon(Icons.Default.Apps, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showHub = true } })
+                        NavigationDrawerItem(label = { Text(appText("شبکه اجتماعی ایما", isEnglish)) }, selected = false,
+                            icon = { Icon(Icons.Default.Groups, contentDescription = null) },
+                            onClick = { scope.launch { drawerState.close(); showEmaSocial = true } })
                         NavigationDrawerItem(label = { Text(appText("اتصال به کامپیوتر", isEnglish)) }, selected = false,
                             icon = { Icon(Icons.Default.Computer, contentDescription = null) },
                             onClick = { scope.launch { drawerState.close(); showPcControl = true } })
@@ -1991,6 +1996,16 @@ fun NaeemApp(
                             model = model,
                             apiKey = apiKey
                         )
+                    }
+                }
+            }
+        }
+
+        if (showEmaSocial) {
+            Dialog(onDismissRequest = { showEmaSocial = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding(), shape = RoundedCornerShape(0.dp), color = Color(0xFF050B16)) {
+                    ModuleScreenBackdrop("hub") {
+                        EmaSocialScreen(accessToken = chatAccessToken, isEnglish = isEnglish, onClose = { showEmaSocial = false })
                     }
                 }
             }
