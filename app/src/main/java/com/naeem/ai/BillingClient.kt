@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 
 data class BillingPlan(val id:String,val name:String,val durationDays:Int,val priceToman:Long,val aiCreditPercent:Int)
 data class BillingOrder(val id:String,val amountToman:Long,val purpose:String,val status:String,val receiptSubmitted:Boolean,val rejectionReason:String)
-data class BillingCatalog(val balanceToman:Long,val plans:List<BillingPlan>,val paymentInstructions:String,val minTopupToman:Long,val maxTopupToman:Long,val subscriptionName:String?,val isAdmin:Boolean)
+data class BillingCatalog(val balanceCredits:Long,val plans:List<BillingPlan>,val paymentInstructions:String,val minTopupToman:Long,val maxTopupToman:Long,val subscriptionName:String?,val isAdmin:Boolean)
 data class BillingAdminOrder(val id:String,val userId:String,val amountToman:Long,val purpose:String,val reference:String,val createdAt:String)
 data class BillingSnapshot(val catalog:BillingCatalog,val orders:List<BillingOrder>)
 data class BillingAdminDashboard(val summary:JSONObject,val users:List<JSONObject>,val orders:List<JSONObject>,val subscriptions:List<JSONObject>,val providerCosts:List<JSONObject>,val paymentStatus:List<JSONObject>,val recentAudit:List<JSONObject>,val providerAccounts:List<JSONObject>)
@@ -50,7 +50,7 @@ class BillingClient(private val gatewayUrl:String) {
         val catalog = call("/v1/billing/catalog", token)
         val subscription = catalog.optJSONObject("subscription")
         return catalog.optBoolean("isAdmin", false) ||
-            catalog.optLong("balanceToman") > 0L ||
+            catalog.optLong("balanceCredits") > 0L ||
             !subscription?.optString("plan_name").isNullOrBlank()
     }
 
@@ -64,8 +64,8 @@ class BillingClient(private val gatewayUrl:String) {
         val payment=catalogJson.optJSONObject("payment") ?: JSONObject()
         val subscription=catalogJson.optJSONObject("subscription")
         val catalog=BillingCatalog(
-            catalogJson.optLong("balanceToman"),plans,payment.optString("instructions"),
-            payment.optLong("minTopupToman",100000),payment.optLong("maxTopupToman",50000000),
+            catalogJson.optLong("balanceCredits"),plans,payment.optString("instructions"),
+            payment.optLong("minTopupToman",500000),payment.optLong("maxTopupToman",50000000),
             subscription?.optString("plan_name")?.takeIf { it.isNotBlank() },
             catalogJson.optBoolean("isAdmin",false)
         )
