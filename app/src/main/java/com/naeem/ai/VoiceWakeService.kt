@@ -114,8 +114,9 @@ class VoiceWakeService : Service() {
             return START_NOT_STICKY
         }
         startForeground(NOTIFICATION_ID, buildNotification())
+        // Do not advertise the voice service as active until the recognizer is actually ready.
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(PREF_ENABLED, true)
+            .putBoolean(PREF_ENABLED, false)
             .putString("state", "starting")
             .apply()
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification("در حال آماده‌سازی میکروفون و تشخیص گفتار…"))
@@ -368,7 +369,10 @@ class VoiceWakeService : Service() {
     }
 
     private fun setVoiceState(state: String) {
-        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("state", state).apply()
+        val edit = getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("state", state)
+        if (state == "listening") edit.putBoolean(PREF_ENABLED, true)
+        if (state == "error" || state == "stopped") edit.putBoolean(PREF_ENABLED, false)
+        edit.apply()
     }
 
     private fun speak(text: String, listenAgain: Boolean) {
