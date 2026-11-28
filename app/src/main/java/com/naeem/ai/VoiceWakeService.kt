@@ -55,7 +55,6 @@ class VoiceWakeService : Service() {
     private var smartListening = false
     private var restartAfterSpeech = false
     private var destroyed = false
-    private var segmentedSession = false
     private var segmentCommandHandled = false
     private var commandInFlight = false
     private lateinit var router: AssistantActionRouter
@@ -122,6 +121,7 @@ class VoiceWakeService : Service() {
         // Do not advertise the voice service as active until the recognizer is actually ready.
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(PREF_ENABLED, true)
+            .putBoolean("ready", false)
             .putString("state", "starting")
             .apply()
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification("در حال آماده‌سازی میکروفون و تشخیص گفتار…"))
@@ -274,7 +274,6 @@ class VoiceWakeService : Service() {
         val engine = recognizer ?: return
         listeningStartPending = true
         segmentCommandHandled = false
-        segmentedSession = Build.VERSION.SDK_INT >= 33
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
