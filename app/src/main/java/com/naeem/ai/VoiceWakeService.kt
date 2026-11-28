@@ -228,7 +228,6 @@ class VoiceWakeService : Service() {
                     ?.firstOrNull().orEmpty().trim()
                 handleRecognizedText(spoken)
             }
-            override fun onPartialResults(partialResults: Bundle?) = Unit
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
         })
     }
