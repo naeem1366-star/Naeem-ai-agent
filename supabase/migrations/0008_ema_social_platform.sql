@@ -183,7 +183,7 @@ end $$;
 create or replace function public.ema_social_is_admin(p_user_id uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp
 as $$
-  select exists(select 1 from public.ema_admin_users where user_id = p_user_id and role in ('admin','superadmin'));
+  select exists(select 1 from public.ema_admin_users where user_id = p_user_id and role = 'superadmin');
 $$;
 revoke all on function public.ema_social_is_admin(uuid) from public, anon, authenticated;
 grant execute on function public.ema_social_is_admin(uuid) to service_role;
