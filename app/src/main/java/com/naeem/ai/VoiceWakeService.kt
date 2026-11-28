@@ -55,6 +55,9 @@ class VoiceWakeService : Service() {
     private var smartListening = false
     private var restartAfterSpeech = false
     private var destroyed = false
+    private var segmentedSession = false
+    private var segmentCommandHandled = false
+    private var commandInFlight = false
     private lateinit var router: AssistantActionRouter
 
     override fun onCreate() {
@@ -82,6 +85,7 @@ class VoiceWakeService : Service() {
                     override fun onStart(utteranceId: String?) = Unit
                     override fun onDone(utteranceId: String?) {
                         main.post {
+                            commandInFlight = false
                             if (restartAfterSpeech && !destroyed) {
                                 restartAfterSpeech = false
                                 startListening()
@@ -91,6 +95,7 @@ class VoiceWakeService : Service() {
                     @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
                         main.post {
+                            commandInFlight = false
                             if (restartAfterSpeech && !destroyed) {
                                 restartAfterSpeech = false
                                 main.postDelayed({ startListening() }, 700)
@@ -197,9 +202,25 @@ class VoiceWakeService : Service() {
                 listeningStartPending = false
                 setVoiceState("processing")
             }
+            override fun onSegmentResults(segmentResults: Bundle?) {
+                val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
+                if (spoken.isBlank() || !isCommandCandidate(spoken) || segmentCommandHandled) return
+                segmentCommandHandled = true
+                commandInFlight = true
+                runCatching { recognizer?.stopListening() }
+                handleRecognizedText(spoken)
+            }
+            override fun onEndOfSegmentedSession() {
+                listening = false
+                listeningStartPending = false
+                setVoiceState("processing")
+                if (destroyed || commandInFlight || restartAfterSpeech || (tts?.isSpeaking == true)) return
+                main.postDelayed({ startListening() }, 250)
+            }
             override fun onError(error: Int) {
                 listening = false
                 listeningStartPending = false
+                setVoiceState("retrying")
                 if (destroyed) return
                 consecutiveErrors++
                 // Some Android speech providers leave the recognizer busy after an error.
@@ -213,8 +234,7 @@ class VoiceWakeService : Service() {
                     return
                 }
                 // Keep the user-started foreground service alive and retry with backoff.
-                // The button remains green only while recognition is genuinely ready.
-                setVoiceState("retrying")
+                // The UI uses a separate ready flag and never paints a failed recognizer green.
                 val baseDelay = when (error) {
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 1800L
                     SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
@@ -233,6 +253,7 @@ class VoiceWakeService : Service() {
                 listening = false
                 listeningStartPending = false
                 setVoiceState("processing")
+                if (segmentCommandHandled) { segmentCommandHandled = false; return }
                 val spoken = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull().orEmpty().trim()
                 handleRecognizedText(spoken)
@@ -252,16 +273,26 @@ class VoiceWakeService : Service() {
         ensureRecognizer()
         val engine = recognizer ?: return
         listeningStartPending = true
+        segmentCommandHandled = false
+        segmentedSession = Build.VERSION.SDK_INT >= 33
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "fa-IR")
             // Do not force offline recognition: Persian offline packs are absent on many devices.
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, Build.VERSION.SDK_INT >= 33)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1100L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 800L)
+            if (Build.VERSION.SDK_INT >= 33) {
+                // A segmented session keeps one recognizer session open across pauses instead of
+                // restarting every second (which causes the repeated system "ding" on Samsung).
+                putExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION, RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1400L)
+            } else {
+                // Older recognition services are one-shot; use a longer idle window to avoid a beep loop.
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
+            }
         }
         runCatching {
             engine.startListening(intent)
@@ -271,6 +302,12 @@ class VoiceWakeService : Service() {
             setVoiceState("error")
             main.postDelayed({ startListening() }, 1400)
         }
+    }
+
+    private fun isCommandCandidate(raw: String): Boolean {
+        if (smartListening || commandArmed) return true
+        val normalized = normalize(raw)
+        return listOf("ایما جان", "hey ema", "هی ایما", "ایما", "ima").any { normalized.contains(it) }
     }
 
     private fun handleRecognizedText(raw: String) {
@@ -310,6 +347,7 @@ class VoiceWakeService : Service() {
     }
 
     private fun processCommand(command: String) {
+        commandInFlight = true
         val normalized = normalize(command)
         if (normalized.contains("به گوش باش") || normalized.contains("بگوش باش")) {
             setSmartListening(true)
@@ -374,7 +412,9 @@ class VoiceWakeService : Service() {
     }
 
     private fun setVoiceState(state: String) {
-        val edit = getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("state", state)
+        val edit = getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("state", state)
+            .putBoolean("ready", state == "listening")
         if (state == "listening") edit.putBoolean(PREF_ENABLED, true)
         if (state == "error" || state == "stopped") edit.putBoolean(PREF_ENABLED, false)
         edit.apply()
@@ -388,14 +428,14 @@ class VoiceWakeService : Service() {
                 NOTIFICATION_ID,
                 buildNotification(text.take(180))
             )
-            main.postDelayed({ if (listenAgain) startListening() }, 900)
+            main.postDelayed({ commandInFlight = false; if (listenAgain) startListening() }, 900)
             return
         }
         val utteranceId = UUID.randomUUID().toString()
         val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
         if (result == TextToSpeech.ERROR) {
             restartAfterSpeech = false
-            main.postDelayed({ if (listenAgain) startListening() }, 900)
+            main.postDelayed({ commandInFlight = false; if (listenAgain) startListening() }, 900)
         }
     }
 
@@ -416,7 +456,9 @@ class VoiceWakeService : Service() {
         listening = false
         listeningStartPending = false
         restartAfterSpeech = false
+        commandInFlight = false
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("ready", false)
             .putBoolean(PREF_ENABLED, false)
             .putBoolean("smart_listening", false)
             .putString("state", "stopped")
