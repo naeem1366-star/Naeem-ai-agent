@@ -38,13 +38,11 @@ fun EmaSocialScreen(
     var tab by remember { mutableStateOf("profile") }
     var enabled by remember { mutableStateOf(false) }
     var maintenance by remember { mutableStateOf("") }
-    var admin by remember { mutableStateOf(false) }
     var profile by remember { mutableStateOf(EmaSocialProfile()) }
     var profileConsent by remember { mutableStateOf(false) }
     var semanticConsent by remember { mutableStateOf(false) }
     var people by remember { mutableStateOf<List<EmaSocialPerson>>(emptyList()) }
     var requests by remember { mutableStateOf(JSONArray()) }
-    var adminMessage by remember { mutableStateOf("این بخش موقتاً توسط مدیریت غیرفعال شده است.") }
 
     fun refresh() {
         scope.launch {
@@ -57,12 +55,6 @@ fun EmaSocialScreen(
                 profile = runCatching { client.profile(accessToken) }.getOrNull() ?: profile
                 profileConsent = profile.profileProcessingConsent
                 semanticConsent = profile.semanticMatchingConsent
-                admin = runCatching {
-                    val c = client.adminControl(accessToken)
-                    enabled = c.enabled
-                    adminMessage = c.maintenanceMessage.ifBlank { adminMessage }
-                    true
-                }.getOrDefault(false)
                 if (enabled) {
                     if (tab == "discover") people = client.discover(accessToken)
                     if (tab == "matches") people = client.matches(accessToken)
@@ -97,38 +89,6 @@ fun EmaSocialScreen(
                 Text("Connecting Minds. Creating Futures.", color = accent, style = MaterialTheme.typography.labelSmall)
             }
             IconButton(onClick = { refresh() }, enabled = !loading) { Icon(Icons.Default.Refresh, null, tint = accent) }
-        }
-
-        if (admin) {
-            Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isEnglish) "OWNER CONTROL · GLOBAL KILL SWITCH" else "کنترل مالک · کلید قطع و وصل سراسری", color = accent, fontWeight = FontWeight.Bold)
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(if (enabled) (if (isEnglish) "Social network is ON" else "شبکه اجتماعی فعال است") else (if (isEnglish) "Social network is OFF" else "شبکه اجتماعی خاموش است"), color = Color.White, fontWeight = FontWeight.SemiBold)
-                            Text(if (isEnglish) "Applies on the server to all users." else "وضعیت روی سرور برای تمام کاربران اعمال می‌شود.", color = muted, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Switch(checked = enabled, enabled = !working, onCheckedChange = { next ->
-                            scope.launch {
-                                working = true; error = ""
-                                try {
-                                    val result = client.setAdminControl(accessToken, next, adminMessage)
-                                    enabled = result.enabled
-                                    maintenance = result.maintenanceMessage
-                                    notice = if (next) "شبکه اجتماعی برای همه کاربران فعال شد." else "شبکه اجتماعی برای همه کاربران متوقف شد."
-                                } catch (e: Exception) { error = e.message ?: "تغییر وضعیت ناموفق بود." }
-                                finally { working = false }
-                            }
-                        })
-                    }
-                    OutlinedTextField(
-                        value = adminMessage, onValueChange = { adminMessage = it.take(300) },
-                        modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Maintenance message" else "پیام هنگام خاموش بودن") },
-                        minLines = 2, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
-                    )
-                    Text(if (isEnglish) "The switch blocks social API requests server-side. It does not delete data or disable the rest of EMA." else "این کلید درخواست‌های شبکه اجتماعی را در سمت سرور مسدود می‌کند؛ اطلاعات را حذف نمی‌کند و سایر بخش‌های EMA را خاموش نمی‌کند.", color = muted, style = MaterialTheme.typography.bodySmall)
-                }
-            }
         }
 
         if (!enabled) {
