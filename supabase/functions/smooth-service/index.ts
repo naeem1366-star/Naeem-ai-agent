@@ -1029,6 +1029,13 @@ Deno.serve(async (request: Request) => {
 
     const candidates = [
       {
+        name: "GapGPT",
+        key: Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "",
+        base: (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, ""),
+        model: Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini",
+        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+      },
+      {
         name: "EMA Primary",
         key: Deno.env.get("EMA_CHAT_FREE_PRIMARY_API_KEY") || "",
         base: (Deno.env.get("EMA_CHAT_FREE_PRIMARY_BASE_URL") || "").replace(/\/+$/, ""),
@@ -1041,13 +1048,6 @@ Deno.serve(async (request: Request) => {
         base: (Deno.env.get("EMA_CHAT_FREE_FALLBACK_BASE_URL") || "").replace(/\/+$/, ""),
         model: Deno.env.get("EMA_CHAT_FREE_FALLBACK_MODEL") || "",
         visionModel: Deno.env.get("EMA_CHAT_FREE_FALLBACK_VISION_MODEL") || "",
-      },
-      {
-        name: "GapGPT",
-        key: Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "",
-        base: (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, ""),
-        model: Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini",
-        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
       },
     ].filter((provider) => provider.key && provider.base.startsWith("https://") && provider.model);
 
