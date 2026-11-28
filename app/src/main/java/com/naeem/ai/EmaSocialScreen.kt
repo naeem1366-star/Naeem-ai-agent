@@ -55,6 +55,8 @@ fun EmaSocialScreen(
                 enabled = state.enabled
                 maintenance = state.maintenanceMessage
                 profile = runCatching { client.profile(accessToken) }.getOrNull() ?: profile
+                profileConsent = profile.profileProcessingConsent
+                semanticConsent = profile.semanticMatchingConsent
                 admin = runCatching {
                     val c = client.adminControl(accessToken)
                     enabled = c.enabled
@@ -227,7 +229,7 @@ fun EmaSocialScreen(
                             Column(Modifier.fillMaxWidth().padding(12.dp)) {
                                 Text(if (r.optString("sender_user_id") == r.optString("recipient_user_id")) "—" else r.optString("sender_user_id").take(8) + "…", color = Color.White)
                                 Text(r.optString("status"), color = muted)
-                                if (r.optString("recipient_user_id") == "me") {
+                                if (r.optString("direction") == "incoming" && r.optString("status") == "pending") {
                                     Row {
                                         TextButton(onClick = { scope.launch { runCatching { client.updateRequest(accessToken, r.optString("id"), "accepted"); requests = client.requests(accessToken) }.onFailure { error = it.message ?: "خطا" } } }) { Text(if (isEnglish) "Accept" else "پذیرش") }
                                         TextButton(onClick = { scope.launch { runCatching { client.updateRequest(accessToken, r.optString("id"), "declined"); requests = client.requests(accessToken) }.onFailure { error = it.message ?: "خطا" } } }) { Text(if (isEnglish) "Decline" else "رد") }
