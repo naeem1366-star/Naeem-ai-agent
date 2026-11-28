@@ -125,11 +125,15 @@ Deno.serve(async (request: Request) => {
         if (response.ok) return { provider, response, raw: "" };
         const raw = await response.text();
         lastFailure = provider.name + "_http_" + response.status;
-        // A provider-specific billing, key, permission or model rejection must not
-        // prevent the configured secondary provider from serving the request.
-        console.warn("EMA AI provider rejected request; trying fallback", {
+        // Keep NetArz as the actual primary: only retryable upstream/rate-limit failures
+        // may fall through to GapGPT. Authentication, model, permission and credit errors
+        // must be shown instead of silently charging the secondary provider.
+        const retryable = response.status === 408 || response.status === 425 ||
+          response.status === 429 || response.status >= 500;
+        console.warn(retryable ? "EMA AI provider transient failure; trying fallback" : "EMA AI provider rejected request; fallback blocked", {
           provider: provider.name, status: response.status, detail: raw.slice(0, 240),
         });
+        if (!retryable) break;
         continue;
       } catch (error) {
         lastFailure = provider.name + "_" + (error instanceof Error ? error.message : "network_error");
@@ -920,7 +924,9 @@ Deno.serve(async (request: Request) => {
             if (!accountResponse.ok) {
               providerAccounts.push({ provider: "NetArz", status: "error", http_status: accountResponse.status, checked_at: checkedAt });
             } else {
-              const account = await accountResponse.json();
+              const accountPayload = await accountResponse.json();
+              const account = accountPayload?.data ?? accountPayload?.account ?? accountPayload;
+              const balance = account?.balance ?? account?.account?.balance ?? {};
               let usage: any = null;
               let usageStatus = "unavailable";
               try {
@@ -937,12 +943,13 @@ Deno.serve(async (request: Request) => {
               } catch { usageStatus = "error"; }
               providerAccounts.push({
                 provider: "NetArz",
-                status: String(account?.status || "active"),
-                balance_usd: account?.balance?.usd ?? null,
-                balance_display: account?.balance?.usd_display ?? null,
-                balance_toman_estimate: account?.balance?.toman_estimate ?? null,
-                spent_usd: account?.key?.spent_usd ?? null,
-                usage_30d_usd: usage?.total_usd ?? null,
+                status: (balance?.usd ?? account?.balance_usd ?? account?.credit?.usd) == null
+                  ? "configured_balance_unavailable" : String(account?.status || "active"),
+                balance_usd: balance?.usd ?? account?.balance_usd ?? account?.credit?.usd ?? null,
+                balance_display: balance?.usd_display ?? account?.balance_display ?? null,
+                balance_toman_estimate: balance?.toman_estimate ?? account?.balance_toman_estimate ?? null,
+                spent_usd: account?.key?.spent_usd ?? account?.totals?.spent_usd ?? null,
+                usage_30d_usd: usage?.totals?.spend_usd ?? usage?.data?.totals?.spend_usd ?? usage?.total_usd ?? null,
                 usage_status: usageStatus,
                 project_name: account?.project?.name ?? null,
                 key_name: account?.key?.name ?? null,
