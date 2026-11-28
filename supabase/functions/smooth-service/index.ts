@@ -79,6 +79,65 @@ Deno.serve(async (request: Request) => {
     return rows[0].role as string;
   };
 
+  // NetArz pays for all free AI traffic; GapGPT is a failover only for transient outages.
+  const aiProviderConfigs = () => {
+    const netarzKey = Deno.env.get("NETARZ_API_KEY") || Deno.env.get("CHAT_PRIMARY_API_KEY") || Deno.env.get("Netarz") || "";
+    const netarzBase = (Deno.env.get("NETARZ_BASE_URL") || Deno.env.get("CHAT_PRIMARY_BASE_URL") || "https://netarz.ir/api/ai/v1").replace(/\\/+$/, "");
+    const gapKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
+    const gapBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\\/+$/, "");
+    return [
+      {
+        name: "NetArz", key: netarzKey, base: netarzBase,
+        model: Deno.env.get("NETARZ_CHAT_MODEL") || Deno.env.get("CHAT_PRIMARY_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+        visionModel: Deno.env.get("NETARZ_VISION_MODEL") || Deno.env.get("CHAT_PRIMARY_VISION_MODEL") || Deno.env.get("CHAT_PRIMARY_MODEL") || "gpt-4o-mini",
+        imageModel: Deno.env.get("NETARZ_IMAGE_MODEL") || Deno.env.get("CHAT_PRIMARY_IMAGE_MODEL") || "gpt-image-1",
+        speechModel: Deno.env.get("NETARZ_TTS_MODEL") || Deno.env.get("CHAT_PRIMARY_TTS_MODEL") || "gpt-4o-mini-tts",
+      },
+      {
+        name: "GapGPT", key: gapKey, base: gapBase,
+        model: Deno.env.get("CHAT_SECONDARY_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
+        imageModel: Deno.env.get("CHAT_SECONDARY_IMAGE_MODEL") || "gpt-image-2",
+        speechModel: Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || "gpt-4o-mini-tts",
+      },
+    ].filter((provider) => provider.key && provider.base.startsWith("https://"));
+  };
+
+  const requestAiWithFallback = async (
+    path: string,
+    providers: ReturnType<typeof aiProviderConfigs>,
+    payloadFor: (provider: ReturnType<typeof aiProviderConfigs>[number]) => unknown,
+    timeoutMs: number,
+  ) => {
+    let lastFailure = "provider_unavailable";
+    for (const provider of providers) {
+      try {
+        const response = await fetch(provider.base + path, {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + provider.key,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payloadFor(provider)),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (response.ok) return { provider, response, raw: "" };
+        const raw = await response.text();
+        if (response.status === 408 || response.status === 429 || response.status >= 500) {
+          lastFailure = provider.name + "_http_" + response.status;
+          console.warn("EMA primary AI provider transient failure; trying fallback", { provider: provider.name, status: response.status });
+          continue;
+        }
+        return { provider, response, raw };
+      } catch (error) {
+        lastFailure = provider.name + "_" + (error instanceof Error ? error.message : "network_error");
+        console.warn("EMA AI provider connection failed; trying fallback", { provider: provider.name });
+      }
+    }
+    return { provider: null, response: null, raw: "", error: lastFailure };
+  };
+
   try {
     // Account-scoped personal memory. All writes are server-side and tied to the verified Auth user.
     if (route === "/v1/memory/items" && request.method === "GET") {
@@ -167,14 +226,18 @@ Deno.serve(async (request: Request) => {
     }
 
     if (route === "/v1/ai/providers" && request.method === "GET") {
-      const configured = (key: string) => !!Deno.env.get(key)?.trim();
+      const providers = aiProviderConfigs();
+      const netarz = providers.find((provider) => provider.name === "NetArz");
+      const gapgpt = providers.find((provider) => provider.name === "GapGPT");
       return reply({
         chat: [
-          { id: "gapgpt", configured: configured("CHAT_SECONDARY_API_KEY") || configured("CHAT_SECONDARY_APLIKEY"), role: "primary" },
-          { id: "ema_primary", configured: configured("EMA_CHAT_FREE_PRIMARY_API_KEY"), role: "fallback" },
-          { id: "ema_fallback", configured: configured("EMA_CHAT_FREE_FALLBACK_API_KEY"), role: "secondary_fallback" },
+          { id: "netarz", configured: !!netarz, role: "primary" },
+          { id: "gapgpt", configured: !!gapgpt, role: "fallback" },
         ],
-        webSearch: { configured: configured("EMA_SEARCH_API_KEY"), provider: Deno.env.get("EMA_SEARCH_PROVIDER") || "brave" },
+        image: { primary: "NetArz", fallback: "GapGPT", configured: !!netarz || !!gapgpt },
+        vision: { primary: "NetArz", fallback: "GapGPT", configured: !!netarz || !!gapgpt },
+        speech: { primary: "NetArz", fallback: "GapGPT", configured: !!netarz || !!gapgpt },
+        webSearch: { configured: !!Deno.env.get("EMA_SEARCH_API_KEY"), provider: Deno.env.get("EMA_SEARCH_PROVIDER") || "brave" },
         memory: { available: true, storage: "account_scoped" },
       });
     }
@@ -210,154 +273,115 @@ Deno.serve(async (request: Request) => {
       return reply({ provider: "brave", searched_at: new Date().toISOString(), results });
     }
 
-    // Product lens: identify a photographed product using the server-side vision model.
+    // Free AI media uses NetArz first. GapGPT is only a transient-outage fallback.
     if (request.method === "POST" && route === "/v1/vision/product") {
       const body = await jsonBody(request);
       const imageData = String(body?.image || "");
       if (!imageData.startsWith("data:image/") || imageData.length > 5_500_000) {
         return reply({ error: { code: "INVALID_PRODUCT_IMAGE", message: "عکس معتبر نیست یا حجم آن زیاد است." } }, 400);
       }
-      // Free image analysis uses GapGPT only. Never route this tool to paid NetArz.
-      const providerKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      const providerBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
-      const visionModel = Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini";
-      if (!providerKey || !providerBase.startsWith("https://")) {
-        return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "سرویس تشخیص تصویر تنظیم نشده است." } }, 503);
-      }
+      const providers = aiProviderConfigs();
+      const available = providers.filter((provider) => provider.visionModel);
+      if (!available.length) return reply({ error: { code: "VISION_NOT_CONFIGURED", message: "اتصال NetArz و مسیر پشتیبان تشخیص تصویر تنظیم نشده است." } }, 503);
       const prompt = "Identify the main commercial product in this photo. Return concise Persian JSON only with keys product_name, brand, model, category, visual_description, search_query, confidence. Do not invent a brand or model; use empty string if uncertain. search_query should be a useful shopping search phrase in Persian and English.";
-      const upstream = await fetch(`${providerBase}/chat/completions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${providerKey}`, "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          model: visionModel,
-          messages: [{ role: "user", content: [
-            { type: "text", text: prompt },
-            { type: "image_url", image_url: { url: imageData, detail: "high" } },
-          ] }],
-          max_tokens: 500,
-          temperature: 0.1,
-        }),
-        signal: AbortSignal.timeout(90000),
-      });
-      if (!upstream.ok) {
-        const detail = (await upstream.text()).slice(0, 500);
-        console.error("EMA product vision failed", { status: upstream.status, detail: detail.slice(0, 160) });
-        return reply({ error: { code: "VISION_PROVIDER_ERROR", message: `تشخیص تصویر ناموفق بود (HTTP ${upstream.status}).` } }, upstream.status);
+      const result = await requestAiWithFallback("/chat/completions", available, (provider) => ({
+        model: provider.visionModel,
+        messages: [{ role: "user", content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: imageData, detail: "high" } },
+        ] }],
+        max_tokens: 500,
+        temperature: 0.1,
+      }), 90000);
+      if (!result.response) {
+        console.error("EMA product vision providers unavailable", { reason: result.error });
+        return reply({ error: { code: "VISION_PROVIDER_UNAVAILABLE", message: "تشخیص تصویر با NetArz و مسیر پشتیبان موقتاً در دسترس نیست." } }, 503);
       }
-      const result = await upstream.json().catch(() => ({}));
-      const content = result?.choices?.[0]?.message?.content;
-      if (typeof content !== "string" || !content.trim()) {
+      if (!result.response.ok) {
+        console.error("EMA product vision provider rejected request", { provider: result.provider?.name, status: result.response.status, detail: result.raw.slice(0, 160) });
+        return reply({ error: { code: "VISION_PROVIDER_ERROR", message: "تشخیص تصویر ناموفق بود (HTTP " + result.response.status + "). مدل بینایی و اعتبار سرویس را بررسی کن." } }, result.response.status);
+      }
+      const data: any = await result.response.json().catch(() => ({}));
+      const identification = data?.choices?.[0]?.message?.content;
+      if (typeof identification !== "string" || !identification.trim()) {
         return reply({ error: { code: "VISION_EMPTY_RESULT", message: "مدل نتوانست محصول را تشخیص دهد." } }, 502);
       }
-      return reply({ identification: content });
+      console.log("EMA product vision completed", { provider: result.provider?.name, model: result.provider?.visionModel });
+      return reply({ identification });
     }
 
-    // Free image generation uses GapGPT only; no EMA wallet debit and no NetArz fallback.
     if (request.method === "POST" && route === "/v1/images/generations") {
       const body = await jsonBody(request);
       const prompt = String(body?.prompt || "").trim();
-      const model = String(body?.model || Deno.env.get("CHAT_SECONDARY_IMAGE_MODEL") || "gpt-image-2").trim();
-      if (!prompt || prompt.length > 4000 || model.length > 120) {
+      const requestedModel = String(body?.model || "").trim();
+      if (!prompt || prompt.length > 4000 || requestedModel.length > 120) {
         return reply({ error: { code: "INVALID_IMAGE_REQUEST", message: "توضیح تصویر خالی یا بیش از حد طولانی است." } }, 400);
       }
-      const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      const gapgptBase = (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, "");
-      if (!gapgptKey || !gapgptBase.startsWith("https://")) {
-        return reply({ error: { code: "FREE_IMAGE_NOT_CONFIGURED", message: "سرویس ساخت تصویر رایگان GapGPT روی سرور تنظیم نشده است." } }, 503);
+      const providers = aiProviderConfigs();
+      const available = providers.filter((provider) => provider.imageModel);
+      if (!available.length) return reply({ error: { code: "FREE_IMAGE_NOT_CONFIGURED", message: "اتصال NetArz و مسیر پشتیبان ساخت تصویر تنظیم نشده است." } }, 503);
+      const result = await requestAiWithFallback("/images/generations", available, (provider) => {
+        let model = requestedModel || provider.imageModel;
+        // The app's former default was gpt-image-2; NetArz documents gpt-image-1 as its GPT Image model.
+        if (provider.name === "NetArz" && model === "gpt-image-2") model = provider.imageModel || "gpt-image-1";
+        if (provider.name === "GapGPT" && !requestedModel) model = provider.imageModel;
+        return { model, prompt, n: 1, size: "1024x1024", output_format: "png" };
+      }, 180000);
+      if (!result.response) {
+        console.error("EMA free image providers unavailable", { reason: result.error });
+        return reply({ error: { code: "FREE_IMAGE_PROVIDER_UNAVAILABLE", message: "ساخت تصویر با NetArz و مسیر پشتیبان موقتاً در دسترس نیست." } }, 503);
       }
-      try {
-        const upstream = await fetch(gapgptBase + "/images/generations", {
-          method: "POST",
-          headers: { Authorization: "Bearer " + gapgptKey, "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ model, prompt, n: 1, size: "1024x1024", output_format: "png" }),
-          signal: AbortSignal.timeout(180000),
-        });
-        const raw = await upstream.text();
-        if (!upstream.ok) {
-          console.error("EMA GapGPT free image generation failed", { status: upstream.status, detail: raw.slice(0, 160) });
-          return reply({ error: { code: "FREE_IMAGE_PROVIDER_ERROR", message: "ساخت تصویر با GapGPT ناموفق بود (HTTP " + upstream.status + "). اعتبار و مدل تصویر را بررسی کن." } }, upstream.status);
-        }
-        let result: any;
-        try { result = JSON.parse(raw); } catch {
-          return reply({ error: { code: "FREE_IMAGE_INVALID_RESPONSE", message: "پاسخ GapGPT برای ساخت تصویر معتبر نبود." } }, 502);
-        }
-        console.log("EMA free image generated", { provider: "GapGPT", model });
-        return reply(result);
-      } catch (error) {
-        console.error("EMA GapGPT free image request failed", error instanceof Error ? error.message : "network error");
-        return reply({ error: { code: "FREE_IMAGE_PROVIDER_UNAVAILABLE", message: "سرویس ساخت تصویر GapGPT موقتاً در دسترس نیست؛ هیچ انتقالی به NetArz انجام نمی‌شود." } }, 503);
+      const raw = result.response.ok ? await result.response.text() : result.raw;
+      if (!result.response.ok) {
+        console.error("EMA free image provider rejected request", { provider: result.provider?.name, status: result.response.status, detail: raw.slice(0, 160) });
+        return reply({ error: { code: "FREE_IMAGE_PROVIDER_ERROR", message: "ساخت تصویر ناموفق بود (HTTP " + result.response.status + "). مدل و اعتبار سرویس را بررسی کن." } }, result.response.status);
       }
+      let data: any;
+      try { data = JSON.parse(raw); } catch {
+        return reply({ error: { code: "FREE_IMAGE_INVALID_RESPONSE", message: "پاسخ سرویس ساخت تصویر در قالب معتبر نبود." } }, 502);
+      }
+      console.log("EMA free image generated", { provider: result.provider?.name, model: data?.model || requestedModel });
+      return reply(data);
     }
 
-    // Free text-to-speech uses GapGPT only. Never fall back to NetArz.
     if (request.method === "POST" && route === "/v1/audio/speech") {
       const body = await jsonBody(request);
       const input = String(body?.input || "").trim();
       if (!input || input.length > 4096) {
         return reply({ error: { code: "INVALID_SPEECH_INPUT", message: "متن گفتار خالی یا بیش از حد طولانی است." } }, 400);
       }
-
-      const gapgptKey = Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "";
-      let gapgptBase = Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1";
-      while (gapgptBase.endsWith("/")) gapgptBase = gapgptBase.slice(0, -1);
-      const speechModel = Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || String(body?.model || "gpt-4o-mini-tts");
-      const speechVoice = Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || String(body?.voice || "nova");
-      const instructions = String(body?.instructions || "Speak Persian (Farsi) naturally and clearly.");
-
-      if (!gapgptKey || !gapgptBase.startsWith("https://")) {
-        return reply({ error: { code: "FREE_SPEECH_NOT_CONFIGURED", message: "سرویس صدای رایگان GapGPT روی سرور تنظیم نشده است." } }, 503);
+      const providers = aiProviderConfigs();
+      const available = providers.filter((provider) => provider.speechModel);
+      if (!available.length) return reply({ error: { code: "FREE_SPEECH_NOT_CONFIGURED", message: "اتصال NetArz و مسیر پشتیبان گفتار تنظیم نشده است." } }, 503);
+      const result = await requestAiWithFallback("/audio/speech", available, (provider) => ({
+        model: provider.name === "NetArz"
+          ? (Deno.env.get("NETARZ_TTS_MODEL") || Deno.env.get("CHAT_PRIMARY_TTS_MODEL") || String(body?.model || provider.speechModel))
+          : (Deno.env.get("CHAT_SECONDARY_TTS_MODEL") || String(body?.model || provider.speechModel)),
+        voice: String(body?.voice || Deno.env.get("NETARZ_TTS_VOICE") || Deno.env.get("CHAT_SECONDARY_TTS_VOICE") || "nova"),
+        input,
+        instructions: String(body?.instructions || "Speak Persian (Farsi) naturally and clearly."),
+        response_format: "mp3",
+      }), 120000);
+      if (!result.response) {
+        console.error("EMA free speech providers unavailable", { reason: result.error });
+        return reply({ error: { code: "FREE_SPEECH_PROVIDER_UNAVAILABLE", message: "تبدیل متن به گفتار با NetArz و مسیر پشتیبان موقتاً در دسترس نیست." } }, 503);
       }
-
-      try {
-        const upstream = await fetch(`${gapgptBase}/audio/speech`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${gapgptKey}`,
-            "Content-Type": "application/json",
-            Accept: "audio/mpeg, application/octet-stream, application/json",
-          },
-          body: JSON.stringify({
-            model: speechModel,
-            voice: speechVoice,
-            input,
-            instructions,
-            response_format: "mp3",
-          }),
-          signal: AbortSignal.timeout(120000),
-        });
-        if (!upstream.ok) {
-          const detail = (await upstream.text()).slice(0, 400);
-          console.error("EMA GapGPT free speech failed", { status: upstream.status, detail: detail.slice(0, 160) });
-          return reply({
-            error: {
-              code: "FREE_SPEECH_PROVIDER_ERROR",
-              message: `ساخت صدای رایگان با GapGPT ناموفق بود (HTTP ${upstream.status}). لطفاً بعداً دوباره تلاش کن.`,
-            },
-          }, 503);
-        }
-
-        const audio = await upstream.arrayBuffer();
-        if (!audio.byteLength) {
-          return reply({ error: { code: "FREE_SPEECH_EMPTY_RESPONSE", message: "GapGPT فایل صوتی خالی برگرداند." } }, 502);
-        }
-        console.log("EMA free speech generated", { provider: "GapGPT", status: upstream.status });
-        return new Response(audio, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": upstream.headers.get("Content-Type") || "audio/mpeg",
-            "Cache-Control": "no-store",
-          },
-        });
-      } catch (error) {
-        console.error("EMA GapGPT free speech request failed", error instanceof Error ? error.message : "network error");
-        return reply({
-          error: {
-            code: "FREE_SPEECH_PROVIDER_UNAVAILABLE",
-            message: "سرویس صدای رایگان GapGPT موقتاً در دسترس نیست؛ هیچ انتقالی به NetArz انجام نمی‌شود.",
-          },
-        }, 503);
+      if (!result.response.ok) {
+        const detail = result.raw.slice(0, 180);
+        console.error("EMA free speech provider rejected request", { provider: result.provider?.name, status: result.response.status, detail });
+        return reply({ error: { code: "FREE_SPEECH_PROVIDER_ERROR", message: "ساخت صدای فارسی ناموفق بود (HTTP " + result.response.status + "). مدل و اعتبار سرویس را بررسی کن." } }, 503);
       }
+      const audio = await result.response.arrayBuffer();
+      if (!audio.byteLength) return reply({ error: { code: "FREE_SPEECH_EMPTY_RESPONSE", message: "سرویس صوتی فایل خالی برگرداند." } }, 502);
+      console.log("EMA free speech generated", { provider: result.provider?.name, model: result.provider?.speechModel });
+      return new Response(audio, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": result.response.headers.get("Content-Type") || "audio/mpeg",
+          "Cache-Control": "no-store",
+        },
+      });
     }
 
     // Paid media tools use NetArz only. Provider secrets never leave this function.
@@ -1034,7 +1058,7 @@ Deno.serve(async (request: Request) => {
       return reply({ error: { code: "NOT_FOUND", message: "مسیر پرداخت پیدا نشد." } }, 404);
     }
 
-    // Model-independent free chat router. Only explicitly configured free/no-charge providers enter this chain.
+    // Free chat: NetArz is primary, GapGPT is used only if NetArz has a transient outage.
     if (request.method !== "POST" || !route.endsWith("/chat/completions")) return reply({ error: { code: "NOT_FOUND", message: "مسیر درخواست معتبر نیست." } }, 404);
     const raw = await request.text();
     if (new TextEncoder().encode(raw).length > 1_500_000) return reply({ error: { code: "REQUEST_TOO_LARGE", message: "حجم درخواست بیش از حد مجاز است." } }, 413);
@@ -1042,31 +1066,8 @@ Deno.serve(async (request: Request) => {
     try { body = JSON.parse(raw); } catch { return reply({ error: { code: "INVALID_JSON", message: "ساختار گفتگو معتبر نیست." } }, 400); }
     if (!Array.isArray(body?.messages) || body.messages.length < 1 || body.messages.length > 30) return reply({ error: { code: "INVALID_REQUEST", message: "ساختار گفتگو معتبر نیست." } }, 400);
 
-    const candidates = [
-      {
-        name: "GapGPT",
-        key: Deno.env.get("CHAT_SECONDARY_API_KEY") || Deno.env.get("CHAT_SECONDARY_APLIKEY") || "",
-        base: (Deno.env.get("CHAT_SECONDARY_BASE_URL") || "https://api.gapgpt.app/v1").replace(/\/+$/, ""),
-        model: Deno.env.get("CHAT_FREE_MODEL") || Deno.env.get("CHAT_SECONDARY_MODEL") || "gpt-4o-mini",
-        visionModel: Deno.env.get("CHAT_SECONDARY_VISION_MODEL") || Deno.env.get("CHAT_FREE_MODEL") || "gpt-4o-mini",
-      },
-      {
-        name: "EMA Primary",
-        key: Deno.env.get("EMA_CHAT_FREE_PRIMARY_API_KEY") || "",
-        base: (Deno.env.get("EMA_CHAT_FREE_PRIMARY_BASE_URL") || "").replace(/\/+$/, ""),
-        model: Deno.env.get("EMA_CHAT_FREE_PRIMARY_MODEL") || "",
-        visionModel: Deno.env.get("EMA_CHAT_FREE_PRIMARY_VISION_MODEL") || "",
-      },
-      {
-        name: "EMA Fallback",
-        key: Deno.env.get("EMA_CHAT_FREE_FALLBACK_API_KEY") || "",
-        base: (Deno.env.get("EMA_CHAT_FREE_FALLBACK_BASE_URL") || "").replace(/\/+$/, ""),
-        model: Deno.env.get("EMA_CHAT_FREE_FALLBACK_MODEL") || "",
-        visionModel: Deno.env.get("EMA_CHAT_FREE_FALLBACK_VISION_MODEL") || "",
-      },
-    ].filter((provider) => provider.key && provider.base.startsWith("https://") && provider.model);
-
-    if (!candidates.length) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "هیچ موتور گفت‌وگوی رایگانی روی سرور تنظیم نشده است." } }, 503);
+    const candidates = aiProviderConfigs().filter((provider) => provider.model);
+    if (!candidates.length) return reply({ error: { code: "FREE_CHAT_NOT_CONFIGURED", message: "کلید NetArz و مسیر پشتیبان GapGPT روی سرور تنظیم نشده است." } }, 503);
 
     const quotaDate = new Date().toISOString().slice(0, 10);
     const quotaResponse = await fetch(supabaseUrl + "/rest/v1/rpc/ema_consume_chat_quota", {
@@ -1088,58 +1089,59 @@ Deno.serve(async (request: Request) => {
       if (!response?.ok) console.error("EMA failed to refund free chat quota after provider error");
     };
 
-    const payload = {
-      model: body.model || candidates[0].model,
+    const containsImage = JSON.stringify(body.messages).includes("data:image/");
+    const payloadFor = (provider: typeof candidates[number]) => ({
+      model: containsImage
+        ? provider.visionModel
+        : provider.name === "NetArz"
+          ? (String(body.model || "").trim() || provider.model)
+          : provider.model,
       messages: body.messages,
       stream: false,
       max_tokens: Math.min(4096, Math.max(1, Number(body.max_tokens) || 2400)),
       temperature: typeof body.temperature === "number" ? Math.min(1, Math.max(0, body.temperature)) : 0.65,
-    };
+    });
 
     let result: any = null;
-    let lastFailure: string | null = null;
-    for (let index = 0; index < candidates.length; index++) {
-      const provider = candidates[index];
-      const containsImage = JSON.stringify(body.messages).includes("data:image/");
-      const providerPayload = { ...payload, model: (containsImage ? provider.visionModel : provider.model) || provider.model || payload.model };
-      let upstream: Response;
+    let usedProvider = "";
+    let usedModel = "";
+    let lastFailure = "provider_unavailable";
+    for (const provider of candidates) {
+      const providerPayload = payloadFor(provider);
       try {
-        upstream = await fetch(provider.base + "/chat/completions", {
+        const upstream = await fetch(provider.base + "/chat/completions", {
           method: "POST",
           headers: { Authorization: "Bearer " + provider.key, "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify(providerPayload),
           signal: AbortSignal.timeout(45000),
         });
-      } catch (error) {
-        lastFailure = error instanceof Error ? error.message : "network_error";
-        console.warn("EMA chat provider unavailable; trying next configured provider", { provider: provider.name });
-        continue;
-      }
-
-      const providerText = await upstream.text();
-      if (!upstream.ok) {
-        lastFailure = "http_" + upstream.status;
-        // Only transient failures are eligible for automatic fallback. Auth/config errors are surfaced.
-        if (upstream.status === 408 || upstream.status === 429 || upstream.status >= 500) {
-          console.warn("EMA chat provider transient failure; trying next provider", { provider: provider.name, status: upstream.status });
+        const providerText = await upstream.text();
+        if (!upstream.ok) {
+          lastFailure = "http_" + upstream.status;
+          if (upstream.status === 408 || upstream.status === 429 || upstream.status >= 500) {
+            console.warn("EMA chat provider transient failure; trying next provider", { provider: provider.name, status: upstream.status });
+            continue;
+          }
+          await refundFreeQuota();
+          console.error("EMA chat provider rejected request", { provider: provider.name, status: upstream.status });
+          return reply({ error: { code: "CHAT_PROVIDER_REJECTED", message: "موتور گفت‌وگوی انتخاب‌شده درخواست را نپذیرفت؛ تنظیمات مدل و دسترسی آن باید بررسی شود." } }, 502);
+        }
+        try { result = JSON.parse(providerText); } catch {
+          lastFailure = "invalid_json";
+          console.warn("EMA chat provider returned invalid JSON", { provider: provider.name });
           continue;
         }
-        await refundFreeQuota();
-        console.error("EMA chat provider rejected request", { provider: provider.name, status: upstream.status });
-        return reply({ error: { code: "CHAT_PROVIDER_REJECTED", message: "موتور گفت‌وگوی انتخاب‌شده درخواست را نپذیرفت؛ تنظیمات مدل و دسترسی آن باید بررسی شود." } }, 502);
+        if (!Array.isArray(result?.choices) || !result.choices.length) {
+          lastFailure = "empty_choices";
+          continue;
+        }
+        usedProvider = provider.name;
+        usedModel = providerPayload.model;
+        break;
+      } catch (error) {
+        lastFailure = error instanceof Error ? error.message : "network_error";
+        console.warn("EMA chat provider unavailable; trying next provider", { provider: provider.name });
       }
-
-      try { result = JSON.parse(providerText); } catch {
-        lastFailure = "invalid_json";
-        console.warn("EMA chat provider returned invalid JSON", { provider: provider.name });
-        continue;
-      }
-      if (!Array.isArray(result?.choices) || !result.choices.length) {
-        lastFailure = "empty_choices";
-        continue;
-      }
-      console.log("EMA chat completed", { provider: provider.name, model: providerPayload.model, user_id: userId });
-      break;
     }
 
     if (!result) {
@@ -1147,7 +1149,9 @@ Deno.serve(async (request: Request) => {
       console.error("All EMA chat providers failed", { reason: lastFailure });
       return reply({ error: { code: "CHAT_PROVIDERS_UNAVAILABLE", message: "موتورهای گفت‌وگوی ایما موقتاً پاسخگو نیستند؛ سهمیه این درخواست آزاد شد." } }, 503);
     }
+    console.log("EMA free chat completed", { provider: usedProvider, model: usedModel, user_id: userId });
     return reply(result);
+
   } catch (error) {
     const code = error instanceof Error ? error.message : "INTERNAL_ERROR";
     const status = code === "ADMIN_REQUIRED" ? 403 : (error as any)?.status || 500;
