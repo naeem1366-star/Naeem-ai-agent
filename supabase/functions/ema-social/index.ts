@@ -143,8 +143,8 @@ Deno.serve(async (request: Request) => {
 
     if (route === "/v1/social/discover" && request.method === "GET") {
       const rows = await serviceFetch("ema_social_profiles?select=user_id,display_name,headline,bio,city,languages,interests,skills,goals,availability&discoverable=eq.true&visibility=eq.public&user_id=neq." + userId + "&order=updated_at.desc&limit=50");
-      const blocks = await serviceFetch(`ema_social_blocks?select=blocked_user_id&blocker_user_id=eq.${userId}`);
-      const blocked = new Set((blocks || []).map((r: any) => r.blocked_user_id));
+      const blocks = await serviceFetch(`ema_social_blocks?select=blocker_user_id,blocked_user_id&or=(blocker_user_id.eq.${userId},blocked_user_id.eq.${userId})`);
+      const blocked = new Set((blocks || []).map((r: any) => r.blocker_user_id === userId ? r.blocked_user_id : r.blocker_user_id));
       return reply({ people: (rows || []).filter((p: any) => !blocked.has(p.user_id)) });
     }
 
@@ -157,10 +157,12 @@ Deno.serve(async (request: Request) => {
       const consentRows = await serviceFetch(`ema_social_consents?select=semantic_matching&user_id=eq.${userId}&limit=1`);
       if (!consentRows?.[0]?.semantic_matching) return reply({ matches: [], notice: "برای تطبیق معنایی باید رضایت جداگانه را فعال کنی." });
       const candidates = await serviceFetch("ema_social_profiles?select=user_id,display_name,headline,city,interests,skills,goals,collaboration_modes,availability&discoverable=eq.true&ai_matching_consent=eq.true&visibility=eq.public&user_id=neq." + userId + "&limit=100");
-      const blocked = await serviceFetch(`ema_social_blocks?select=blocked_user_id&blocker_user_id=eq.${userId}`);
-      const blockedIds = new Set((blocked || []).map((r: any) => r.blocked_user_id));
+      const candidateConsents = await serviceFetch("ema_social_consents?select=user_id&semantic_matching=eq.true");
+      const consentIds = new Set((candidateConsents || []).map((r: any) => r.user_id));
+      const blocked = await serviceFetch(`ema_social_blocks?select=blocker_user_id,blocked_user_id&or=(blocker_user_id.eq.${userId},blocked_user_id.eq.${userId})`);
+      const blockedIds = new Set((blocked || []).map((r: any) => r.blocker_user_id === userId ? r.blocked_user_id : r.blocker_user_id));
       const overlap = (a: string[] = [], b: string[] = []) => a.filter(v => b.some(w => w.toLocaleLowerCase() === v.toLocaleLowerCase()));
-      const matches = (candidates || []).filter((p: any) => !blockedIds.has(p.user_id)).map((p: any) => {
+      const matches = (candidates || []).filter((p: any) => consentIds.has(p.user_id) && !blockedIds.has(p.user_id)).map((p: any) => {
         const shared = overlap(own.interests || [], p.interests || []);
         const sharedGoals = overlap(own.goals || [], p.goals || []);
         const complementary = (own.skills || []).filter((s: string) => !(p.skills || []).includes(s));
