@@ -208,13 +208,20 @@ class VoiceWakeService : Service() {
                 )
                 main.postDelayed({ startListening() }, delayMs)
             }
-            override fun onPartialResults(segmentResults: Bundle?) {
-                if (destroyed || commandInFlight) return
+            // Do not execute commands from interim hypotheses: Android can emit many
+            // partial updates for one sentence, which caused duplicate actions and restart tones.
+            override fun onPartialResults(partialResults: Bundle?) = Unit
+
+            // Android 13+ delivers finalized speech segments while the segmented session
+            // remains open. Process each segment once without restarting the microphone.
+            override fun onSegmentResults(segmentResults: Bundle?) {
+                if (Build.VERSION.SDK_INT < 33 || destroyed || commandInFlight) return
                 val spoken = segmentResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull().orEmpty().trim()
                 if (spoken.isNotBlank()) {
                     segmentCommandHandled = true
                     listening = true
+                    listeningStartPending = false
                     setVoiceState("listening")
                     handleRecognizedText(spoken)
                 }
