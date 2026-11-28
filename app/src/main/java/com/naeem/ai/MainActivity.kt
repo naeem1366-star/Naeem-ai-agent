@@ -101,7 +101,7 @@ import kotlinx.coroutines.CompletableDeferred
 import com.naeem.ai.core.assistant.*
 import java.io.File
 
-private fun pinEmaModuleShortcut(context: Context, moduleTitle: String, shortcutLabel: String) {
+internal fun pinEmaModuleShortcut(context: Context, moduleTitle: String, shortcutLabel: String) {
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
         android.widget.Toast.makeText(context, "میانبر صفحه اصلی در این نسخه اندروید پشتیبانی نمی‌شود.", android.widget.Toast.LENGTH_LONG).show()
         return
@@ -226,9 +226,17 @@ data class ChatMessage(val text: String, val fromUser: Boolean, val image: andro
 
 class MainActivity : FragmentActivity() {
     private val introCompleted = mutableStateOf(false)
+    private val shortcutModule = mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        shortcutModule.value = intent.getStringExtra("ema_shortcut_module")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        shortcutModule.value = intent.getStringExtra("ema_shortcut_module")
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val store = SecureConfigStore(this)
@@ -349,6 +357,7 @@ class MainActivity : FragmentActivity() {
                     } else {
                         NaeemApp(
                             store,
+                            requestedModule = shortcutModule.value,
                             onExternalActivityStarted = {},
                             onExternalActivityReturned = {},
                             userEmail = authSession.value?.email.orEmpty(),
@@ -753,6 +762,7 @@ private fun appText(value: String, english: Boolean): String {
 @Composable
 fun NaeemApp(
     store: SecureConfigStore,
+    requestedModule: String? = null,
     onExternalActivityStarted: () -> Unit,
     onExternalActivityReturned: () -> Unit,
     onSignOut: () -> Unit = {},
@@ -879,6 +889,38 @@ fun NaeemApp(
     var showPlanner by remember { mutableStateOf(false) }
     var showThinkRoom by remember { mutableStateOf(false) }
     var showFutureGateway by remember { mutableStateOf(false) }
+    LaunchedEffect(requestedModule) {
+        when (requestedModule) {
+            "سفر و هم‌سفرها" -> showTravel = true
+            "Naeem Trail" -> showTrail = true
+            "باشگاه ورزش" -> showSports = true
+            "نبض بازار" -> showMarkets = true
+            "اتاق فکر" -> showThinkRoom = true
+            "به آینده وارد شو" -> showFutureGateway = true
+            "اخبار مهم" -> showNews = true
+            "یادآور دارو" -> showMedication = true
+            "نوت‌بوک" -> showPlanner = true
+            "دفتر مالی" -> { showFinance = true; ledgerEntries = ledgerStore.entries() }
+            "روایت هفته و ماه" -> showWrapped = true
+            "روزنگار من" -> showJournal = true
+            "سلامت و تغذیه" -> showHealth = true
+            "حافظه هوشمند" -> { showMemory = true; memories = dataStore.memories() }
+            "آلبوم تصاویر" -> { showAlbum = true; albumImages = dataStore.images() }
+            "بازی‌ها" -> showGames = true
+            "سینما" -> showDiscover = true
+            "پادکست" -> showPodcast = true
+            "تحلیل عکس" -> showProductLens = true
+            "استودیو ایما" -> showVideoCreator = true
+            "ساخت ویدیو رایگان مبتدی" -> showBeginnerVideo = true
+            "ساخت ویدیوی پیشرفته" -> showProfessionalVideo = true
+            "موسیقی" -> { showMusic = true; musicCreationStart = false }
+            "ساخت موسیقی با هوش مصنوعی" -> { showMusic = true; musicCreationStart = true }
+            "تحلیل اینستاگرام" -> showSocialAnalytics = true
+            "تنظیمات" -> showSettings = true
+            "اتصال به کامپیوتر" -> showPcControl = true
+            "کیف پول و اشتراک" -> showWallet = true
+        }
+    }
     var memoryDraft by remember { mutableStateOf("") }
     var searchMode by remember { mutableStateOf(false) }
     var speechPaused by remember { mutableStateOf(false) }
