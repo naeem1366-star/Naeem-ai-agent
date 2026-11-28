@@ -101,6 +101,34 @@ import kotlinx.coroutines.CompletableDeferred
 import com.naeem.ai.core.assistant.*
 import java.io.File
 
+private fun pinEmaModuleShortcut(context: Context, moduleTitle: String, shortcutLabel: String) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+        android.widget.Toast.makeText(context, "میانبر صفحه اصلی در این نسخه اندروید پشتیبانی نمی‌شود.", android.widget.Toast.LENGTH_LONG).show()
+        return
+    }
+    val manager = context.getSystemService(android.content.pm.ShortcutManager::class.java)
+    if (manager == null || !manager.isRequestPinShortcutSupported) {
+        android.widget.Toast.makeText(context, "لانچر گوشی اجازه افزودن میانبر را نمی‌دهد.", android.widget.Toast.LENGTH_LONG).show()
+        return
+    }
+    val safeId = moduleTitle.lowercase().map { if (it.isLetterOrDigit()) it else '_' }.joinToString("").take(35)
+    val launch = Intent(context, MainActivity::class.java).apply {
+        action = "com.naeem.ai.OPEN_EMA_MODULE"
+        putExtra("ema_shortcut_module", moduleTitle)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    }
+    val shortcut = android.content.pm.ShortcutInfo.Builder(context, "ema_module_$safeId")
+        .setShortLabel(shortcutLabel.take(25))
+        .setLongLabel("EMA · $shortcutLabel")
+        .setIcon(android.graphics.drawable.Icon.createWithResource(context, R.mipmap.ic_launcher_round))
+        .setIntent(launch)
+        .build()
+    runCatching { manager.requestPinShortcut(shortcut, null) }
+        .onFailure {
+            android.widget.Toast.makeText(context, "افزودن میانبر ناموفق بود: ${it.message ?: "خطا"}", android.widget.Toast.LENGTH_LONG).show()
+        }
+}
+
 @Composable
 private fun GeminiStyleBackdrop(content: @Composable () -> Unit) {
     SupraGlassBackdrop { content() }
@@ -435,6 +463,22 @@ private fun UserProfileSetup(isEnglish: Boolean = false, onSave: (String, String
 
 @Composable
 private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit) {
+    val context = LocalContext.current
+    val voicePrefs = remember { context.getSharedPreferences("ema_voice_wake", Context.MODE_PRIVATE) }
+    var voiceEnabled by remember { mutableStateOf(voicePrefs.getBoolean("enabled", false)) }
+    var voiceStatus by remember { mutableStateOf("") }
+    val voicePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        if (permissions[android.Manifest.permission.RECORD_AUDIO] == true) {
+            runCatching {
+                context.startForegroundService(Intent(context, VoiceWakeService::class.java))
+                voicePrefs.edit().putBoolean("enabled", true).apply()
+                voiceEnabled = true
+                voiceStatus = "شنود صوتی روشن شد؛ برای خاموش‌کردن دوباره همین دکمه را بزن."
+            }.onFailure { voiceStatus = "راه‌اندازی شنود ناموفق بود: ${it.message ?: "خطای نامشخص"}" }
+        } else {
+            voiceStatus = "برای شنود، اجازه میکروفون لازم است. بدون این اجازه، ایما به میکروفون دسترسی ندارد."
+        }
+    }
     var page by remember { mutableIntStateOf(-1) }
     val silver = Color(0xFFE8EDF5)
     val muted = Color(0xFFB9C5D5)
@@ -486,7 +530,7 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                         if (isEnglish) "EMA understands intent beyond literal words. You can talk naturally about your day, ideas, and plans. When you turn on the voice standby control, say “EMA” to hear “I’m here.” Then say “be on the lookout” to enable smart listening; say “EMA, stop listening” to turn smart listening off and return to wake-word standby. The microphone is active only while the voice service is enabled, with a visible Android notification. In this version, spoken food and workout logging are supported; broader online analysis and routing to all EMA spaces are still being completed."
                         else "ایما از مفهوم «ایما و اشاره» الهام گرفته است؛ یعنی دریافت منظور، حتی زمانی که همه‌چیز را مستقیم و دقیق بیان نمی‌کنی.\n\nمی‌توانی طبیعی و راحت درباره اتفاقات روزمره، ایده‌ها و برنامه‌هایت صحبت کنی. وقتی کنترل آماده‌باش صوتی را روشن کنی، با گفتن «ایما» پاسخ «در خدمتم» را می‌شنوی. سپس با گفتن «ایما، به گوش باش» حالت شنود هوشمند فعال می‌شود؛ برای توقف آن بگو «ایما، شنود رو خاموش کن» تا ایما به حالت آماده‌باش برگردد. میکروفون فقط وقتی سرویس صوتی را خودت فعال کرده‌ای کار می‌کند و اعلان دائمی اندروید وضعیت آن را نشان می‌دهد. در این نسخه، ثبت صوتی غذا و تمرین پشتیبانی می‌شود؛ تحلیل آنلاین سایر موضوعات و هدایت کامل اطلاعات به همه فضاهای ایما هنوز در حال تکمیل است.",
                         color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp, textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
-                } else {
+                } else if (page == 1) {
                     Text(appText("ایما چه کارهایی انجام می‌دهد؟", isEnglish), color = silver, style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
@@ -500,7 +544,7 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                 }
                 Spacer(Modifier.height(24.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    repeat(2) { index ->
+                    repeat(3) { index ->
                         Box(Modifier.padding(horizontal = 4.dp).size(if (page == index) 9.dp else 7.dp)
                             .background(if (page == index) Color(0xFFDCE8FA) else Color(0x667D97BA), CircleShape))
                     }
@@ -510,13 +554,48 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                     Button(onClick = { page = 1 }, modifier = Modifier.fillMaxWidth().height(54.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
                         shape = RoundedCornerShape(17.dp)) { Text(appText("ادامه", isEnglish), fontWeight = FontWeight.Bold) }
-                } else {
+                } else if (page == 1) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { page = 0 }, modifier = Modifier.weight(1f).height(54.dp),
                             shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", isEnglish), color = silver) }
-                        Button(onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                        Button(onClick = { page = 2 }, modifier = Modifier.weight(1f).height(54.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
-                            shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", isEnglish), fontWeight = FontWeight.Bold) }
+                            shape = RoundedCornerShape(17.dp)) { Text(appText("تنظیم شنود صوتی", isEnglish), fontWeight = FontWeight.Bold) }
+                    }
+                } else {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            onClick = {
+                                if (voiceEnabled) {
+                                    context.stopService(Intent(context, VoiceWakeService::class.java))
+                                    voicePrefs.edit().putBoolean("enabled", false).putBoolean("smart_listening", false).putString("state", "stopped").apply()
+                                    voiceEnabled = false
+                                    voiceStatus = "شنود صوتی خاموش شد."
+                                } else {
+                                    val needed = mutableListOf<String>()
+                                    if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) needed.add(android.Manifest.permission.RECORD_AUDIO)
+                                    if (android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) needed.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    if (needed.isEmpty()) {
+                                        runCatching {
+                                            context.startForegroundService(Intent(context, VoiceWakeService::class.java))
+                                            voicePrefs.edit().putBoolean("enabled", true).apply()
+                                            voiceEnabled = true
+                                            voiceStatus = "شنود صوتی روشن شد؛ اعلان وضعیت در نوار اعلان‌ها دیده می‌شود."
+                                        }.onFailure { voiceStatus = "راه‌اندازی شنود ناموفق بود: ${it.message ?: "خطای نامشخص"}" }
+                                    } else voicePermissionLauncher.launch(needed.toTypedArray())
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (voiceEnabled) Color(0xFF247B58) else Color(0xFFDCE8FA), contentColor = if (voiceEnabled) Color.White else Color(0xFF101A2A)),
+                            shape = RoundedCornerShape(17.dp)
+                        ) { Text(if (voiceEnabled) "خاموش‌کردن شنود صوتی" else "روشن‌کردن شنود صوتی", fontWeight = FontWeight.Bold) }
+                        if (voiceStatus.isNotBlank()) Text(voiceStatus, color = muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(onClick = { page = 1 }, modifier = Modifier.weight(1f).height(54.dp), shape = RoundedCornerShape(17.dp)) { Text(appText("قبلی", isEnglish), color = silver) }
+                            Button(onClick = onEnter, modifier = Modifier.weight(1f).height(54.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDCE8FA), contentColor = Color(0xFF101A2A)),
+                                shape = RoundedCornerShape(17.dp)) { Text(appText("ورود به ایما", isEnglish), fontWeight = FontWeight.Bold) }
+                        }
                     }
                 }
             }
