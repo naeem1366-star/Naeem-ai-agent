@@ -183,6 +183,13 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
                                 if (!account.isNull("usage_30d_usd")) Text((if (isEnglish) "Last 30 days: $" else "مصرف ۳۰ روز اخیر: $") + account.optString("usage_30d_usd"), color = muted, style = MaterialTheme.typography.bodySmall)
                                 Text((if (isEnglish) "Project: " else "پروژه: ") + account.optString("project_name").ifBlank { "—" }, color = muted, style = MaterialTheme.typography.bodySmall)
                             }
+                            else if (provider == "NetArz") {
+                                Text(
+                                    if (isEnglish) "The NetArz key responded, but no balance value was returned. Check the live API response and key permissions."
+                                    else "کلید NetArz پاسخ داده، اما مقدار موجودی از API دریافت نشده است. پاسخ زنده سرویس و دسترسی کلید باید بررسی شود.",
+                                    color = Color(0xFFFFD18A), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End
+                                )
+                            }
                             Text((if (isEnglish) "Last checked: " else "آخرین بررسی: ") + account.optString("checked_at").take(19).replace("T", " "), color = muted, style = MaterialTheme.typography.bodySmall)
                         }
                     }
