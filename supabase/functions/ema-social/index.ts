@@ -58,7 +58,7 @@ Deno.serve(async (request: Request) => {
   };
   const isAdmin = async () => {
     const rows = await serviceFetch(`ema_admin_users?select=role&user_id=eq.${userId}&limit=1`);
-    return Array.isArray(rows) && rows.length > 0;
+    return Array.isArray(rows) && rows.some((row: any) => row.role === "superadmin");
   };
   const control = async () => {
     const rows = await serviceFetch("ema_feature_controls?select=enabled,maintenance_message,updated_at&feature_key=eq.social_network&limit=1");
