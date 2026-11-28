@@ -264,7 +264,25 @@ class MainActivity : FragmentActivity() {
                             auth,
                             isEnglish = appLanguage.value == "en",
                             onAuthenticated = { session -> authSession.value = session; guestMode.value = false; appPrefs.edit().putBoolean("guest_mode", false).apply(); showAuthScreen.value = false },
-                            onGuestAccess = { guestMode.value = true; appPrefs.edit().putBoolean("guest_mode", true).apply(); showAuthScreen.value = false }
+                            onGuestAccess = {
+                                authScope.launch {
+                                    runCatching { auth.signInAnonymously() }
+                                        .onSuccess { result ->
+                                            authSession.value = result.session
+                                            guestMode.value = true
+                                            appPrefs.edit().putBoolean("guest_mode", true).apply()
+                                            showAuthScreen.value = false
+                                        }
+                                        .onFailure { failure ->
+                                            authSession.value = null
+                                            guestMode.value = true
+                                            appPrefs.edit().putBoolean("guest_mode", true).apply()
+                                            showAuthScreen.value = false
+                                            // Keep guest access available locally if anonymous Auth is disabled;
+                                            // the secure cloud chat will ask for sign-in instead of crashing.
+                                        }
+                                }
+                            }
                         )
                     } else if (showAuthScreen.value) {
                         SupabaseAuthScreen(
@@ -273,7 +291,7 @@ class MainActivity : FragmentActivity() {
                             onAuthenticated = { session -> authSession.value = session; guestMode.value = false; appPrefs.edit().putBoolean("guest_mode", false).apply(); showAuthScreen.value = false },
                             onGuestAccess = { showAuthScreen.value = false }
                         )
-                    } else if (authSession.value != null && !profileCompleted.value) {
+                    } else if (authSession.value != null && !guestMode.value && !profileCompleted.value) {
                         UserProfileSetup(isEnglish = appLanguage.value == "en", onSave = { name, interests, about, style ->
                             profilePrefs.edit()
                                 .putString("user_name", name)
