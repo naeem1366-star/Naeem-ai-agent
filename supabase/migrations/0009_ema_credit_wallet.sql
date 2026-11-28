@@ -134,10 +134,6 @@ begin
     insert into public.ema_credit_ledger(user_id,entry_type,amount_credits,balance_after_credits,reference,description)
       values(r.user_id,'ai_refund',v_delta,v_balance,'credit-settle-refund:'||r.id::text,'Release unused AI credits');
   end if;
-  if p_actual_credits>0 then
-    insert into public.ema_credit_ledger(user_id,entry_type,amount_credits,balance_after_credits,reference,description,metadata)
-      values(r.user_id,'ai_charge',-p_actual_credits,v_balance,'credit-charge:'||r.id::text,'AI usage charge',jsonb_build_object('provider',p_provider,'model',r.model));
-  end if;
   insert into public.ema_usage_events(user_id,reservation_id,feature,provider,model,input_tokens,output_tokens,provider_cost_usd,charged_toman,metadata)
     values(r.user_id,null,r.feature,p_provider,r.model,greatest(0,p_input_tokens),greatest(0,p_output_tokens),
       greatest(0,p_provider_cost_usd),greatest(0,p_charged_toman),jsonb_build_object('charged_credits',p_actual_credits,'credit_reservation_id',r.id))
