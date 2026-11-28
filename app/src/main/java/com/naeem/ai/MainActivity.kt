@@ -919,6 +919,8 @@ fun NaeemApp(
     val audioClient = remember { AudioSpeechClient() }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var speechPlaying by remember { mutableStateOf(false) }
+    var speechCaption by remember { mutableStateOf("") }
+    var speechCaptionVisibleWords by remember { mutableIntStateOf(0) }
     var conversationMode by remember { mutableStateOf(false) }
     val currentConversationMode by rememberUpdatedState(conversationMode)
     var startVoiceCapture by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -959,6 +961,7 @@ fun NaeemApp(
         mediaPlayer = null
         speechPlaying = false
         speechPaused = false
+        speechCaptionVisibleWords = 0
     }
 
     fun playAnswer(text: String, continueListening: Boolean = false) {
@@ -966,6 +969,8 @@ fun NaeemApp(
         speechJob = scope.launch {
             speechPlaying = true
             speechPaused = false
+            speechCaption = text
+            speechCaptionVisibleWords = 0
             try {
                 val textChunks = audioClient.splitText(text)
                 for (textChunk in textChunks) {
@@ -996,7 +1001,20 @@ fun NaeemApp(
                             if (continuation.isActive) continuation.resumeWithException(IllegalStateException("پخش یکی از بخش‌های صدای فارسی ناموفق بود."))
                             true
                         }
-                        player.setOnPreparedListener { prepared -> if (continuation.isActive) prepared.start() }
+                        player.setOnPreparedListener { prepared ->
+                            if (continuation.isActive) {
+                                prepared.start()
+                                val wordsInChunk = textChunk.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                                scope.launch {
+                                    val wordDelay = (prepared.duration.toLong() / wordsInChunk.size.coerceAtLeast(1)).coerceIn(110L, 650L)
+                                    wordsInChunk.forEach {
+                                        if (!isActive || !speechPlaying) return@launch
+                                        speechCaptionVisibleWords = (speechCaptionVisibleWords + 1).coerceAtMost(speechCaption.split(Regex("\\s+")).size)
+                                        delay(wordDelay)
+                                    }
+                                }
+                            }
+                        }
                         continuation.invokeOnCancellation {
                             runCatching { player.release() }
                             generatedFile.delete()
@@ -1626,15 +1644,23 @@ fun NaeemApp(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.height(34.dp))
-                        ThinkingOrb(diameter = 204.dp, active = true, onClick = { playThinkingOrbSound(context) })
-                        Spacer(Modifier.height(20.dp))
-                        Image(painter = painterResource(R.drawable.ic_brain_mark),
-                            contentDescription = "لوگوی ایما", modifier = Modifier.size(92.dp), contentScale = ContentScale.Fit)
-                        Spacer(Modifier.height(7.dp))
+                        ThinkingOrb(diameter = 224.dp, active = true)
+                        Spacer(Modifier.height(12.dp))
+                        val captionWords = speechCaption.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                        val visibleCaption = captionWords.take(speechCaptionVisibleWords).joinToString(" ")
                         Text(
-                            appText("لمس گوی یا نوشتن پیام برای شروع", isEnglish),
-                            color = Color(0xFF879AB5),
-                            style = MaterialTheme.typography.labelMedium
+                            when {
+                                visibleCaption.isNotBlank() -> visibleCaption
+                                speechPlaying -> ""
+                                listening -> "در حال شنیدن صدای تو…"
+                                busy -> "دارم فکر می‌کنم…"
+                                else -> "هر وقت آماده‌ای، با من صحبت کن"
+                            },
+                            color = Color(0xFFDCEBFA),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            minLines = 2
                         )
                     }
                 }
@@ -1643,7 +1669,7 @@ fun NaeemApp(
                         Text(error, color = Color(0xFFFFC4C4), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (conversationMode || listening || speechPlaying || busy) {
+                if ((conversationMode || listening || speechPlaying || busy) && messages.isNotEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                         shape = RoundedCornerShape(26.dp),
