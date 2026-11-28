@@ -168,15 +168,16 @@ class VoiceWakeService : Service() {
             stopSelf()
             return
         }
-        recognizer = try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
-                SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-            } else {
-                SpeechRecognizer.createSpeechRecognizer(this)
-            }
-        } catch (_: Exception) {
+        // Use the system recognition service so Persian (fa-IR) can use its installed
+        // online language provider. An available on-device engine does not imply Persian support.
+        recognizer = runCatching {
             SpeechRecognizer.createSpeechRecognizer(this)
+        }.getOrElse {
+            setVoiceState("error")
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID, buildNotification("راه‌اندازی موتور تشخیص گفتار ممکن نشد.")
+            )
+            null
         }
         recognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
@@ -208,20 +209,21 @@ class VoiceWakeService : Service() {
                     stopSelf()
                     return
                 }
-                if (consecutiveErrors >= 12) {
-                    setVoiceState("error")
-                    getSystemService(NotificationManager::class.java).notify(
-                        NOTIFICATION_ID, buildNotification("تشخیص گفتار چندین بار ناموفق بود. سرویس را خاموش و دوباره روشن کن.")
-                    )
-                    stopSelf()
-                    return
-                }
-                val delayMs = when (error) {
-                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 1600L
+                // Keep the user-started foreground service alive and retry with backoff.
+                // The button remains green only while recognition is genuinely ready.
+                setVoiceState("retrying")
+                val baseDelay = when (error) {
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 1800L
                     SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
-                    SpeechRecognizer.ERROR_SERVER -> 2200L
-                    else -> 900L
+                    SpeechRecognizer.ERROR_SERVER -> 3000L
+                    SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED,
+                    SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> 5000L
+                    else -> 1200L
                 }
+                val delayMs = (baseDelay * (1L shl (consecutiveErrors.coerceAtMost(4) - 1).coerceAtLeast(0))).coerceAtMost(20000L)
+                getSystemService(NotificationManager::class.java).notify(
+                    NOTIFICATION_ID, buildNotification("اتصال شنود ناپایدار شد؛ در حال تلاش مجدد…")
+                )
                 main.postDelayed({ startListening() }, delayMs)
             }
             override fun onResults(results: Bundle?) {
