@@ -550,6 +550,19 @@ private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit)
                     Spacer(Modifier.height(20.dp))
                     Text(appText("تو زندگی کن؛ ایما حواسش هست.", isEnglish), color = silver, style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                } else {
+                    Text(if (isEnglish) "EMA Voice Standby" else "شنود صوتی ایما", color = silver,
+                        style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        if (isEnglish) "When you enable this control, EMA keeps a microphone listening service running in the background. It can recognize the wake word and supported voice commands. Android shows a persistent notification while the microphone service is active. You can turn it off here or from inside EMA. Microphone permission is requested only when you press Enable. Voice standby can use battery and network, and Persian recognition depends on the speech service installed on your phone."
+                        else "با روشن‌کردن این گزینه، سرویس شنود میکروفون ایما در پس‌زمینه فعال می‌ماند تا فرمان بیدارباش و فرمان‌های صوتی پشتیبانی‌شده را تشخیص دهد. تا وقتی سرویس فعال است، اندروید اعلان دائمی وضعیت میکروفون را نشان می‌دهد. هر زمان بخواهی می‌توانی شنود را از همین صفحه یا داخل برنامه خاموش کنی. اجازه میکروفون فقط زمانی درخواست می‌شود که خودت دکمه روشن‌کردن را بزنی. این قابلیت ممکن است از باتری و اینترنت استفاده کند و کیفیت تشخیص فارسی به موتور گفتار نصب‌شده روی گوشی بستگی دارد.",
+                        color = muted, style = MaterialTheme.typography.bodyLarge, lineHeight = 29.sp,
+                        textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
+                    Spacer(Modifier.height(12.dp))
+                    Text(if (isEnglish) "Privacy: EMA does not activate this microphone service until you explicitly enable it." else "حریم خصوصی: ایما تا زمانی که خودت شنود را روشن نکنی، این سرویس میکروفون را فعال نمی‌کند.",
+                        color = Color(0xFFB9D8FF), style = MaterialTheme.typography.bodyMedium,
+                        textAlign = if (isEnglish) TextAlign.Start else TextAlign.End)
                 }
                 Spacer(Modifier.height(24.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
