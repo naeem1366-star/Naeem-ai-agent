@@ -1065,12 +1065,14 @@ fun NaeemApp(
     val wakePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
     var wakeAssistantEnabled by remember { mutableStateOf(wakePrefs.getBoolean("enabled", false)) }
     var smartListeningEnabled by remember { mutableStateOf(wakePrefs.getBoolean("smart_listening", false)) }
+    var wakeListeningReady by remember { mutableStateOf(wakePrefs.getBoolean("ready", false)) }
     var showVoiceHelp by remember { mutableStateOf(false) }
     var showComposerMenu by remember { mutableStateOf(false) }
     DisposableEffect(wakePrefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             if (key == "enabled") wakeAssistantEnabled = prefs?.getBoolean("enabled", false) ?: false
             if (key == "smart_listening") smartListeningEnabled = prefs?.getBoolean("smart_listening", false) ?: false
+            if (key == "ready") wakeListeningReady = prefs?.getBoolean("ready", false) ?: false
         }
         wakePrefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { wakePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
@@ -1700,7 +1702,7 @@ fun NaeemApp(
                                 },
                                 modifier = Modifier.size(38.dp).background(
                                     when {
-                                        smartListeningEnabled -> Color(0xFF238653)
+                                        smartListeningEnabled && wakeListeningReady -> Color(0xFF238653)
                                         wakeAssistantEnabled -> Color(0xFF286B50)
                                         else -> Panel
                                     }, CircleShape
@@ -1709,7 +1711,8 @@ fun NaeemApp(
                                 Icon(
                                     Icons.Default.GraphicEq,
                                     contentDescription = when {
-                                        smartListeningEnabled -> "شنود هوشمند فعال است"
+                                        smartListeningEnabled && wakeListeningReady -> "شنود هوشمند فعال است"
+                                        wakeAssistantEnabled && !wakeListeningReady -> "در حال اتصال به شنود؛ برای توقف لمس کن"
                                         wakeAssistantEnabled -> "شنود صوتی فعال است؛ برای توقف لمس کن"
                                         else -> "فعال‌کردن شنود صوتی"
                                     },
