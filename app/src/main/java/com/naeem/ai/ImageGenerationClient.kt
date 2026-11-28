@@ -33,7 +33,7 @@ class ImageGenerationClient {
         require(accessToken.isNotBlank()) { "برای ساخت تصویر وارد حساب شو." }
         require(prompt.isNotBlank()) { "توضیح تصویر را بنویس." }
         val payload = JSONObject()
-            .put("model", model.trim().ifBlank { "gpt-image-2" })
+            .put("model", model.trim().ifBlank { "gpt-image-1" })
             .put("prompt", prompt.trim())
             .put("n", 1)
             .put("size", "1024x1024")
@@ -53,13 +53,13 @@ class ImageGenerationClient {
                     json.optJSONObject("error")?.optString("message")
                         ?.takeIf { it.isNotBlank() } ?: json.optString("message").ifBlank { raw.take(600) }
                 }.getOrDefault(raw.take(600))
-                throw IllegalStateException("خطای ساخت تصویر با GapGPT (HTTP ${response.code}): $detail")
+                throw IllegalStateException("خطای ساخت تصویر از درگاه امن ایما (HTTP ${response.code}): $detail")
             }
             val responseJson = runCatching { JSONObject(raw) }.getOrElse {
-                throw IllegalStateException("پاسخ GapGPT برای تصویر JSON معتبر نیست.")
+                throw IllegalStateException("پاسخ سرویس تصویر JSON معتبر نیست.")
             }
             val imageItem = findImageObject(responseJson)
-                ?: throw IllegalStateException("پاسخ GapGPT داده یا لینک تصویر ندارد.")
+                ?: throw IllegalStateException("پاسخ سرویس تصویر داده یا لینک تصویر ندارد.")
             val encodedValue = firstString(imageItem, "b64_json", "image_base64", "base64", "image")
             val encodedImage = encodedValue?.let { value ->
                 if (value.startsWith("data:image/", true)) value.substringAfter("base64,", "")
@@ -72,7 +72,7 @@ class ImageGenerationClient {
                 !encodedImage.isNullOrBlank() -> decodeBase64(encodedImage)
                     ?: throw IllegalStateException("داده تصویر برگشتی قابل رمزگشایی نیست.")
                 !imageUrl.isNullOrBlank() -> downloadImage(imageUrl)
-                else -> throw IllegalStateException("پاسخ GapGPT فاقد تصویر قابل استفاده است.")
+                else -> throw IllegalStateException("پاسخ سرویس تصویر فاقد تصویر قابل استفاده است.")
             }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 ?: throw IllegalStateException("تصویر برگشتی GapGPT قابل نمایش نیست.")
