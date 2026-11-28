@@ -198,7 +198,7 @@ Deno.serve(async (request: Request) => {
       return reply({ request: rows?.[0] || null }, 201);
     }
 
-    const requestMatch = route.match(/^\\/v1\\/social\\/connections\\/requests\\/([0-9a-f-]{36})$/i);
+    const requestMatch = route.match(/^\/v1\/social\/connections\/requests\/([0-9a-f-]{36})$/i);
     if (requestMatch && request.method === "PATCH") {
       const body = await jsonBody(request);
       const decision = body?.decision;
