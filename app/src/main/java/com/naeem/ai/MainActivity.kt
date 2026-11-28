@@ -473,7 +473,7 @@ private fun UserProfileSetup(isEnglish: Boolean = false, onSave: (String, String
 @Composable
 private fun AppIntegrationIntro(isEnglish: Boolean = false, onEnter: () -> Unit) {
     val context = LocalContext.current
-    val voicePrefs = remember { context.getSharedPreferences("ema_voice_wake", Context.MODE_PRIVATE) }
+    val voicePrefs = remember { context.getSharedPreferences("ima_voice_wake", Context.MODE_PRIVATE) }
     var voiceEnabled by remember { mutableStateOf(voicePrefs.getBoolean("enabled", false)) }
     var voiceStatus by remember { mutableStateOf("") }
     val voicePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
