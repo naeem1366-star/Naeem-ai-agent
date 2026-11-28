@@ -32,6 +32,7 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
     var loading by remember { mutableStateOf(true) }
     var working by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+    var notice by remember { mutableStateOf("") }
     var section by remember { mutableStateOf("overview") }
     val accent = Color(0xFF8CC4FF)
     val panel = Color(0xFF10243B)
@@ -249,6 +250,7 @@ fun AdminBillingScreen(client: BillingClient, accessToken: String, isEnglish: Bo
                 }
             }
         }
+        if (notice.isNotBlank()) Text(notice, color = Color(0xFF9BE7C4), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
         if (error.isNotBlank()) Text(error, color = Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
         if (loading && dashboard != null) LinearProgressIndicator(Modifier.fillMaxWidth(), color = accent)
         Spacer(Modifier.height(18.dp))
