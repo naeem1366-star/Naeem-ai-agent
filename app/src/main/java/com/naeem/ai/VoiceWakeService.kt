@@ -197,6 +197,11 @@ class VoiceWakeService : Service() {
                 listeningStartPending = false
                 if (destroyed) return
                 consecutiveErrors++
+                // Some Android speech providers leave the recognizer busy after an error.
+                // Recreate it before retrying instead of repeatedly starting a poisoned instance.
+                runCatching { recognizer?.cancel() }
+                runCatching { recognizer?.destroy() }
+                recognizer = null
                 if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                     setVoiceState("error")
                     stopSelf()
@@ -245,7 +250,8 @@ class VoiceWakeService : Service() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "fa-IR")
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            // Do not force offline recognition: Persian offline packs are absent on many devices.
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1100L)
