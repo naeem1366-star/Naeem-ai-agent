@@ -2420,67 +2420,15 @@ fun NaeemApp(
                             Text(if (isEnglish) "Signed in as $userEmail" else "واردشده با $userEmail", color = Muted, style = MaterialTheme.typography.bodySmall)
                         }
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
-                        Text(if (isEnglish) "Provider connection (local tools)" else "اتصال سرویس‌دهنده (ابزارهای محلی)")
-                        Text(if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) { if (isEnglish) "Secure chat: server gateway is not configured in this build. Saving a provider key here does not activate chat." else "چت امن: نشانی درگاه سرور در این نسخه تنظیم نشده؛ ذخیره کلید سرویس‌دهنده در این صفحه، چت را فعال نمی‌کند." } else { if (isEnglish) "Secure chat gateway: configured" else "درگاه امن چت: تنظیم شده" }, color = if (BuildConfig.CHAT_GATEWAY_URL.isBlank()) Color(0xFFFFC28A) else Color(0xFF9BD7B0), style = MaterialTheme.typography.bodySmall)
-                        Text(if (isEnglish) "Paid AI spaces (Think Room, Future Gateway, Instagram analysis) use NetArz through EMA's secure server. Do not enter the NetArz API key on this screen." else "قابلیت‌های پولی هوش مصنوعی (اتاق فکر، به آینده وارد شو و تحلیل اینستاگرام) از طریق سرور امن ایما به NetArz وصل می‌شوند؛ کلید NetArz را در این صفحه وارد نکن.", color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                            OutlinedButton(onClick = { switchApiProvider("https://netarz.ir/api/ai/v1"); model = "gpt-4o-mini" }) { Text(appText("نت‌ارز", isEnglish), color = Gold) }
-                            OutlinedButton(onClick = { switchApiProvider("https://api.openai.com/v1"); model = "gpt-4o-mini" }) { Text("OpenAI مستقیم", color = Gold) }
-                            OutlinedButton(onClick = { switchApiProvider("https://api.gapgpt.ir/v1"); model = "gpt-4o-mini" }) { Text("GapGPT", color = Gold) }
-                        }
-                        Text(appText("نشانی سرویس (Base URL)", isEnglish))
-                        OutlinedTextField(baseUrl, { baseUrl = it }, singleLine = true)
-                        Text(appText("نام مدل گفتگو", isEnglish))
-                        OutlinedTextField(model, { model = it }, singleLine = true)
+                        Text(if (isEnglish) "Secure AI connection" else "اتصال امن هوش مصنوعی", color = Gold, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (isEnglish) "Chat and image generation use EMA's secure server gateway. Provider API keys are stored on the server and must not be entered on this phone. Free chat and image requests are routed to GapGPT when its server connection is enabled; paid media tools use NetArz."
+                            else "چت و تولید تصویر از درگاه امن سرور ایما استفاده می‌کنند. کلیدهای سرویس‌دهنده فقط روی سرور نگهداری می‌شوند و نباید در گوشی وارد شوند. چت و ساخت تصویر رایگان از مسیر GapGPT و ابزارهای رسانه‌ای پولی از مسیر NetArz انجام می‌شوند؛ فعال‌بودن کلیدهای سرور برای هر سرویس لازم است.",
+                            color = Color(0xFFB9E5C9), style = MaterialTheme.typography.bodySmall
+                        )
                         Text(appText("شناسه مدل ساخت تصویر", isEnglish))
                         OutlinedTextField(imageModel, { imageModel = it }, singleLine = true)
-                        Text(appText("نوع مدل برای دریافت فهرست", isEnglish))
-                        Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf("chat" to if (isEnglish) "Chat" else "چت", "image" to if (isEnglish) "Image" else "تصویر", "audio_tts" to if (isEnglish) "Text to speech" else "متن به صدا", "audio_stt" to if (isEnglish) "Speech to text" else "صدا به متن", "video" to if (isEnglish) "Video" else "ویدیو", "music" to if (isEnglish) "Music" else "موسیقی", "embedding" to if (isEnglish) "Memory" else "حافظه").forEach { (type, label) ->
-                                FilterChip(selected = selectedModelType == type, onClick = { selectedModelType = type; availableModels = emptyList(); providerTestStatus = "" }, label = { Text(label) })
-                            }
-                        }
-                        Button(
-                            onClick = {
-                                testingProvider = true
-                                providerTestStatus = ""
-                                scope.launch {
-                                    try {
-                                        availableModels = client.fetchModels(baseUrl, apiKey, selectedModelType)
-                                        providerTestStatus = if (isEnglish) "Connection successful; " + availableModels.size + " model IDs received." else "اتصال موفق؛ " + availableModels.size + " شناسه مدل دریافت شد."
-                                    } catch (e: Exception) {
-                                        providerTestStatus = e.message ?: if (isEnglish) "Connection test failed." else "آزمایش اتصال ناموفق بود."
-                                    } finally {
-                                        testingProvider = false
-                                    }
-                                }
-                            },
-                            enabled = !testingProvider && apiKey.isNotBlank(),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(if (testingProvider) { if (isEnglish) "Testing connection…" else "در حال آزمایش اتصال…" } else { if (isEnglish) "Test connection & load models" else "آزمایش اتصال و دریافت مدل‌ها" })
-                        }
-                        if (providerTestStatus.isNotBlank()) Text(providerTestStatus, color = if (availableModels.isNotEmpty()) Color(0xFFD4D9E0) else Color(0xFFFFB2A8), style = MaterialTheme.typography.bodySmall)
-                        if (availableModels.isNotEmpty()) {
-                            Text(appText("مدل‌های دسته انتخاب‌شده؛ روی شناسه بزن تا برای همان قابلیت ذخیره شود:", isEnglish), color = Muted, style = MaterialTheme.typography.labelSmall)
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                availableModels.take(30).forEach { modelId ->
-                                    TextButton(onClick = {
-                                        store.saveModelFor(selectedModelType, modelId)
-                                        when (selectedModelType) { "chat" -> model = modelId; "image" -> imageModel = modelId }
-                                        providerTestStatus = if (isEnglish) "Model $modelId saved for $selectedModelType." else "مدل $modelId برای دسته $selectedModelType ذخیره شد."
-                                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
-                                        Text(modelId, color = if ((selectedModelType == "chat" && model == modelId) || (selectedModelType == "image" && imageModel == modelId) || store.modelFor(selectedModelType) == modelId) Gold else Color.White, style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                            }
-                        }
-                        Text(appText("کلید API", isEnglish))
-                        OutlinedTextField(apiKey, { apiKey = it }, singleLine = true, visualTransformation = PasswordVisualTransformation())
-                        Text(if (isEnglish) "Security: device encryption helps, but a provider API key must not be embedded in a public app. Production requests should go through EMA\u0027s secure server gateway." else "هشدار امنیتی: رمزگذاری گوشی مفید است، اما کلید API نباید در نسخه عمومی اپ قرار بگیرد. برای انتشار امن، درخواست‌ها باید از سرور واسط اختصاصی ایما عبور کنند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD28A))
+                        Text(if (isEnglish) "The chat provider, credentials, and paid service routing are managed securely by EMA's server. No API key is required here." else "انتخاب سرویس چت، اعتبارنامه‌ها و مسیر سرویس‌های پولی از سمت سرور ایما مدیریت می‌شود؛ در این قسمت نیازی به واردکردن کلید API نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
                         Divider(color = Color(0xFF3A3D45), modifier = Modifier.padding(vertical = 5.dp))
                         Text(appText("پشتیبان‌گیری و بازیابی", isEnglish), color = Gold, fontWeight = FontWeight.SemiBold)
                         Text(if (isEnglish) "Creates an encrypted backup of finance, workouts, trips, memory, conversations, and the image album. Keep the password safe; recovery is impossible without it." else "از اطلاعات مالی، تمرین‌ها، سفرها، حافظه، گفتگوها و آلبوم تصویر، یک فایل رمزگذاری‌شده می‌سازد. رمز را در جای امن نگه دار؛ بدون آن بازیابی ممکن نیست.", color = Muted, style = MaterialTheme.typography.bodySmall)
@@ -2509,7 +2457,8 @@ fun NaeemApp(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        store.save(baseUrl.trim(), model.trim(), apiKey.trim())
+                        store.save(baseUrl.trim(), model.trim(), "")
+                        apiKey = ""
                         store.saveImageModel(imageModel)
                         store.saveModelFor("chat", model)
                         store.saveModelFor("image", imageModel)
