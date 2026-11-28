@@ -545,7 +545,7 @@ Deno.serve(async (request: Request) => {
         try { result = JSON.parse(raw); } catch { throw new Error("NETARZ_INVALID_MUSIC_RESPONSE"); }
         const reportedUsd = Number(result?.usd ?? result?.usage?.cost_usd);
         const returnedUsd = Number.isFinite(reportedUsd) && reportedUsd > 0 ? reportedUsd : estimateUsd;
-        await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.creditsPerToman, access.isAdmin, access.hasSubscription,
+        await settleMediaReservation(reservationId, "ai_music", model, returnedUsd, access.rate, access.markup, access.isAdmin, access.hasSubscription,
           { request_id: result?.id || null, seconds }, access.reserveCredits);
         console.log("EMA paid music completed", { user_id: userId, model, provider: "NetArz", cost_usd: returnedUsd });
         return reply(result);
@@ -665,7 +665,7 @@ Deno.serve(async (request: Request) => {
           const isAdmin = Array.isArray(admins) && admins.length > 0;
           const subs = await serviceFetch(`ema_subscriptions?select=id&user_id=eq.${userId}&starts_at=lte.${encodeURIComponent(new Date().toISOString())}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`);
           await settleMediaReservation(reservationId, "professional_video", savedJob.model, cost,
-            Number(billing.usd_to_toman || 0), Math.max(0, Number(billing.markup_bps || 0)), Number(billing.credits_per_toman || 0), isAdmin,
+            Number(billing.usd_to_toman || 0), Math.max(0, Number(billing.markup_bps || 0)), isAdmin,
             Array.isArray(subs) && subs.length > 0, { provider_job_id: providerJobId, seconds: savedJob.seconds, size: savedJob.size }, Number(savedJob.reserve_toman || Number.MAX_SAFE_INTEGER));
         } else if (reservationId) {
           await serviceFetch("rpc/ema_release_credits", {
