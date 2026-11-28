@@ -15,7 +15,8 @@ data class EmaSocialProfile(
     val interests: List<String> = emptyList(), val skills: List<String> = emptyList(), val goals: List<String> = emptyList(),
     val experienceSummary: String = "", val collaborationModes: List<String> = emptyList(),
     val availability: String = "not_set", val visibility: String = "private",
-    val discoverable: Boolean = false, val aiMatchingConsent: Boolean = false
+    val discoverable: Boolean = false, val aiMatchingConsent: Boolean = false,
+    val profileProcessingConsent: Boolean = false, val semanticMatchingConsent: Boolean = false
 )
 data class EmaSocialPerson(
     val userId: String, val displayName: String, val headline: String, val bio: String, val city: String,
@@ -81,8 +82,10 @@ class EmaSocialClient {
         return EmaSocialControl(o.optBoolean("enabled"), o.optString("maintenanceMessage"), o.optString("checkedAt"))
     }
     suspend fun profile(token: String): EmaSocialProfile? {
-        val o = call("/v1/social/profile", token).optJSONObject("profile") ?: return null
-        return profileFrom(o)
+        val response = call("/v1/social/profile", token)
+        val o = response.optJSONObject("profile") ?: return null
+        val consent = response.optJSONObject("consent") ?: JSONObject()
+        return profileFrom(o).copy(profileProcessingConsent = consent.optBoolean("profile_processing"), semanticMatchingConsent = consent.optBoolean("semantic_matching"))
     }
     suspend fun saveProfile(token: String, p: EmaSocialProfile, profileConsent: Boolean, semanticConsent: Boolean) {
         val body = JSONObject()
