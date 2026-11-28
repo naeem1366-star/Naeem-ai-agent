@@ -86,18 +86,7 @@ Deno.serve(async (request: Request) => {
     if (route === "/v1/social/admin/control" && request.method === "GET") {
       if (!(await isAdmin())) throw new Error("ADMIN_REQUIRED");
       const state = await control();
-      const [profiles, requests, teams, reports] = await Promise.all([
-        serviceFetch("ema_social_profiles?select=user_id&limit=1"),
-        serviceFetch("ema_social_connection_requests?select=id&status=eq.pending&limit=1"),
-        serviceFetch("ema_social_teams?select=id&limit=1"),
-        serviceFetch("ema_social_reports?select=id&status=eq.open&limit=1"),
-      ]);
-      return reply({ control: state, metrics: {
-        profiles_sample_count: Array.isArray(profiles) ? profiles.length : 0,
-        pending_requests_sample_count: Array.isArray(requests) ? requests.length : 0,
-        teams_sample_count: Array.isArray(teams) ? teams.length : 0,
-        open_reports_sample_count: Array.isArray(reports) ? reports.length : 0,
-      }});
+      return reply({ control: state });
     }
     if (route === "/v1/social/admin/control" && request.method === "PATCH") {
       if (!(await isAdmin())) throw new Error("ADMIN_REQUIRED");
@@ -165,6 +154,8 @@ Deno.serve(async (request: Request) => {
       if (!own || own.ai_matching_consent !== true || own.discoverable !== true) {
         return reply({ matches: [], notice: "برای دریافت پیشنهاد، نمایش‌پذیری و رضایت تطبیق را در پروفایل فعال کن." });
       }
+      const consentRows = await serviceFetch(`ema_social_consents?select=semantic_matching&user_id=eq.${userId}&limit=1`);
+      if (!consentRows?.[0]?.semantic_matching) return reply({ matches: [], notice: "برای تطبیق معنایی باید رضایت جداگانه را فعال کنی." });
       const candidates = await serviceFetch("ema_social_profiles?select=user_id,display_name,headline,city,interests,skills,goals,collaboration_modes,availability&discoverable=eq.true&ai_matching_consent=eq.true&visibility=eq.public&user_id=neq." + userId + "&limit=100");
       const blocked = await serviceFetch(`ema_social_blocks?select=blocked_user_id&blocker_user_id=eq.${userId}`);
       const blockedIds = new Set((blocked || []).map((r: any) => r.blocked_user_id));
